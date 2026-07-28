@@ -2,9 +2,16 @@ import http from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { APP_ROOT, loadConfig } from "./config.mjs";
+import { handleProductionRecordRoute } from "./modules/images/production-record-route.mjs";
+import { createProductionRecordStore } from "./modules/images/production-records.mjs";
 
 const PUBLIC_ROOT = path.join(APP_ROOT, "public");
 const config = await loadConfig();
+const imageStudioConfig = config.integrations?.imageStudio;
+const productionRecordStore =
+  imageStudioConfig?.enabled && imageStudioConfig.productionRecordsRoot
+    ? createProductionRecordStore({ root: imageStudioConfig.productionRecordsRoot })
+    : null;
 
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -55,7 +62,7 @@ async function serveStatic(response, pathname) {
   }
 }
 
-export function createServer() {
+export function createServer({ recordStore = productionRecordStore } = {}) {
   return http.createServer(async (request, response) => {
     try {
       const url = new URL(
@@ -69,6 +76,18 @@ export function createServer() {
           service: "hanabit-hub",
           version: "0.1.0",
         });
+      }
+
+      if (
+        await handleProductionRecordRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          store: recordStore,
+          sendJson,
+        })
+      ) {
+        return;
       }
 
       if (request.method === "GET" && (await serveStatic(response, url.pathname))) {

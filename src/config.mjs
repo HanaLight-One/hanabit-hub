@@ -61,6 +61,13 @@ function validateConfig(config) {
     throw new Error("dayStartsAtHour는 0부터 23 사이의 정수여야 합니다.");
   }
 
+  const imageStudio = config.integrations?.imageStudio;
+  if (imageStudio?.enabled && !path.isAbsolute(imageStudio.productionRecordsRoot ?? "")) {
+    throw new Error(
+      "Image Studio를 활성화하려면 productionRecordsRoot 절대경로가 필요합니다.",
+    );
+  }
+
   return config;
 }
 
