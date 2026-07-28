@@ -32,6 +32,10 @@ npm.cmd run dev
 Git에 포함되지 않습니다. 새 설정 항목을 추가할 때는 실제 값이 없는
 `config.example.json`도 함께 갱신합니다.
 
+Image Studio 코드 이전 계획과 외부 설정 대상은
+[docs/image-studio-migration.md](./docs/image-studio-migration.md)에 기록되어
+있습니다. 날짜별 테마는 서울 시간 오전 02시를 기준으로 운영일을 구분합니다.
+
 ## 안전 원칙
 
 - 저장소·파이프라인·예약 작업의 기존 파일 위치를 옮기지 않습니다.

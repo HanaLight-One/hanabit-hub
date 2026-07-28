@@ -12,6 +12,10 @@ const DEFAULT_CONFIG = Object.freeze({
     imageStudio: { enabled: false },
     fortune: { enabled: false },
   },
+  operations: {
+    timezone: "Asia/Seoul",
+    dayStartsAtHour: 2,
+  },
   allowedActions: [],
 });
 
@@ -45,6 +49,18 @@ function validateConfig(config) {
     throw new Error("allowedActions는 배열이어야 합니다.");
   }
 
+  if (config.operations?.timezone !== "Asia/Seoul") {
+    throw new Error("현재 운영 시간대는 Asia/Seoul만 지원합니다.");
+  }
+
+  if (
+    !Number.isInteger(config.operations?.dayStartsAtHour) ||
+    config.operations.dayStartsAtHour < 0 ||
+    config.operations.dayStartsAtHour > 23
+  ) {
+    throw new Error("dayStartsAtHour는 0부터 23 사이의 정수여야 합니다.");
+  }
+
   return config;
 }
 
@@ -62,4 +78,4 @@ export async function loadConfig() {
   return validateConfig(mergeConfig(DEFAULT_CONFIG, localConfig));
 }
 
-export { APP_ROOT };
+export { APP_ROOT, validateConfig };
