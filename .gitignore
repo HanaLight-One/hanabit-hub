@@ -1,0 +1,40 @@
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+
+# Local configuration and secrets
+config.local.json
+AGENTS.local.md
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Runtime state and logs
+state/
+logs/
+*.log
+*.ndjson
+*.pid
+*.lock
+
+# Generated and local media
+uploads/
+generated/
+thumbnails/
+trash/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.bak
+work/
+scratch/

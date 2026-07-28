@@ -1,0 +1,154 @@
+:root {
+  color-scheme: dark;
+  --background: #090c10;
+  --panel: #11171d;
+  --line: #26303a;
+  --text: #f4f1e9;
+  --muted: #939da7;
+  --accent: #d8ff52;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 85% 5%, rgb(216 255 82 / 10%), transparent 28rem),
+    var(--background);
+  color: var(--text);
+  font-family: "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+}
+
+main {
+  width: min(1080px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: clamp(80px, 12vw, 150px) 0 64px;
+}
+
+.eyebrow,
+.label {
+  margin: 0 0 18px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+h1 {
+  max-width: 800px;
+  margin: 0;
+  font-size: clamp(54px, 9vw, 112px);
+  line-height: 0.94;
+  letter-spacing: -0.065em;
+}
+
+h1 em {
+  color: var(--accent);
+  font-style: normal;
+}
+
+.intro {
+  max-width: 620px;
+  margin: 32px 0 56px;
+  color: var(--muted);
+  font-size: clamp(16px, 2vw, 20px);
+  line-height: 1.75;
+}
+
+.status-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgb(17 23 29 / 84%);
+}
+
+.status-card h2,
+.modules h2 {
+  margin: 0;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--muted);
+}
+
+.status span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.status.online {
+  color: var(--text);
+}
+
+.status.online span {
+  background: var(--accent);
+  box-shadow: 0 0 0 6px rgb(216 255 82 / 9%);
+}
+
+.modules {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.modules article {
+  min-height: 190px;
+  padding: 26px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--panel);
+}
+
+.modules article > span {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.modules h2 {
+  margin-top: 46px;
+}
+
+.modules p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+@media (max-width: 700px) {
+  main {
+    width: min(100% - 28px, 1080px);
+    padding-top: 64px;
+  }
+
+  .status-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .modules {
+    grid-template-columns: 1fr;
+  }
+
+  .modules article {
+    min-height: 150px;
+  }
+
+  .modules h2 {
+    margin-top: 28px;
+  }
+}
