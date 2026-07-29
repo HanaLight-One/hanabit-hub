@@ -2,6 +2,8 @@ import http from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { APP_ROOT, loadConfig } from "./config.mjs";
+import { createImageArchive } from "./modules/images/image-archive.mjs";
+import { handleImageListRoute } from "./modules/images/image-list-route.mjs";
 import { handleProductionRecordRoute } from "./modules/images/production-record-route.mjs";
 import { createProductionRecordStore } from "./modules/images/production-records.mjs";
 
@@ -11,6 +13,14 @@ const imageStudioConfig = config.integrations?.imageStudio;
 const productionRecordStore =
   imageStudioConfig?.enabled && imageStudioConfig.productionRecordsRoot
     ? createProductionRecordStore({ root: imageStudioConfig.productionRecordsRoot })
+    : null;
+const imageArchive =
+  imageStudioConfig?.enabled &&
+  (imageStudioConfig.dailyImagesRoot || imageStudioConfig.pilotImagesRoot)
+    ? createImageArchive({
+        dailyImagesRoot: imageStudioConfig.dailyImagesRoot,
+        pilotImagesRoot: imageStudioConfig.pilotImagesRoot,
+      })
     : null;
 
 const CONTENT_TYPES = {
@@ -62,7 +72,10 @@ async function serveStatic(response, pathname) {
   }
 }
 
-export function createServer({ recordStore = productionRecordStore } = {}) {
+export function createServer({
+  archive = imageArchive,
+  recordStore = productionRecordStore,
+} = {}) {
   return http.createServer(async (request, response) => {
     try {
       const url = new URL(
@@ -76,6 +89,18 @@ export function createServer({ recordStore = productionRecordStore } = {}) {
           service: "hanabit-hub",
           version: "0.1.0",
         });
+      }
+
+      if (
+        await handleImageListRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          archive,
+          sendJson,
+        })
+      ) {
+        return;
       }
 
       if (

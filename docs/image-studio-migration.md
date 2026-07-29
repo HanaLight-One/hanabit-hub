@@ -86,9 +86,21 @@ Tunnel에는 변화가 없다. 시작프로그램, 예약 작업 또는 Tunnel �
   `src/modules/images/image-studio-runtime.mjs`
 - 추가생성의 결정적 화풍·인물 선택과 compact context 작성:
   `src/modules/images/image-studio-queue-context.mjs`
+- 날짜별 이미지 목록과 안전한 이미지 ID:
+  `src/modules/images/image-archive.mjs`
 
 이 단계에서는 기존 서버·화면·Python·PowerShell·CMD를 실행 경로에서 교체하지
 않는다. 위 모듈을 임시 경로 테스트로 검증한 뒤 API와 화면을 순차적으로 옮긴다.
+
+### 이전된 읽기 전용 API
+
+```text
+GET /api/images
+```
+
+이미지 목록은 날짜, 앨범, 그룹, 파일명, 크기, 수정시각과 불투명 이미지 ID를
+반환한다. 절대경로와 상대경로는 반환하지 않는다. 원본·썸네일·다운로드·제작 기록은
+같은 이미지 ID를 사용하는 후속 API 주소로 연결한다.
 
 ## 단계
 
