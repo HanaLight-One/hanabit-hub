@@ -30,6 +30,7 @@ npm.cmd run dev
 - `npm.cmd start`: 일반 서버 실행
 - `npm.cmd run check`: JavaScript 문법과 기본 테스트 확인
 - `scripts/start-hidden.ps1`: 현재 checkout의 설정 포트로 서버를 숨김 실행
+- `scripts/restart-codex.ps1`: 허용된 긴급 제어 API가 호출하는 Codex 전용 재기동 도우미
 
 ## 설정
 
@@ -53,6 +54,8 @@ Cloudflare Tunnel, 시작프로그램 및 예약 작업을 전환하지 않습�
 - 저장소·파이프라인·예약 작업의 기존 파일 위치를 옮기지 않습니다.
 - 임의 명령 실행이나 임의 경로 접근 API를 만들지 않습니다.
 - 서버 작업은 코드에 명시된 allowlist만 허용합니다.
+- Codex 긴급 재기동은 `allowedActions`에 `restart-codex`가 있을 때만 활성화되며,
+  임의 명령·경로·인수를 받지 않습니다.
 - `.env`, 키, 토큰, 쿠키, 세션, 로그, 상태 파일을 커밋하지 않습니다.
 - 배포와 Cloudflare 변경은 별도 승인 후 진행합니다.
 

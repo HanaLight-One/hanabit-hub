@@ -37,5 +37,5 @@
     "timezone": "Asia/Seoul",
     "dayStartsAtHour": 2
   },
-  "allowedActions": []
+  "allowedActions": ["restart-codex"]
 }

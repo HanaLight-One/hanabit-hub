@@ -69,6 +69,55 @@ h1 em {
   background: rgb(17 23 29 / 84%);
 }
 
+.emergency-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 14px;
+  padding: 28px;
+  border: 1px solid #573238;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgb(83 34 44 / 36%), var(--panel));
+}
+
+.emergency-card h2 {
+  margin: 0;
+}
+
+.control-copy {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.danger-button {
+  flex: 0 0 auto;
+  min-height: 46px;
+  padding: 0 20px;
+  border: 1px solid #ff6b7a;
+  border-radius: 999px;
+  background: #ff6b7a;
+  color: #19090c;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.danger-button:hover:not(:disabled),
+.danger-button:focus-visible:not(:disabled) {
+  background: #ff8793;
+  outline: 3px solid rgb(255 107 122 / 20%);
+  outline-offset: 3px;
+}
+
+.danger-button:disabled {
+  border-color: var(--line);
+  background: #242b32;
+  color: #75808a;
+  cursor: not-allowed;
+}
+
 .status-card h2,
 .modules h2 {
   margin: 0;
@@ -153,6 +202,15 @@ h1 em {
   .status-card {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .emergency-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .danger-button {
+    width: 100%;
   }
 
   .modules {

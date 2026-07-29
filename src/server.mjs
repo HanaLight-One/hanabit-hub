@@ -2,6 +2,8 @@ import http from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { APP_ROOT, loadConfig } from "./config.mjs";
+import { createCodexControl } from "./modules/system/codex-control.mjs";
+import { handleCodexControlRoute } from "./modules/system/codex-control-route.mjs";
 import { createCreationOptionsCatalog } from "./modules/images/creation-options.mjs";
 import { handleCreationOptionsRoute } from "./modules/images/creation-options-route.mjs";
 import { createImageArchive } from "./modules/images/image-archive.mjs";
@@ -70,6 +72,11 @@ const themes =
         ...config.operations,
       })
     : null;
+const codexControl = createCodexControl({
+  enabled: config.allowedActions.includes("restart-codex"),
+  scriptPath: path.join(APP_ROOT, "scripts", "restart-codex.ps1"),
+  auditRoot: path.join(APP_ROOT, "state"),
+});
 
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -133,6 +140,7 @@ export function createServer({
   recordStore = productionRecordStore,
   thumbnails = imageThumbnails,
   themeService = themes,
+  systemControl = codexControl,
 } = {}) {
   return http.createServer(async (request, response) => {
     try {
@@ -147,6 +155,18 @@ export function createServer({
           service: "hanabit-hub",
           version: "0.1.0",
         });
+      }
+
+      if (
+        await handleCodexControlRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          control: systemControl,
+          sendJson,
+        })
+      ) {
+        return;
       }
 
       if (

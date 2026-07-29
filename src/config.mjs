@@ -49,6 +49,13 @@ function validateConfig(config) {
   if (!Array.isArray(config.allowedActions)) {
     throw new Error("allowedActions는 배열이어야 합니다.");
   }
+  const knownActions = new Set(["restart-codex"]);
+  const invalidAction = config.allowedActions.find(
+    (action) => typeof action !== "string" || !knownActions.has(action),
+  );
+  if (invalidAction !== undefined) {
+    throw new Error("allowedActions에 알 수 없는 작업이 있습니다.");
+  }
 
   if (config.operations?.timezone !== "Asia/Seoul") {
     throw new Error("현재 운영 시간대는 Asia/Seoul만 지원합니다.");

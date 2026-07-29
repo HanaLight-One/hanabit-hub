@@ -28,3 +28,22 @@ test("Image Studio 활성화 시 제작 기록 절대경로를 요구한다", ()
     /productionRecordsRoot 절대경로/,
   );
 });
+
+test("서버 제어 allowlist는 알려진 작업만 허용한다", () => {
+  assert.throws(
+    () =>
+      validateConfig({
+        host: "127.0.0.1",
+        port: 8790,
+        integrations: {
+          imageStudio: { enabled: false },
+        },
+        operations: {
+          timezone: "Asia/Seoul",
+          dayStartsAtHour: 2,
+        },
+        allowedActions: ["run-any-command"],
+      }),
+    /알 수 없는 작업/,
+  );
+});
