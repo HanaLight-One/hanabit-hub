@@ -3,6 +3,7 @@ import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif"]);
+const IMAGE_ID_PATTERN = /^[a-f0-9]{64}$/;
 const SOURCES = Object.freeze(["daily", "pilot"]);
 
 function imageId(source, relative) {
@@ -53,6 +54,9 @@ async function walkImages(root, source) {
       const id = imageId(source, relative);
       results.push(
         Object.freeze({
+          target: fullPath,
+          extension: path.extname(entry.name).toLowerCase(),
+          publicRecord: Object.freeze({
           id,
           source,
           name: entry.name,
@@ -60,6 +64,7 @@ async function walkImages(root, source) {
           size: info.size,
           ...classify(relative),
           ...publicUrls(id),
+          }),
         }),
       );
     }
@@ -109,8 +114,9 @@ export function createImageArchive({ dailyImagesRoot, pilotImagesRoot }) {
       ),
     );
 
-    const images = imageGroups
-      .flat()
+    const entries = imageGroups.flat();
+    const images = entries
+      .map((entry) => entry.publicRecord)
       .sort((left, right) => right.modifiedAt.localeCompare(left.modifiedAt));
 
     return Object.freeze({
@@ -119,5 +125,26 @@ export function createImageArchive({ dailyImagesRoot, pilotImagesRoot }) {
     });
   }
 
-  return Object.freeze({ list });
+  async function find(id) {
+    if (!IMAGE_ID_PATTERN.test(id)) {
+      throw new TypeError("imageId는 64자리 소문자 16진수여야 합니다.");
+    }
+
+    for (const source of SOURCES) {
+      const inspection = await inspectRoot(roots[source]);
+      if (!inspection.available) continue;
+      const entries = await walkImages(roots[source], source);
+      const match = entries.find((entry) => entry.publicRecord.id === id);
+      if (match) {
+        return Object.freeze({
+          target: match.target,
+          extension: match.extension,
+          record: match.publicRecord,
+        });
+      }
+    }
+    return null;
+  }
+
+  return Object.freeze({ find, list });
 }

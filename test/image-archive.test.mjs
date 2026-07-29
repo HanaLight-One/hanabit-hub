@@ -56,6 +56,22 @@ test("이미지 ID 기반 후속 API 주소를 제공한다", async (context) =>
   }
 });
 
+test("이미지 ID를 허용된 저장소 안의 파일로만 해석한다", async (context) => {
+  const { root, daily, pilot } = await fixture(context);
+  const archive = createImageArchive({
+    dailyImagesRoot: daily,
+    pilotImagesRoot: pilot,
+  });
+  const { images } = await archive.list();
+
+  const resolved = await archive.find(images[0].id);
+
+  assert.equal(resolved.record.id, images[0].id);
+  assert.equal(resolved.target.startsWith(root), true);
+  assert.equal("target" in images[0], false);
+  await assert.rejects(() => archive.find("../secret"), /64자리/);
+});
+
 test("없는 저장소는 경로 대신 안전한 준비 상태만 반환한다", async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-images-"));
   context.after(() => rm(root, { recursive: true, force: true }));

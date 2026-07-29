@@ -3,6 +3,7 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { APP_ROOT, loadConfig } from "./config.mjs";
 import { createImageArchive } from "./modules/images/image-archive.mjs";
+import { handleImageContentRoute } from "./modules/images/image-content-route.mjs";
 import { handleImageListRoute } from "./modules/images/image-list-route.mjs";
 import { handleProductionRecordRoute } from "./modules/images/production-record-route.mjs";
 import { createProductionRecordStore } from "./modules/images/production-records.mjs";
@@ -93,6 +94,18 @@ export function createServer({
 
       if (
         await handleImageListRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          archive,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
+        await handleImageContentRoute({
           request,
           response,
           pathname: url.pathname,
