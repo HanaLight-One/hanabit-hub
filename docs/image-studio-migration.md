@@ -21,6 +21,75 @@ Image Studio의 코드는 Hanabit Hub 저장소에서 관리하되 운영 데이
 
 실제 값은 `config.local.json`에만 두며 예시 파일에는 빈 문자열만 유지한다.
 
+### 조사된 런타임 의존성
+
+2026-07-29 기준 기존 코드에서 다음 운영 의존성을 확인했다. 실제 컴퓨터 경로는
+이 문서에 기록하지 않고 `config.local.json`에서만 관리한다.
+
+| 구분 | 설정 키 | 기존 사용처 |
+| --- | --- | --- |
+| 날짜별 이미지 | `dailyImagesRoot` | 이미지 목록·원본·다운로드·삭제·복원 |
+| 파일럿 이미지 | `pilotImagesRoot` | 이미지 목록·원본·다운로드·삭제·복원 |
+| 화풍 설정 | `stylesRoot` | 화풍 카드와 추가생성 컨텍스트 |
+| 운영 상태 | `stateRoot` | queue, trash, thumbnails, logs, worker lock |
+| 이미지 제작 기록 | `productionRecordsRoot` | 이미지별 제작 기록 API |
+| 오늘의 테마 | `topicPath` | Hero 테마와 수집 성공 시각 |
+| 운세 결과 | `fortuneOutputRoot` | 운세 TXT·JSON 다운로드 |
+| 게시 상태 | `fortunePublisherStateRoot` | 안전한 게시 receipt와 실행 상태 |
+| 파이프라인 | `generation.pipelineRoot` | 자산 색인과 Responses bridge |
+| 자산 색인 | `generation.assetIndexPath` | 화풍·관계·인물·이미지 앵커 |
+| 추가생성 출력 | `generation.outputRoot` | 날짜별 `extra-requests` |
+| Python | `generation.pythonExecutablePath` | Responses 작업 프로세스 |
+| Responses worker | `generation.responsesWorkerPath` | 무료 API 장면 구성과 이미지 생성 |
+| 무료 텍스트 runner | `generation.freeTextRunnerPath` | 장면 JSON 생성 |
+| Responses bridge | `generation.codexResponsesBridgePath` | ChatGPT Codex 이미지 도구 연결 |
+
+현재 추가생성은 더 이상 `codex exec`에 의존하지 않는다. 기존 설정의
+`workflowPath`와 `codexExecutablePath`는 이전 버전 호환과 조사 기록을 위해
+예시에는 남기되 새 worker의 필수 경로로 취급하지 않는다.
+
+### 코드만 복사할 때 깨지는 기능
+
+- `stateRoot`가 바뀌면 기존 큐 이력, 휴지통, 복원 원위치 정보, 썸네일 캐시,
+  활동 로그와 worker lock이 새 빈 상태로 갈라진다.
+- `dailyImagesRoot` 또는 `pilotImagesRoot`가 비어 있으면 목록, 원본 보기,
+  슬라이드, 개별·일괄 다운로드가 동작하지 않는다.
+- `stylesRoot` 또는 자산 색인이 없으면 화풍 목록과 화풍·예배당 추가생성이
+  동작하지 않는다.
+- Python, Responses worker, 무료 텍스트 runner 또는 Responses bridge가 없으면
+  큐 JSON은 만들어져도 생성 프로세스를 시작할 수 없다.
+- 테마·운세·게시 상태 경로가 없으면 해당 탭은 비어 있거나 준비되지 않은 상태로
+  표시된다.
+- `sharp`가 설치되지 않으면 썸네일 생성이 실패한다.
+- 기존 시작프로그램 CMD와 Windows 예약 작업은 이전 코드 경로를 직접
+  가리키므로 코드 복사만으로 실행 주체가 바뀌지 않는다.
+
+### 상태 보존 방식
+
+전환 전까지 기존 `stateRoot`를 그대로 외부 설정으로 참조한다. queue, trash,
+thumbnails, logs 및 worker lock을 저장소 안으로 복사하거나 Git에 추가하지
+않는다. 새 코드의 쓰기 기능을 병행 검증할 때는 운영 `stateRoot`가 아니라 별도
+임시 상태 루트를 사용한다. 최종 전환 시에도 같은 상태 루트를 연결해야 기존
+휴지통과 큐 이력이 유지된다.
+
+### 서버와 Tunnel 영향
+
+기존 운영 서버와 Cloudflare Tunnel 원점은 8787을 계속 사용한다. 이 저장소의
+기본 개발 서버는 8790이며, 코드와 설정 모듈을 추가하는 것만으로 8787 또는
+Tunnel에는 변화가 없다. 시작프로그램, 예약 작업 또는 Tunnel 원점 변경은 병행
+검증 이후 사용자 승인과 복구 절차를 마련한 별도 작업으로 수행한다.
+
+### 이번 이전에서 분리한 코드
+
+- 외부 경로 검증: `src/modules/images/image-studio-config.mjs`
+- 상태 디렉터리 파생과 준비 상태 검사:
+  `src/modules/images/image-studio-runtime.mjs`
+- 추가생성의 결정적 화풍·인물 선택과 compact context 작성:
+  `src/modules/images/image-studio-queue-context.mjs`
+
+이 단계에서는 기존 서버·화면·Python·PowerShell·CMD를 실행 경로에서 교체하지
+않는다. 위 모듈을 임시 경로 테스트로 검증한 뒤 API와 화면을 순차적으로 옮긴다.
+
 ## 단계
 
 1. 운영일과 테마 기록처럼 독립적인 기능을 허브 모듈로 먼저 구현한다.

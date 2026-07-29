@@ -36,6 +36,11 @@ Image Studio 코드 이전 계획과 외부 설정 대상은
 [docs/image-studio-migration.md](./docs/image-studio-migration.md)에 기록되어
 있습니다. 날짜별 테마는 서울 시간 오전 02시를 기준으로 운영일을 구분합니다.
 
+현재 Image Studio 이전 단계에서는 `config.local.json`에 기존 이미지·상태·
+파이프라인 경로를 기록하되 `integrations.imageStudio.enabled`를 `false`로
+유지합니다. 이는 경로 검증과 코드 분리를 위한 준비 설정이며 기존 8787 서버,
+Cloudflare Tunnel, 시작프로그램 및 예약 작업을 전환하지 않습니다.
+
 ## 안전 원칙
 
 - 저장소·파이프라인·예약 작업의 기존 파일 위치를 옮기지 않습니다.

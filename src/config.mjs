@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { validateImageStudioConfig } from "./modules/images/image-studio-config.mjs";
 
 const APP_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const LOCAL_CONFIG_PATH = path.join(APP_ROOT, "config.local.json");
@@ -62,6 +63,7 @@ function validateConfig(config) {
   }
 
   const imageStudio = config.integrations?.imageStudio;
+  validateImageStudioConfig(imageStudio);
   if (imageStudio?.enabled && !path.isAbsolute(imageStudio.productionRecordsRoot ?? "")) {
     throw new Error(
       "Image Studio를 활성화하려면 productionRecordsRoot 절대경로가 필요합니다.",

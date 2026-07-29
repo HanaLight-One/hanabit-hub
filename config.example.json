@@ -12,8 +12,17 @@
       "topicPath": "",
       "topicChannelId": "",
       "topicChannelName": "daily-theme",
+      "fortuneOutputRoot": "",
+      "fortunePublisherStateRoot": "",
       "generation": {
         "workspaceRoot": "",
+        "pipelineRoot": "",
+        "assetIndexPath": "",
+        "outputRoot": "",
+        "pythonExecutablePath": "",
+        "responsesWorkerPath": "",
+        "freeTextRunnerPath": "",
+        "codexResponsesBridgePath": "",
         "workflowPath": "",
         "codexExecutablePath": ""
       }
