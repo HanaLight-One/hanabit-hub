@@ -1,10 +1,15 @@
 [CmdletBinding()]
 param(
-  [string]$Root = (Split-Path -Parent $PSScriptRoot)
+  [string]$Root = ""
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+if ([string]::IsNullOrWhiteSpace($Root)) {
+  $scriptDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
+  $Root = Split-Path -Parent $scriptDirectory
+}
 
 $resolvedRoot = (Resolve-Path -LiteralPath $Root).Path
 $configPath = Join-Path $resolvedRoot "config.local.json"
