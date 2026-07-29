@@ -167,18 +167,42 @@
 
 .field-heading {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 18px;
 }
 
-.field-heading legend {
+.field-heading h3 {
+  margin: 0;
   color: var(--text);
   font-size: 15px;
   font-weight: 800;
 }
 
-.field-heading span { color: var(--muted); font-size: 11px; }
+.field-heading span {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.fold-button {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.fold-button:hover,
+.fold-button:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
 
 .style-grid {
   margin-top: 12px;
@@ -186,6 +210,8 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
+
+.style-grid[hidden] { display: none; }
 
 .style-card { min-width: 0; cursor: pointer; }
 

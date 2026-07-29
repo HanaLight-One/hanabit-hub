@@ -13,6 +13,7 @@ const elements = {
   characterCount: document.querySelector("#character-count"),
   styleGrid: document.querySelector("#style-grid"),
   styleStatus: document.querySelector("#style-status"),
+  styleToggle: document.querySelector("#style-toggle"),
   sourceContext: document.querySelector("#source-context"),
   sourceImage: document.querySelector("#source-image"),
   sourceName: document.querySelector("#source-name"),
@@ -32,7 +33,11 @@ const source = SAFE_SOURCE_ID.test(params.get("source") ?? "")
   : null;
 const requestedMode = params.get("mode");
 const sourceModes = document.querySelectorAll("[data-needs-source]");
-const styleLabels = new Map([["random", "자동 선택"]]);
+const styleLabels = new Map([
+  ["random", "자동 선택"],
+  ["none", "화풍 없음"],
+]);
+let connectedStyleCount = 0;
 
 function setSourceModesEnabled(enabled) {
   for (const input of sourceModes) input.disabled = !enabled;
@@ -77,13 +82,15 @@ function appendStyleOption({ id, label }, { checked = false } = {}) {
 async function loadCreationOptions() {
   elements.styleGrid.replaceChildren();
   appendStyleOption({ id: "random", label: "🎲 자동 선택" }, { checked: true });
+  appendStyleOption({ id: "none", label: "화풍 없음" });
 
   try {
     const response = await fetch("/api/images/creation-options");
     if (!response.ok) throw new Error("Creation options request failed");
     const { styles } = await response.json();
     for (const style of styles) appendStyleOption(style);
-    elements.styleStatus.textContent = `${styles.length}개 화풍 연결됨`;
+    connectedStyleCount = styles.length;
+    elements.styleStatus.textContent = `${styles.length}개 화풍 · 자동 선택`;
   } catch {
     elements.styleStatus.textContent = "화풍 목록을 불러오지 못했어요.";
   }
@@ -138,6 +145,22 @@ async function loadSourceContext() {
 setSourceModesEnabled(false);
 loadCreationOptions();
 loadSourceContext();
+
+elements.styleToggle.addEventListener("click", () => {
+  const willOpen = elements.styleGrid.hidden;
+  elements.styleGrid.hidden = !willOpen;
+  elements.styleToggle.setAttribute("aria-expanded", String(willOpen));
+  elements.styleToggle.textContent = willOpen ? "접기" : "펼치기";
+});
+
+elements.styleGrid.addEventListener("change", (event) => {
+  if (!(event.target instanceof HTMLInputElement) || event.target.name !== "style") {
+    return;
+  }
+  const selected = styleLabels.get(event.target.value) ?? "자동 선택";
+  const prefix = connectedStyleCount ? `${connectedStyleCount}개 화풍 · ` : "";
+  elements.styleStatus.textContent = `${prefix}${selected.replace(/^🎲\s*/u, "")}`;
+});
 
 elements.scene.addEventListener("input", () => {
   elements.characterCount.textContent = elements.scene.value.length;

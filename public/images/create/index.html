@@ -64,13 +64,18 @@
             </label>
           </fieldset>
 
-          <fieldset class="style-field">
+          <section class="style-field" aria-labelledby="style-title">
             <div class="field-heading">
-              <legend>화풍 선택</legend>
-              <span id="style-status">화풍을 불러오는 중이에요.</span>
+              <div>
+                <h3 id="style-title">화풍 선택</h3>
+                <span id="style-status">화풍을 불러오는 중이에요.</span>
+              </div>
+              <button id="style-toggle" class="fold-button" type="button"
+                aria-expanded="false" aria-controls="style-grid">펼치기</button>
             </div>
-            <div id="style-grid" class="style-grid" aria-live="polite"></div>
-          </fieldset>
+            <div id="style-grid" class="style-grid" role="radiogroup"
+              aria-labelledby="style-title" aria-live="polite" hidden></div>
+          </section>
 
           <label class="scene-field">
             <span>원하는 장면</span>

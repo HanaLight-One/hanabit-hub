@@ -26,6 +26,8 @@ test("/images/create가 안전한 추가생성 초안 화면을 제공한다", a
     assert.match(body, /추가 이미지 생성실 · Hanabit Hub/);
     assert.match(body, /id="creation-form"/);
     assert.match(body, /id="style-grid"/);
+    assert.match(body, /id="style-toggle"/);
+    assert.match(body, /aria-expanded="false"/);
     assert.match(body, /생성 대기열 연결 준비 중/);
     assert.match(body, /disabled/);
     assert.equal(body.includes("<form action="), false);
@@ -44,6 +46,7 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.equal(style.status, 200);
     assert.match(scriptBody, /fetch\(`\/api\/images\//);
     assert.match(scriptBody, /\/api\/images\/creation-options/);
+    assert.match(scriptBody, /화풍 없음/);
     assert.equal(scriptBody.includes('method: "POST"'), false);
     assert.equal(scriptBody.includes('method: "PUT"'), false);
     assert.equal(scriptBody.includes('method: "DELETE"'), false);
