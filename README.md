@@ -20,11 +20,16 @@ npm.cmd run dev
 기본 개발 주소는 `http://127.0.0.1:8790`입니다. 기존 운영 서버의 8787
 포트와 Cloudflare 연결은 전환 승인 전까지 유지합니다.
 
+검증된 커밋만 실행하는 안정 운영본은 별도 checkout과 8791 포트를 사용합니다.
+구성과 배포·복구 절차는
+[docs/live-runtime.md](./docs/live-runtime.md)를 참고하세요.
+
 ## 명령
 
 - `npm.cmd run dev`: 파일 변경을 감지하는 개발 서버
 - `npm.cmd start`: 일반 서버 실행
 - `npm.cmd run check`: JavaScript 문법과 기본 테스트 확인
+- `scripts/start-hidden.ps1`: 현재 checkout의 설정 포트로 서버를 숨김 실행
 
 ## 설정
 
