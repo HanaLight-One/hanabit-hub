@@ -34,7 +34,9 @@ Git에 포함되지 않습니다. 새 설정 항목을 추가할 때는 실제 �
 
 Image Studio 코드 이전 계획과 외부 설정 대상은
 [docs/image-studio-migration.md](./docs/image-studio-migration.md)에 기록되어
-있습니다. 날짜별 테마는 서울 시간 오전 02시를 기준으로 운영일을 구분합니다.
+있습니다. 날짜별 테마는 서울 시간 오전 02시를 기준으로 운영일을 구분하며,
+`/images`의 전체 보기에는 현재 운영일 테마, 날짜별 보기에는 보관된 그날의
+테마를 표시합니다.
 
 현재 Image Studio 이전 단계에서는 `config.local.json`에 기존 이미지·상태·
 파이프라인 경로를 기록하되 `integrations.imageStudio.enabled`를 `false`로

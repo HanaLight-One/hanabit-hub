@@ -5,6 +5,10 @@ const elements = {
   imageCount: document.querySelector("#image-count"),
   dateCount: document.querySelector("#date-count"),
   dateFilter: document.querySelector("#date-filter"),
+  themeLabel: document.querySelector("#theme-label"),
+  themeTitle: document.querySelector("#theme-title"),
+  themeDate: document.querySelector("#theme-date"),
+  themeText: document.querySelector("#theme-text"),
   panel: document.querySelector("#detail-panel"),
   backdrop: document.querySelector("#panel-backdrop"),
   close: document.querySelector("#panel-close"),
@@ -22,6 +26,7 @@ const state = {
   selectedDate: "all",
   selectedImageId: null,
   lastFocused: null,
+  themeRequest: 0,
 };
 
 function formatBytes(bytes) {
@@ -112,6 +117,39 @@ function renderFilters() {
   elements.dateCount.textContent = dates.length.toLocaleString("ko-KR");
 }
 
+async function loadTheme() {
+  const requestId = ++state.themeRequest;
+  const isToday = state.selectedDate === "all";
+  const selectedDate = isToday ? null : state.selectedDate;
+  elements.themeLabel.textContent = isToday ? "TODAY'S THEME" : "THEME ARCHIVE";
+  elements.themeTitle.textContent = isToday ? "오늘의 테마" : "그날의 테마";
+  elements.themeDate.textContent = selectedDate ?? "운영일 확인 중";
+  elements.themeText.textContent = "테마 기록을 확인하는 중이에요.";
+
+  if (selectedDate === "undated") {
+    elements.themeDate.textContent = "날짜 없음";
+    elements.themeText.textContent = "날짜가 없는 이미지에는 테마 기록을 연결할 수 없어요.";
+    return;
+  }
+
+  try {
+    const query = selectedDate ? `?date=${encodeURIComponent(selectedDate)}` : "";
+    const response = await fetch(`/api/themes${query}`);
+    if (!response.ok) throw new Error("Theme request failed");
+    const payload = await response.json();
+    if (requestId !== state.themeRequest) return;
+
+    elements.themeDate.textContent = payload.date;
+    elements.themeText.textContent = payload.available
+      ? payload.theme.theme
+      : "이 날짜의 테마 기록은 아직 없어요.";
+  } catch {
+    if (requestId !== state.themeRequest) return;
+    elements.themeDate.textContent = selectedDate ?? "—";
+    elements.themeText.textContent = "테마 기록을 불러오지 못했어요.";
+  }
+}
+
 async function loadProductionRecord(image) {
   const requestedImageId = image.id;
   elements.productionRecord.replaceChildren();
@@ -180,6 +218,7 @@ function closePanel() {
 elements.dateFilter.addEventListener("change", () => {
   state.selectedDate = elements.dateFilter.value;
   renderGrid();
+  loadTheme();
 });
 elements.close.addEventListener("click", closePanel);
 elements.backdrop.addEventListener("click", closePanel);
@@ -200,10 +239,12 @@ try {
     sourceCount > 0 ? ` ${sourceCount}개 저장소 연결됨` : " 저장소 연결 준비 중";
   renderFilters();
   renderGrid();
+  loadTheme();
 } catch {
   elements.message.textContent =
     "이미지 모듈을 아직 실제 저장소에 연결하지 않았어요. 설정 후 이곳에 표시됩니다.";
   elements.status.lastChild.textContent = " 이미지 모듈 준비 중";
   elements.imageCount.textContent = "0";
   elements.dateCount.textContent = "0";
+  loadTheme();
 }

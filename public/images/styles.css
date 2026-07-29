@@ -165,6 +165,52 @@ h1 em { color: var(--accent); font-style: normal; }
   color: var(--text);
 }
 
+.theme-card {
+  position: relative;
+  margin-bottom: 28px;
+  padding: clamp(22px, 4vw, 36px);
+  overflow: hidden;
+  border: 1px solid rgb(216 255 82 / 28%);
+  border-radius: 20px;
+  background:
+    linear-gradient(120deg, rgb(216 255 82 / 9%), transparent 55%),
+    var(--panel);
+}
+
+.theme-card::after {
+  content: "✦";
+  position: absolute;
+  right: clamp(20px, 5vw, 56px);
+  bottom: -28px;
+  color: rgb(216 255 82 / 8%);
+  font-size: clamp(100px, 16vw, 190px);
+  line-height: 1;
+  pointer-events: none;
+}
+
+.theme-heading {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.theme-heading h3 { margin: 0; font-size: 25px; }
+.theme-heading time { color: var(--muted); font-size: 13px; }
+
+.theme-text {
+  position: relative;
+  z-index: 1;
+  max-width: 900px;
+  margin: 22px 0 0;
+  white-space: pre-wrap;
+  color: var(--text);
+  font-size: clamp(16px, 2vw, 20px);
+  line-height: 1.75;
+}
+
 .archive-message {
   padding: 28px;
   border: 1px dashed var(--line);
@@ -318,6 +364,8 @@ h1 em { color: var(--accent); font-style: normal; }
   .summary { margin-top: 34px; }
   .toolbar { align-items: stretch; flex-direction: column; }
   .date-filter select { width: 100%; }
+  .theme-heading { display: block; }
+  .theme-heading time { display: block; margin-top: 12px; }
   .image-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .card-copy { padding: 12px; }
   .detail-panel {

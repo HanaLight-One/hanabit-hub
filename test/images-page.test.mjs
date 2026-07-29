@@ -27,6 +27,8 @@ test("/images가 읽기 전용 이미지 화면을 제공한다", async () => {
     assert.match(body, /id="detail-panel"/);
     assert.match(body, /aria-hidden="true" inert/);
     assert.match(body, /id="date-filter"/);
+    assert.match(body, /id="theme-card"/);
+    assert.match(body, /오늘의 테마/);
     assert.equal(body.includes("삭제"), false);
   });
 });

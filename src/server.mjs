@@ -10,6 +10,10 @@ import { handleImageThumbnailRoute } from "./modules/images/image-thumbnail-rout
 import { createImageThumbnailService } from "./modules/images/image-thumbnails.mjs";
 import { handleProductionRecordRoute } from "./modules/images/production-record-route.mjs";
 import { createProductionRecordStore } from "./modules/images/production-records.mjs";
+import { createThemeHistory } from "./modules/images/theme-history.mjs";
+import { handleThemeRoute } from "./modules/images/theme-route.mjs";
+import { createThemeService } from "./modules/images/theme-service.mjs";
+import { createTopicThemeSource } from "./modules/images/topic-theme-source.mjs";
 
 const PUBLIC_ROOT = path.join(APP_ROOT, "public");
 const config = await loadConfig();
@@ -31,6 +35,30 @@ const imageThumbnails =
     ? createImageThumbnailService({
         archive: imageArchive,
         cacheRoot: path.join(imageStudioConfig.stateRoot, "thumbnails", "hub-v1"),
+      })
+    : null;
+const themeHistory =
+  imageStudioConfig?.enabled && imageStudioConfig.stateRoot
+    ? createThemeHistory({
+        root: path.join(imageStudioConfig.stateRoot, "themes"),
+        ...config.operations,
+      })
+    : null;
+const topicThemeSource =
+  themeHistory && imageStudioConfig.topicPath
+    ? createTopicThemeSource({
+        topicPath: imageStudioConfig.topicPath,
+        history: themeHistory,
+        channelId: imageStudioConfig.topicChannelId,
+        channelName: imageStudioConfig.topicChannelName,
+      })
+    : null;
+const themes =
+  themeHistory && topicThemeSource
+    ? createThemeService({
+        history: themeHistory,
+        source: topicThemeSource,
+        ...config.operations,
       })
     : null;
 
@@ -92,6 +120,7 @@ export function createServer({
   archive = imageArchive,
   recordStore = productionRecordStore,
   thumbnails = imageThumbnails,
+  themeService = themes,
 } = {}) {
   return http.createServer(async (request, response) => {
     try {
@@ -106,6 +135,18 @@ export function createServer({
           service: "hanabit-hub",
           version: "0.1.0",
         });
+      }
+
+      if (
+        await handleThemeRoute({
+          request,
+          response,
+          url,
+          service: themeService,
+          sendJson,
+        })
+      ) {
+        return;
       }
 
       if (
