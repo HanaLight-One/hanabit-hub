@@ -40,6 +40,10 @@ const CONTENT_TYPES = {
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
 };
+const PAGE_ROUTES = Object.freeze({
+  "/images": "images/index.html",
+  "/images/": "images/index.html",
+});
 
 function sendJson(response, statusCode, payload) {
   response.writeHead(statusCode, {
@@ -51,7 +55,8 @@ function sendJson(response, statusCode, payload) {
 }
 
 function resolvePublicFile(pathname) {
-  const relative = pathname === "/" ? "index.html" : pathname.slice(1);
+  const relative =
+    pathname === "/" ? "index.html" : PAGE_ROUTES[pathname] ?? pathname.slice(1);
   if (!relative || relative.includes("\0")) return null;
 
   const target = path.resolve(PUBLIC_ROOT, relative);

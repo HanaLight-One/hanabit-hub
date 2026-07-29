@@ -105,7 +105,8 @@ h1 em {
   margin-top: 14px;
 }
 
-.modules article {
+.modules article,
+.module-link {
   min-height: 190px;
   padding: 26px;
   border: 1px solid var(--line);
@@ -113,7 +114,21 @@ h1 em {
   background: var(--panel);
 }
 
-.modules article > span {
+.module-link {
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.module-link:hover,
+.module-link:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+  transform: translateY(-2px);
+}
+
+.modules article > span,
+.module-link > span {
   color: var(--accent);
   font-size: 12px;
   font-weight: 800;
@@ -144,7 +159,8 @@ h1 em {
     grid-template-columns: 1fr;
   }
 
-  .modules article {
+  .modules article,
+  .module-link {
     min-height: 150px;
   }
 

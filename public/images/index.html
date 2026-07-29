@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#090c10" />
+    <meta name="description" content="하나빛 허브의 읽기 전용 이미지 아카이브" />
+    <title>이미지 아카이브 · Hanabit Hub</title>
+    <link rel="stylesheet" href="/images/styles.css" />
+    <script src="/images/app.js" type="module"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="하나빛 허브 홈">
+        <span class="brand-mark">H</span>
+        <span>HANABIT <b>IMAGES</b></span>
+      </a>
+      <p id="archive-status" class="connection" aria-live="polite">
+        <span></span> 이미지 저장소 확인 중
+      </p>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <p class="eyebrow">READ-ONLY ARCHIVE</p>
+          <h1>이미지의<br /><em>빛나는 기록.</em></h1>
+          <p class="intro">
+            기존 저장소의 파일을 이동하지 않고 안전하게 읽어옵니다.
+            카드를 누르면 제작 기록과 원본 보기를 확인할 수 있어요.
+          </p>
+        </div>
+        <div class="summary" aria-label="이미지 요약">
+          <div><strong id="image-count">—</strong><span>이미지</span></div>
+          <div><strong id="date-count">—</strong><span>날짜</span></div>
+        </div>
+      </section>
+
+      <section class="archive-section" aria-labelledby="archive-title">
+        <div class="toolbar">
+          <div>
+            <p class="section-label">COLLECTION</p>
+            <h2 id="archive-title">날짜별 이미지</h2>
+          </div>
+          <label class="date-filter">
+            <span>날짜 선택</span>
+            <select id="date-filter">
+              <option value="all">모든 날짜</option>
+            </select>
+          </label>
+        </div>
+
+        <p id="archive-message" class="archive-message" aria-live="polite">
+          이미지를 불러오는 중이에요.
+        </p>
+        <div id="image-grid" class="image-grid" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <button id="panel-backdrop" class="panel-backdrop" type="button" hidden
+      aria-label="제작 기록 닫기"></button>
+    <aside id="detail-panel" class="detail-panel" aria-labelledby="detail-title"
+      aria-hidden="true" inert>
+      <div class="panel-head">
+        <div>
+          <p class="section-label">PRODUCTION RECORD</p>
+          <h2 id="detail-title">제작 기록</h2>
+        </div>
+        <button id="panel-close" class="icon-button" type="button" aria-label="제작 기록 닫기">×</button>
+      </div>
+      <img id="detail-image" class="detail-image" alt="" />
+      <dl id="basic-record" class="record-list"></dl>
+      <section class="generated-record" aria-labelledby="generated-record-title">
+        <h3 id="generated-record-title">생성 정보</h3>
+        <p id="record-message">제작 기록을 확인하는 중이에요.</p>
+        <dl id="production-record" class="record-list"></dl>
+      </section>
+      <div class="panel-actions">
+        <a id="original-link" class="secondary-action" target="_blank" rel="noreferrer">원본 보기</a>
+        <a id="download-link" class="primary-action">다운로드</a>
+      </div>
+    </aside>
+  </body>
+</html>
