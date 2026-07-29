@@ -4,6 +4,7 @@ import path from "node:path";
 import { APP_ROOT, loadConfig } from "./config.mjs";
 import { createImageArchive } from "./modules/images/image-archive.mjs";
 import { handleImageContentRoute } from "./modules/images/image-content-route.mjs";
+import { handleImageDetailRoute } from "./modules/images/image-detail-route.mjs";
 import { handleImageDownloadRoute } from "./modules/images/image-download-route.mjs";
 import { handleImageListRoute } from "./modules/images/image-list-route.mjs";
 import { handleImageThumbnailRoute } from "./modules/images/image-thumbnail-route.mjs";
@@ -153,6 +154,18 @@ export function createServer({
 
       if (
         await handleImageListRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          archive,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
+        await handleImageDetailRoute({
           request,
           response,
           pathname: url.pathname,

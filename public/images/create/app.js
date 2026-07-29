@@ -4,13 +4,19 @@ const MODE_LABELS = Object.freeze({
   "same-characters": "등장인물 유지",
   "same-style": "같은 화풍",
 });
-const SAFE_SOURCE_ID = /^[A-Za-z0-9_-]{1,512}$/;
+const SAFE_SOURCE_ID = /^[a-f0-9]{64}$/;
 
 const elements = {
   form: document.querySelector("#creation-form"),
   sourceStatus: document.querySelector("#source-status"),
   scene: document.querySelector("#scene-request"),
   characterCount: document.querySelector("#character-count"),
+  sourceContext: document.querySelector("#source-context"),
+  sourceImage: document.querySelector("#source-image"),
+  sourceName: document.querySelector("#source-name"),
+  sourceMeta: document.querySelector("#source-meta"),
+  sourceRecord: document.querySelector("#source-record"),
+  sourceMessage: document.querySelector("#source-message"),
   previewSource: document.querySelector("#preview-source"),
   previewMode: document.querySelector("#preview-mode"),
   previewScene: document.querySelector("#preview-scene"),
@@ -24,16 +30,77 @@ const source = SAFE_SOURCE_ID.test(params.get("source") ?? "")
 const requestedMode = params.get("mode");
 const sourceModes = document.querySelectorAll("[data-needs-source]");
 
-for (const input of sourceModes) input.disabled = !source;
-if (source && requestedMode in MODE_LABELS) {
+function setSourceModesEnabled(enabled) {
+  for (const input of sourceModes) input.disabled = !enabled;
+}
+
+function selectRequestedMode() {
+  if (!source || !(requestedMode in MODE_LABELS)) return;
   const requestedInput = document.querySelector(
     `input[name="mode"][value="${requestedMode}"]`,
   );
   if (requestedInput && !requestedInput.disabled) requestedInput.checked = true;
 }
 
-elements.sourceStatus.textContent = source ? "이미지 연결됨" : "새 요청";
-elements.previewSource.textContent = source ? "선택한 이미지" : "없음";
+function appendSourceRecord(rows) {
+  elements.sourceRecord.replaceChildren();
+  for (const [label, value] of rows) {
+    const term = document.createElement("dt");
+    const description = document.createElement("dd");
+    term.textContent = label;
+    description.textContent = value;
+    elements.sourceRecord.append(term, description);
+  }
+}
+
+async function loadSourceContext() {
+  if (!source) {
+    elements.sourceStatus.textContent = "새 요청";
+    elements.previewSource.textContent = "없음";
+    return;
+  }
+
+  elements.sourceContext.hidden = false;
+  elements.sourceStatus.textContent = "연결 확인 중";
+  elements.previewSource.textContent = "확인 중";
+
+  try {
+    const imageResponse = await fetch(`/api/images/${encodeURIComponent(source)}`);
+    if (!imageResponse.ok) throw new Error("Source image request failed");
+    const { image } = await imageResponse.json();
+    elements.sourceImage.src = image.thumbnailUrl;
+    elements.sourceImage.alt = `${image.name} 미리보기`;
+    elements.sourceName.textContent = image.name;
+    elements.sourceMeta.textContent = `${image.date ?? "날짜 없음"} · ${image.group}`;
+    elements.sourceStatus.textContent = "이미지 연결됨";
+    elements.previewSource.textContent = image.name;
+
+    const recordResponse = await fetch(image.productionRecordUrl);
+    if (recordResponse.status === 404) {
+      elements.sourceMessage.textContent =
+        "구조화된 제작 기록이 없어 유지 모드는 아직 사용할 수 없어요.";
+      return;
+    }
+    if (!recordResponse.ok) throw new Error("Production record request failed");
+    const { record } = await recordResponse.json();
+    appendSourceRecord([
+      ["등장인물", record.characters.join(", ")],
+      ["관계", record.relationGroup],
+      ["화풍", record.style],
+    ]);
+    elements.sourceMessage.textContent = "제작 기록을 안전하게 불러왔어요.";
+    setSourceModesEnabled(true);
+    selectRequestedMode();
+  } catch {
+    elements.sourceStatus.textContent = "연결 실패";
+    elements.previewSource.textContent = "불러오지 못함";
+    elements.sourceMeta.textContent = "선택한 이미지를 확인할 수 없어요.";
+    elements.sourceMessage.textContent = "새 장면 모드로 다시 시작해주세요.";
+  }
+}
+
+setSourceModesEnabled(false);
+loadSourceContext();
 
 elements.scene.addEventListener("input", () => {
   elements.characterCount.textContent = elements.scene.value.length;

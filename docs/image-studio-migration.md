@@ -96,6 +96,7 @@ Tunnel에는 변화가 없다. 시작프로그램, 예약 작업 또는 Tunnel �
 
 ```text
 GET /api/images
+GET /api/images/:imageId
 GET /api/images/:imageId/content
 GET /api/images/:imageId/thumbnail
 GET /api/images/:imageId/download
@@ -127,8 +128,10 @@ GET /api/themes?date=YYYY-MM-DD
 
 `/images/create`는 추가생성 요청을 구성하는 첫 화면이다. 이미지 아카이브 또는
 개별 이미지 상세에서 진입할 수 있고, 새 장면·같은 조합·등장인물 유지·같은 화풍
-모드를 제공한다. 현재 단계에서는 브라우저 안의 초안 미리보기만 갱신하며 생성
-대기열, Python 및 기존 자동화에는 요청을 전송하지 않는다.
+모드를 제공한다. 연결된 이미지의 안전한 메타데이터와 제작 기록을 읽어오며,
+구조화된 제작 기록이 있을 때만 기록 의존 모드를 활성화한다. 현재 단계에서는
+브라우저 안의 초안 미리보기만 갱신하며 생성 대기열, Python 및 기존 자동화에는
+요청을 전송하지 않는다.
 
 ## 단계
 

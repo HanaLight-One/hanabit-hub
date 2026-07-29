@@ -41,7 +41,10 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
 
     assert.equal(script.status, 200);
     assert.equal(style.status, 200);
-    assert.equal(scriptBody.includes("fetch("), false);
+    assert.match(scriptBody, /fetch\(`\/api\/images\//);
+    assert.equal(scriptBody.includes('method: "POST"'), false);
+    assert.equal(scriptBody.includes('method: "PUT"'), false);
+    assert.equal(scriptBody.includes('method: "DELETE"'), false);
     assert.equal(scriptBody.includes("localStorage"), false);
     assert.match(scriptBody, /SAFE_SOURCE_ID/);
   });
