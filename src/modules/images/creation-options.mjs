@@ -17,6 +17,18 @@ function normalizeStyle(style) {
   return Object.freeze({ id, label: id });
 }
 
+function normalizeCharacter(character, fallbackId) {
+  const id = String(character?.name ?? fallbackId ?? "").trim();
+  if (
+    !id ||
+    id.length > MAX_STYLE_TEXT_LENGTH ||
+    CONTROL_CHARACTERS.test(id)
+  ) {
+    return null;
+  }
+  return Object.freeze({ id, label: id });
+}
+
 export function createCreationOptionsCatalog({ assetIndexPath }) {
   if (!path.isAbsolute(assetIndexPath ?? "")) {
     throw new TypeError("자산 색인 경로는 절대경로여야 합니다.");
@@ -37,8 +49,24 @@ export function createCreationOptionsCatalog({ assetIndexPath }) {
       .map(normalizeStyle)
       .filter((style) => style && !seen.has(style.id) && seen.add(style.id))
       .sort((left, right) => left.label.localeCompare(right.label, "ko"));
+    const rawCharacters = Array.isArray(index.characters)
+      ? index.characters.map((character) => [character?.name, character])
+      : Object.entries(index.characters ?? {});
+    const seenCharacters = new Set();
+    const characters = rawCharacters
+      .map(([key, character]) => normalizeCharacter(character, key))
+      .filter(
+        (character) =>
+          character &&
+          !seenCharacters.has(character.id) &&
+          seenCharacters.add(character.id),
+      )
+      .sort((left, right) => left.label.localeCompare(right.label, "ko"));
 
-    return Object.freeze({ styles: Object.freeze(styles) });
+    return Object.freeze({
+      styles: Object.freeze(styles),
+      characters: Object.freeze(characters),
+    });
   }
 
   return Object.freeze({ list });

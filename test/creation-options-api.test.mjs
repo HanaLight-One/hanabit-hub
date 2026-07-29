@@ -20,7 +20,10 @@ async function withServer(creationOptionsCatalog, callback) {
 test("추가생성 옵션 API가 화풍 목록을 제공한다", async () => {
   const catalog = {
     async list() {
-      return { styles: [{ id: "고딕", label: "고딕" }] };
+      return {
+        styles: [{ id: "고딕", label: "고딕" }],
+        characters: [{ id: "헤일라", label: "헤일라" }],
+      };
     },
   };
 
@@ -30,6 +33,7 @@ test("추가생성 옵션 API가 화풍 목록을 제공한다", async () => {
 
     assert.equal(response.status, 200);
     assert.deepEqual(body.styles, [{ id: "고딕", label: "고딕" }]);
+    assert.deepEqual(body.characters, [{ id: "헤일라", label: "헤일라" }]);
   });
 });
 

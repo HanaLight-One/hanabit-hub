@@ -26,6 +26,18 @@ test("자산 색인에서 안전한 화풍 이름만 제공한다", async (conte
           content: "another internal prompt",
         },
       ],
+      characters: {
+        헤일라: {
+          name: "헤일라",
+          anchor_text: "internal identity prompt",
+          image_anchor_path: path.join(root, "heila.png"),
+        },
+        리벨라: {
+          name: "리벨라",
+          anchor_text: "another internal identity prompt",
+          image_anchor_path: path.join(root, "rivella.png"),
+        },
+      },
     }),
   );
   const catalog = createCreationOptionsCatalog({ assetIndexPath });
@@ -37,9 +49,14 @@ test("자산 색인에서 안전한 화풍 이름만 제공한다", async (conte
     { id: "고딕", label: "고딕" },
     { id: "말랑", label: "말랑" },
   ]);
+  assert.deepEqual(result.characters, [
+    { id: "리벨라", label: "리벨라" },
+    { id: "헤일라", label: "헤일라" },
+  ]);
   assert.equal(serialized.includes(root), false);
   assert.equal(serialized.includes("filename"), false);
   assert.equal(serialized.includes("content"), false);
+  assert.equal(serialized.includes("anchor_text"), false);
 });
 
 test("상대 자산 색인 경로를 거부한다", () => {

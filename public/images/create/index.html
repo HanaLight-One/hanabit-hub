@@ -64,6 +64,19 @@
             </label>
           </fieldset>
 
+          <section class="character-field" aria-labelledby="character-title">
+            <div class="field-heading">
+              <div>
+                <h3 id="character-title">등장인물 선택</h3>
+                <span id="character-status">인물을 불러오는 중이에요.</span>
+              </div>
+              <button id="character-toggle" class="fold-button" type="button"
+                aria-expanded="false" aria-controls="character-grid">펼치기</button>
+            </div>
+            <div id="character-grid" class="option-grid character-grid"
+              aria-labelledby="character-title" aria-live="polite" hidden></div>
+          </section>
+
           <section class="style-field" aria-labelledby="style-title">
             <div class="field-heading">
               <div>
@@ -73,7 +86,7 @@
               <button id="style-toggle" class="fold-button" type="button"
                 aria-expanded="false" aria-controls="style-grid">펼치기</button>
             </div>
-            <div id="style-grid" class="style-grid" role="radiogroup"
+            <div id="style-grid" class="option-grid style-grid" role="radiogroup"
               aria-labelledby="style-title" aria-live="polite" hidden></div>
           </section>
 
@@ -113,6 +126,8 @@
             <dd id="preview-source">없음</dd>
             <dt>생성 방식</dt>
             <dd id="preview-mode">새 장면</dd>
+            <dt>등장인물</dt>
+            <dd id="preview-characters">자동 선택</dd>
             <dt>화풍</dt>
             <dd id="preview-style">자동 선택</dd>
             <dt>장면 요청</dt>
