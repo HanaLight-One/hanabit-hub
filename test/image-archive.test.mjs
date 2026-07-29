@@ -47,7 +47,10 @@ test("이미지 ID 기반 후속 API 주소를 제공한다", async (context) =>
   const { images } = await archive.list();
   for (const image of images) {
     assert.equal(image.contentUrl, `/api/images/${image.id}/content`);
-    assert.equal(image.thumbnailUrl, `/api/images/${image.id}/thumbnail`);
+    assert.match(
+      image.thumbnailUrl,
+      new RegExp(`^/api/images/${image.id}/thumbnail\\?v=\\d+$`),
+    );
     assert.equal(image.downloadUrl, `/api/images/${image.id}/download`);
     assert.equal(
       image.productionRecordUrl,

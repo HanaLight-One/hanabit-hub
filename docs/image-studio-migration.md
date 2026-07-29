@@ -97,6 +97,7 @@ Tunnel에는 변화가 없다. 시작프로그램, 예약 작업 또는 Tunnel �
 ```text
 GET /api/images
 GET /api/images/:imageId/content
+GET /api/images/:imageId/thumbnail
 GET /api/images/:imageId/download
 ```
 
@@ -105,7 +106,8 @@ GET /api/images/:imageId/download
 같은 이미지 ID를 사용하는 후속 API 주소로 연결한다. 원본 API는 이 ID를 허용된
 이미지 저장소 안에서만 해석하고 파일 시스템 경로를 응답에 포함하지 않는다.
 다운로드 API는 같은 경계를 사용하며 안전한 첨부 파일명과 `no-store` 캐시 정책을
-적용한다.
+적용한다. 썸네일 API는 원본을 변경하지 않고 `stateRoot/thumbnails/hub-v1`
+아래에 최대 480px WebP 캐시를 생성하며 수정시각 버전이 포함된 URL을 사용한다.
 
 ## 단계
 

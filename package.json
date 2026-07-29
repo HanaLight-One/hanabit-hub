@@ -10,5 +10,8 @@
     "dev": "node --watch src/server.mjs",
     "start": "node src/server.mjs",
     "check": "node --check src/server.mjs && node --check src/config.mjs && node --test"
+  },
+  "dependencies": {
+    "sharp": "^0.35.3"
   }
 }

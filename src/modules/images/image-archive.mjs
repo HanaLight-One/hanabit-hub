@@ -10,11 +10,11 @@ function imageId(source, relative) {
   return crypto.createHash("sha256").update(`${source}:${relative}`).digest("hex");
 }
 
-function publicUrls(id) {
+function publicUrls(id, modifiedAtMs) {
   const encodedId = encodeURIComponent(id);
   return Object.freeze({
     contentUrl: `/api/images/${encodedId}/content`,
-    thumbnailUrl: `/api/images/${encodedId}/thumbnail`,
+    thumbnailUrl: `/api/images/${encodedId}/thumbnail?v=${Math.trunc(modifiedAtMs)}`,
     downloadUrl: `/api/images/${encodedId}/download`,
     productionRecordUrl: `/api/images/${encodedId}/production-record`,
   });
@@ -63,7 +63,7 @@ async function walkImages(root, source) {
           modifiedAt: info.mtime.toISOString(),
           size: info.size,
           ...classify(relative),
-          ...publicUrls(id),
+          ...publicUrls(id, info.mtimeMs),
           }),
         }),
       );

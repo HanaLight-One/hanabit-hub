@@ -6,6 +6,8 @@ import { createImageArchive } from "./modules/images/image-archive.mjs";
 import { handleImageContentRoute } from "./modules/images/image-content-route.mjs";
 import { handleImageDownloadRoute } from "./modules/images/image-download-route.mjs";
 import { handleImageListRoute } from "./modules/images/image-list-route.mjs";
+import { handleImageThumbnailRoute } from "./modules/images/image-thumbnail-route.mjs";
+import { createImageThumbnailService } from "./modules/images/image-thumbnails.mjs";
 import { handleProductionRecordRoute } from "./modules/images/production-record-route.mjs";
 import { createProductionRecordStore } from "./modules/images/production-records.mjs";
 
@@ -22,6 +24,13 @@ const imageArchive =
     ? createImageArchive({
         dailyImagesRoot: imageStudioConfig.dailyImagesRoot,
         pilotImagesRoot: imageStudioConfig.pilotImagesRoot,
+      })
+    : null;
+const imageThumbnails =
+  imageArchive && imageStudioConfig.stateRoot
+    ? createImageThumbnailService({
+        archive: imageArchive,
+        cacheRoot: path.join(imageStudioConfig.stateRoot, "thumbnails", "hub-v1"),
       })
     : null;
 
@@ -77,6 +86,7 @@ async function serveStatic(response, pathname) {
 export function createServer({
   archive = imageArchive,
   recordStore = productionRecordStore,
+  thumbnails = imageThumbnails,
 } = {}) {
   return http.createServer(async (request, response) => {
     try {
@@ -111,6 +121,18 @@ export function createServer({
           response,
           pathname: url.pathname,
           archive,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
+        await handleImageThumbnailRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          thumbnails,
           sendJson,
         })
       ) {
