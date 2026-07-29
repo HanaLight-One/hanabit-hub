@@ -1,6 +1,12 @@
 import { readFile, stat } from "node:fs/promises";
 
 const MAX_TOPIC_FILE_BYTES = 64 * 1024;
+const TRAILING_DISCORD_LEARN_MORE =
+  /\s*(?:\*Learn more:\*|_Learn more:_)\s*https?:\/\/(?:www\.)?discord\.com\/channels\/[^\s]+\s*$/iu;
+
+export function normalizeTopicTheme(value) {
+  return String(value ?? "").replace(TRAILING_DISCORD_LEARN_MORE, "").trim();
+}
 
 function matchesExpectedChannel(payload, { channelId, channelName }) {
   if (channelId && payload.channel_id !== channelId) return false;
@@ -25,7 +31,7 @@ export function createTopicThemeSource({
       const payload = JSON.parse(await readFile(topicPath, "utf8"));
       if (!matchesExpectedChannel(payload, { channelId, channelName })) return null;
 
-      const theme = String(payload.topic ?? "").trim();
+      const theme = normalizeTopicTheme(payload.topic);
       const observedAt = new Date(payload.fetched_at);
       if (!theme || Number.isNaN(observedAt.getTime())) return null;
 
