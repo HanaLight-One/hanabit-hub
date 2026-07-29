@@ -39,9 +39,12 @@ test("이미지 화면의 스크립트와 스타일을 제공한다", async () =
       fetch(`${baseUrl}/images/app.js`),
       fetch(`${baseUrl}/images/styles.css`),
     ]);
+    const scriptBody = await script.text();
 
     assert.equal(script.status, 200);
     assert.match(script.headers.get("content-type"), /javascript/);
+    assert.match(scriptBody, /currentOperationalDate/);
+    assert.match(scriptBody, /· 오늘/);
     assert.equal(style.status, 200);
     assert.match(style.headers.get("content-type"), /text\/css/);
   });

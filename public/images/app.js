@@ -24,6 +24,7 @@ const elements = {
 const state = {
   images: [],
   selectedDate: "all",
+  currentOperationalDate: null,
   selectedImageId: null,
   lastFocused: null,
   themeRequest: 0,
@@ -106,15 +107,31 @@ function renderGrid() {
 }
 
 function renderFilters() {
-  const dates = [...new Set(state.images.map((image) => image.date ?? "undated"))]
+  const dateSet = new Set(
+    state.images
+      .map((image) => image.date)
+      .filter(Boolean),
+  );
+  if (state.currentOperationalDate) dateSet.add(state.currentOperationalDate);
+  const dates = [...dateSet]
+    .filter((date) => date !== state.currentOperationalDate)
     .sort()
     .reverse();
+  if (state.currentOperationalDate) dates.unshift(state.currentOperationalDate);
+  const hasUndated = state.images.some((image) => !image.date);
+
   elements.dateFilter.replaceChildren(new Option("모든 날짜", "all"));
   for (const date of dates) {
-    elements.dateFilter.add(new Option(date === "undated" ? "날짜 없음" : date, date));
+    const label =
+      date === state.currentOperationalDate ? `${date} · 오늘` : date;
+    elements.dateFilter.add(new Option(label, date));
   }
+  if (hasUndated) elements.dateFilter.add(new Option("날짜 없음", "undated"));
+  elements.dateFilter.value = state.selectedDate;
   elements.imageCount.textContent = state.images.length.toLocaleString("ko-KR");
-  elements.dateCount.textContent = dates.length.toLocaleString("ko-KR");
+  elements.dateCount.textContent = (dates.length + Number(hasUndated)).toLocaleString(
+    "ko-KR",
+  );
 }
 
 async function loadTheme() {
@@ -139,6 +156,10 @@ async function loadTheme() {
     const payload = await response.json();
     if (requestId !== state.themeRequest) return;
 
+    if (isToday && state.currentOperationalDate !== payload.date) {
+      state.currentOperationalDate = payload.date;
+      renderFilters();
+    }
     elements.themeDate.textContent = payload.date;
     elements.themeText.textContent = payload.available
       ? payload.theme.theme
