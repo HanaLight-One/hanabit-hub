@@ -71,6 +71,8 @@ const CONTENT_TYPES = {
 const PAGE_ROUTES = Object.freeze({
   "/images": "images/index.html",
   "/images/": "images/index.html",
+  "/images/create": "images/create/index.html",
+  "/images/create/": "images/create/index.html",
 });
 
 function sendJson(response, statusCode, payload) {

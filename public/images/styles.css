@@ -165,6 +165,24 @@ h1 em { color: var(--accent); font-style: normal; }
   color: var(--text);
 }
 
+.toolbar-controls {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+}
+
+.toolbar-action {
+  min-height: 42px;
+  padding: 11px 16px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--background);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
 .theme-card {
   position: relative;
   margin-bottom: 28px;
@@ -354,6 +372,12 @@ h1 em { color: var(--accent); font-style: normal; }
 
 .secondary-action { border: 1px solid var(--line); }
 .primary-action { background: var(--accent); color: var(--background); }
+.create-action {
+  grid-column: 1 / -1;
+  border: 1px solid rgb(216 255 82 / 36%);
+  background: rgb(216 255 82 / 8%);
+  color: var(--accent);
+}
 
 @media (max-width: 720px) {
   .topbar { height: 64px; padding: 0 16px; }
@@ -363,7 +387,9 @@ h1 em { color: var(--accent); font-style: normal; }
   .intro { font-size: 15px; }
   .summary { margin-top: 34px; }
   .toolbar { align-items: stretch; flex-direction: column; }
+  .toolbar-controls { align-items: stretch; flex-direction: column; }
   .date-filter select { width: 100%; }
+  .toolbar-action { text-align: center; }
   .theme-heading { display: block; }
   .theme-heading time { display: block; margin-top: 12px; }
   .image-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }

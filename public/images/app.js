@@ -17,6 +17,7 @@ const elements = {
   basicRecord: document.querySelector("#basic-record"),
   recordMessage: document.querySelector("#record-message"),
   productionRecord: document.querySelector("#production-record"),
+  createLink: document.querySelector("#create-link"),
   originalLink: document.querySelector("#original-link"),
   downloadLink: document.querySelector("#download-link"),
 };
@@ -208,6 +209,8 @@ function openPanel(image, trigger) {
   elements.detailTitle.textContent = image.name;
   elements.detailImage.src = image.thumbnailUrl;
   elements.detailImage.alt = `${image.name} 미리보기`;
+  elements.createLink.href =
+    `/images/create?source=${encodeURIComponent(image.id)}&mode=same-combination`;
   elements.originalLink.href = image.contentUrl;
   elements.downloadLink.href = image.downloadUrl;
   appendDefinitionList(elements.basicRecord, [

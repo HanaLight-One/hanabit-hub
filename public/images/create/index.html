@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#090c10" />
+    <meta name="description" content="하나빛 이미지 추가생성 초안실" />
+    <title>추가 이미지 생성실 · Hanabit Hub</title>
+    <link rel="stylesheet" href="/images/styles.css" />
+    <link rel="stylesheet" href="/images/create/styles.css" />
+    <script src="/images/create/app.js" type="module"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/images" aria-label="이미지 아카이브로 돌아가기">
+        <span class="brand-mark">H</span>
+        <span>HANABIT <b>CREATE</b></span>
+      </a>
+      <p class="connection draft-status">
+        <span></span> 안전한 초안 모드
+      </p>
+    </header>
+
+    <main>
+      <section class="create-hero">
+        <div>
+          <p class="eyebrow">ADDITIONAL CREATION</p>
+          <h1>새로운 장면을<br /><em>살짝 불러오기.</em></h1>
+          <p class="intro">
+            지금은 요청을 구성하고 미리보는 단계예요.
+            생성 대기열과 기존 자동화에는 아직 아무것도 보내지 않습니다.
+          </p>
+        </div>
+        <a class="back-link" href="/images">← 이미지 아카이브</a>
+      </section>
+
+      <section class="create-layout" aria-label="추가생성 초안">
+        <form id="creation-form" class="draft-form">
+          <div class="form-heading">
+            <div>
+              <p class="section-label">DRAFT REQUEST</p>
+              <h2>생성 방식 고르기</h2>
+            </div>
+            <span id="source-status" class="source-status">새 요청</span>
+          </div>
+
+          <fieldset class="mode-grid">
+            <legend>생성 방식</legend>
+            <label class="mode-card">
+              <input type="radio" name="mode" value="new" checked />
+              <span><b>✦ 새 장면</b><small>처음부터 새로운 요청을 작성해요.</small></span>
+            </label>
+            <label class="mode-card">
+              <input type="radio" name="mode" value="same-combination" data-needs-source />
+              <span><b>↻ 같은 조합</b><small>인물과 화풍 조합을 이어가요.</small></span>
+            </label>
+            <label class="mode-card">
+              <input type="radio" name="mode" value="same-characters" data-needs-source />
+              <span><b>👥 등장인물 유지</b><small>인물만 유지하고 새 장면을 만들어요.</small></span>
+            </label>
+            <label class="mode-card">
+              <input type="radio" name="mode" value="same-style" data-needs-source />
+              <span><b>🎨 같은 화풍</b><small>화풍만 이어서 다른 장면을 만들어요.</small></span>
+            </label>
+          </fieldset>
+
+          <label class="scene-field">
+            <span>원하는 장면</span>
+            <textarea id="scene-request" maxlength="500" required
+              placeholder="예: 비가 그친 새벽, 두 사람이 오래된 온실에서 작은 빛을 발견한다."></textarea>
+            <small><span id="character-count">0</span> / 500</small>
+          </label>
+
+          <div class="safety-note">
+            <b>지금은 안전한 초안 단계</b>
+            <span>미리보기를 눌러도 파일·대기열·Python에는 아무 변화가 없어요.</span>
+          </div>
+
+          <button class="preview-button" type="submit">초안 미리보기</button>
+        </form>
+
+        <aside class="draft-preview" aria-live="polite">
+          <p class="section-label">REQUEST PREVIEW</p>
+          <h2>아직 비어 있는 신탁</h2>
+          <dl class="preview-list">
+            <dt>연결 이미지</dt>
+            <dd id="preview-source">없음</dd>
+            <dt>생성 방식</dt>
+            <dd id="preview-mode">새 장면</dd>
+            <dt>장면 요청</dt>
+            <dd id="preview-scene">왼쪽에서 장면을 적어주세요.</dd>
+          </dl>
+          <p id="preview-message" class="preview-message">
+            초안은 이 브라우저 화면에서만 확인됩니다.
+          </p>
+          <button class="queue-button" type="button" disabled>
+            생성 대기열 연결 준비 중
+          </button>
+        </aside>
+      </section>
+    </main>
+  </body>
+</html>

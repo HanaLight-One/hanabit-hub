@@ -42,12 +42,15 @@
             <p class="section-label">COLLECTION</p>
             <h2 id="archive-title">날짜별 이미지</h2>
           </div>
-          <label class="date-filter">
-            <span>날짜 선택</span>
-            <select id="date-filter">
-              <option value="all">모든 날짜</option>
-            </select>
-          </label>
+          <div class="toolbar-controls">
+            <label class="date-filter">
+              <span>날짜 선택</span>
+              <select id="date-filter">
+                <option value="all">모든 날짜</option>
+              </select>
+            </label>
+            <a class="toolbar-action" href="/images/create">＋ 추가 생성</a>
+          </div>
         </div>
 
         <article id="theme-card" class="theme-card" aria-live="polite">
@@ -87,6 +90,7 @@
         <dl id="production-record" class="record-list"></dl>
       </section>
       <div class="panel-actions">
+        <a id="create-link" class="create-action">＋ 추가 생성</a>
         <a id="original-link" class="secondary-action" target="_blank" rel="noreferrer">원본 보기</a>
         <a id="download-link" class="primary-action">다운로드</a>
       </div>
