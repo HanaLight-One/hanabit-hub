@@ -5,6 +5,7 @@ const MODE_LABELS = Object.freeze({
   "same-style": "같은 화풍",
 });
 const SAFE_SOURCE_ID = /^[a-f0-9]{64}$/;
+const PINK_BRIDGE_ID = "pink-bridge";
 
 const elements = {
   form: document.querySelector("#creation-form"),
@@ -98,7 +99,7 @@ function appendCharacterOption(
   input.checked = checked;
   const copy = document.createElement("span");
   const name = document.createElement("b");
-  name.textContent = label;
+  name.textContent = id === PINK_BRIDGE_ID ? `🌉 ${label}` : label;
   copy.append(name);
   card.append(input, copy);
   elements.characterGrid.append(card);
@@ -123,10 +124,15 @@ function updateCharacterSelection() {
     ...elements.characterGrid.querySelectorAll('input[name="character"]:checked'),
   ];
   const reachedLimit = selected.length >= 3;
+  const pinkBridgeSelected = selected.some(
+    (input) => input.value === PINK_BRIDGE_ID,
+  );
   for (const input of elements.characterGrid.querySelectorAll(
     'input[name="character"]',
   )) {
-    input.disabled = reachedLimit && !input.checked;
+    input.disabled =
+      (pinkBridgeSelected && input.value !== PINK_BRIDGE_ID) ||
+      (reachedLimit && !input.checked);
   }
   const prefix = connectedCharacterCount
     ? `${connectedCharacterCount}명 · `
@@ -240,6 +246,18 @@ elements.characterGrid.addEventListener("change", (event) => {
       input.checked = false;
     }
   } else if (event.target.name === "character") {
+    if (event.target.checked && event.target.value === PINK_BRIDGE_ID) {
+      for (const input of elements.characterGrid.querySelectorAll(
+        'input[name="character"]',
+      )) {
+        if (input !== event.target) input.checked = false;
+      }
+    } else if (event.target.checked) {
+      const pinkBridge = elements.characterGrid.querySelector(
+        `input[name="character"][value="${PINK_BRIDGE_ID}"]`,
+      );
+      if (pinkBridge) pinkBridge.checked = false;
+    }
     for (const input of elements.characterGrid.querySelectorAll(
       'input[name="character-mode"]',
     )) {

@@ -38,6 +38,10 @@ test("자산 색인에서 안전한 화풍 이름만 제공한다", async (conte
           image_anchor_path: path.join(root, "rivella.png"),
         },
       },
+      pink_bridge: {
+        prompt_path: path.join(root, "pink-bridge.txt"),
+        appearance_prompt: "internal pink bridge identity",
+      },
     }),
   );
   const catalog = createCreationOptionsCatalog({ assetIndexPath });
@@ -49,14 +53,23 @@ test("자산 색인에서 안전한 화풍 이름만 제공한다", async (conte
     { id: "고딕", label: "고딕" },
     { id: "말랑", label: "말랑" },
   ]);
-  assert.deepEqual(result.characters, [
-    { id: "리벨라", label: "리벨라" },
-    { id: "헤일라", label: "헤일라" },
-  ]);
+  assert.deepEqual(result.characters[0], {
+    id: "pink-bridge",
+    label: "핑크브릿지",
+  });
+  assert.deepEqual(
+    result.characters.slice(1),
+    [
+      { id: "리벨라", label: "리벨라" },
+      { id: "헤일라", label: "헤일라" },
+    ],
+  );
   assert.equal(serialized.includes(root), false);
   assert.equal(serialized.includes("filename"), false);
   assert.equal(serialized.includes("content"), false);
   assert.equal(serialized.includes("anchor_text"), false);
+  assert.equal(serialized.includes("appearance_prompt"), false);
+  assert.equal(serialized.includes("internal pink bridge identity"), false);
 });
 
 test("상대 자산 색인 경로를 거부한다", () => {

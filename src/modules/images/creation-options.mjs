@@ -62,6 +62,14 @@ export function createCreationOptionsCatalog({ assetIndexPath }) {
           seenCharacters.add(character.id),
       )
       .sort((left, right) => left.label.localeCompare(right.label, "ko"));
+    if (
+      String(index.pink_bridge?.appearance_prompt ?? "").trim() &&
+      !seenCharacters.has("pink-bridge")
+    ) {
+      characters.unshift(
+        Object.freeze({ id: "pink-bridge", label: "핑크브릿지" }),
+      );
+    }
 
     return Object.freeze({
       styles: Object.freeze(styles),

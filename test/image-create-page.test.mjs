@@ -50,6 +50,7 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(scriptBody, /\/api\/images\/creation-options/);
     assert.match(scriptBody, /화풍 없음/);
     assert.match(scriptBody, /등장인물 없음/);
+    assert.match(scriptBody, /PINK_BRIDGE_ID/);
     assert.equal(scriptBody.includes('method: "POST"'), false);
     assert.equal(scriptBody.includes('method: "PUT"'), false);
     assert.equal(scriptBody.includes('method: "DELETE"'), false);
