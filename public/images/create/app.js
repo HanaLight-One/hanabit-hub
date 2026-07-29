@@ -11,6 +11,8 @@ const elements = {
   sourceStatus: document.querySelector("#source-status"),
   scene: document.querySelector("#scene-request"),
   characterCount: document.querySelector("#character-count"),
+  styleGrid: document.querySelector("#style-grid"),
+  styleStatus: document.querySelector("#style-status"),
   sourceContext: document.querySelector("#source-context"),
   sourceImage: document.querySelector("#source-image"),
   sourceName: document.querySelector("#source-name"),
@@ -19,6 +21,7 @@ const elements = {
   sourceMessage: document.querySelector("#source-message"),
   previewSource: document.querySelector("#preview-source"),
   previewMode: document.querySelector("#preview-mode"),
+  previewStyle: document.querySelector("#preview-style"),
   previewScene: document.querySelector("#preview-scene"),
   previewMessage: document.querySelector("#preview-message"),
 };
@@ -29,6 +32,7 @@ const source = SAFE_SOURCE_ID.test(params.get("source") ?? "")
   : null;
 const requestedMode = params.get("mode");
 const sourceModes = document.querySelectorAll("[data-needs-source]");
+const styleLabels = new Map([["random", "자동 선택"]]);
 
 function setSourceModesEnabled(enabled) {
   for (const input of sourceModes) input.disabled = !enabled;
@@ -50,6 +54,38 @@ function appendSourceRecord(rows) {
     term.textContent = label;
     description.textContent = value;
     elements.sourceRecord.append(term, description);
+  }
+}
+
+function appendStyleOption({ id, label }, { checked = false } = {}) {
+  const card = document.createElement("label");
+  card.className = "style-card";
+  const input = document.createElement("input");
+  input.type = "radio";
+  input.name = "style";
+  input.value = id;
+  input.checked = checked;
+  const copy = document.createElement("span");
+  const name = document.createElement("b");
+  name.textContent = label;
+  copy.append(name);
+  card.append(input, copy);
+  elements.styleGrid.append(card);
+  styleLabels.set(id, label);
+}
+
+async function loadCreationOptions() {
+  elements.styleGrid.replaceChildren();
+  appendStyleOption({ id: "random", label: "🎲 자동 선택" }, { checked: true });
+
+  try {
+    const response = await fetch("/api/images/creation-options");
+    if (!response.ok) throw new Error("Creation options request failed");
+    const { styles } = await response.json();
+    for (const style of styles) appendStyleOption(style);
+    elements.styleStatus.textContent = `${styles.length}개 화풍 연결됨`;
+  } catch {
+    elements.styleStatus.textContent = "화풍 목록을 불러오지 못했어요.";
   }
 }
 
@@ -100,6 +136,7 @@ async function loadSourceContext() {
 }
 
 setSourceModesEnabled(false);
+loadCreationOptions();
 loadSourceContext();
 
 elements.scene.addEventListener("input", () => {
@@ -110,9 +147,11 @@ elements.form.addEventListener("submit", (event) => {
   event.preventDefault();
   const data = new FormData(elements.form);
   const mode = MODE_LABELS[data.get("mode")] ?? MODE_LABELS.new;
+  const style = styleLabels.get(data.get("style")) ?? "자동 선택";
   const scene = elements.scene.value.trim();
 
   elements.previewMode.textContent = mode;
+  elements.previewStyle.textContent = style;
   elements.previewScene.textContent = scene || "장면 요청이 비어 있어요.";
   elements.previewMessage.textContent =
     "미리보기만 갱신했어요. 서버나 생성 대기열로 전송되지 않았습니다.";

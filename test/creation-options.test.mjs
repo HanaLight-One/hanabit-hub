@@ -1,0 +1,50 @@
+import assert from "node:assert/strict";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import test from "node:test";
+import { createCreationOptionsCatalog } from "../src/modules/images/creation-options.mjs";
+
+test("자산 색인에서 안전한 화풍 이름만 제공한다", async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-options-"));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const assetIndexPath = path.join(root, "asset-index.json");
+  await writeFile(
+    assetIndexPath,
+    JSON.stringify({
+      styles: [
+        {
+          id: "고딕",
+          filename: "[화풍] 고딕.txt",
+          path: path.join(root, "secret-style.txt"),
+          content: "internal prompt content",
+        },
+        {
+          id: "말랑",
+          filename: "[화풍] 말랑.txt",
+          path: path.join(root, "another-style.txt"),
+          content: "another internal prompt",
+        },
+      ],
+    }),
+  );
+  const catalog = createCreationOptionsCatalog({ assetIndexPath });
+
+  const result = await catalog.list();
+  const serialized = JSON.stringify(result);
+
+  assert.deepEqual(result.styles, [
+    { id: "고딕", label: "고딕" },
+    { id: "말랑", label: "말랑" },
+  ]);
+  assert.equal(serialized.includes(root), false);
+  assert.equal(serialized.includes("filename"), false);
+  assert.equal(serialized.includes("content"), false);
+});
+
+test("상대 자산 색인 경로를 거부한다", () => {
+  assert.throws(
+    () => createCreationOptionsCatalog({ assetIndexPath: "asset-index.json" }),
+    /절대경로/,
+  );
+});

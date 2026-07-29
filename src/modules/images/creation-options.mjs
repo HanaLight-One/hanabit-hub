@@ -1,0 +1,45 @@
+import { readFile, stat } from "node:fs/promises";
+import path from "node:path";
+
+const MAX_INDEX_BYTES = 4 * 1024 * 1024;
+const MAX_STYLE_TEXT_LENGTH = 80;
+const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/u;
+
+function normalizeStyle(style) {
+  const id = String(style?.id ?? "").trim();
+  if (
+    !id ||
+    id.length > MAX_STYLE_TEXT_LENGTH ||
+    CONTROL_CHARACTERS.test(id)
+  ) {
+    return null;
+  }
+  return Object.freeze({ id, label: id });
+}
+
+export function createCreationOptionsCatalog({ assetIndexPath }) {
+  if (!path.isAbsolute(assetIndexPath ?? "")) {
+    throw new TypeError("자산 색인 경로는 절대경로여야 합니다.");
+  }
+
+  async function list() {
+    const info = await stat(assetIndexPath);
+    if (!info.isFile() || info.size > MAX_INDEX_BYTES) {
+      throw new Error("자산 색인을 안전하게 읽을 수 없습니다.");
+    }
+
+    const index = JSON.parse(await readFile(assetIndexPath, "utf8"));
+    const rawStyles = Array.isArray(index.styles)
+      ? index.styles
+      : Object.values(index.styles ?? {});
+    const seen = new Set();
+    const styles = rawStyles
+      .map(normalizeStyle)
+      .filter((style) => style && !seen.has(style.id) && seen.add(style.id))
+      .sort((left, right) => left.label.localeCompare(right.label, "ko"));
+
+    return Object.freeze({ styles: Object.freeze(styles) });
+  }
+
+  return Object.freeze({ list });
+}

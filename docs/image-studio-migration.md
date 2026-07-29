@@ -96,6 +96,7 @@ Tunnel에는 변화가 없다. 시작프로그램, 예약 작업 또는 Tunnel �
 
 ```text
 GET /api/images
+GET /api/images/creation-options
 GET /api/images/:imageId
 GET /api/images/:imageId/content
 GET /api/images/:imageId/thumbnail
@@ -132,6 +133,10 @@ GET /api/themes?date=YYYY-MM-DD
 구조화된 제작 기록이 있을 때만 기록 의존 모드를 활성화한다. 현재 단계에서는
 브라우저 안의 초안 미리보기만 갱신하며 생성 대기열, Python 및 기존 자동화에는
 요청을 전송하지 않는다.
+
+화풍 선택 목록은 외부 자산 색인의 현재 내용을 읽어 자동 구성한다. API에는 화풍
+ID와 표시 이름만 반환하며 프롬프트 본문, 파일명, 파일 경로 및 자산 색인의 원본
+응답은 제공하지 않는다.
 
 ## 단계
 

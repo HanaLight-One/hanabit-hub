@@ -64,6 +64,14 @@
             </label>
           </fieldset>
 
+          <fieldset class="style-field">
+            <div class="field-heading">
+              <legend>화풍 선택</legend>
+              <span id="style-status">화풍을 불러오는 중이에요.</span>
+            </div>
+            <div id="style-grid" class="style-grid" aria-live="polite"></div>
+          </fieldset>
+
           <label class="scene-field">
             <span>원하는 장면</span>
             <textarea id="scene-request" maxlength="500" required
@@ -100,6 +108,8 @@
             <dd id="preview-source">없음</dd>
             <dt>생성 방식</dt>
             <dd id="preview-mode">새 장면</dd>
+            <dt>화풍</dt>
+            <dd id="preview-style">자동 선택</dd>
             <dt>장면 요청</dt>
             <dd id="preview-scene">왼쪽에서 장면을 적어주세요.</dd>
           </dl>

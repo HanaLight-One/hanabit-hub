@@ -2,6 +2,8 @@ import http from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { APP_ROOT, loadConfig } from "./config.mjs";
+import { createCreationOptionsCatalog } from "./modules/images/creation-options.mjs";
+import { handleCreationOptionsRoute } from "./modules/images/creation-options-route.mjs";
 import { createImageArchive } from "./modules/images/image-archive.mjs";
 import { handleImageContentRoute } from "./modules/images/image-content-route.mjs";
 import { handleImageDetailRoute } from "./modules/images/image-detail-route.mjs";
@@ -22,6 +24,12 @@ const imageStudioConfig = config.integrations?.imageStudio;
 const productionRecordStore =
   imageStudioConfig?.enabled && imageStudioConfig.productionRecordsRoot
     ? createProductionRecordStore({ root: imageStudioConfig.productionRecordsRoot })
+    : null;
+const creationOptions =
+  imageStudioConfig?.enabled && imageStudioConfig.generation?.assetIndexPath
+    ? createCreationOptionsCatalog({
+        assetIndexPath: imageStudioConfig.generation.assetIndexPath,
+      })
     : null;
 const imageArchive =
   imageStudioConfig?.enabled &&
@@ -121,6 +129,7 @@ async function serveStatic(response, pathname) {
 
 export function createServer({
   archive = imageArchive,
+  creationOptionsCatalog = creationOptions,
   recordStore = productionRecordStore,
   thumbnails = imageThumbnails,
   themeService = themes,
@@ -146,6 +155,18 @@ export function createServer({
           response,
           url,
           service: themeService,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
+        await handleCreationOptionsRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          catalog: creationOptionsCatalog,
           sendJson,
         })
       ) {
