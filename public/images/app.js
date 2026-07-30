@@ -74,10 +74,14 @@ function renderGrid() {
   elements.grid.replaceChildren();
   elements.message.hidden = images.length > 0;
   if (images.length === 0) {
-    elements.message.textContent =
-      state.images.length === 0
-        ? "아직 연결된 이미지가 없어요."
-        : "선택한 날짜에 이미지가 없어요.";
+    if (state.images.length === 0) {
+      elements.message.textContent = "아직 연결된 이미지가 없어요.";
+    } else if (state.selectedDate === state.currentOperationalDate) {
+      elements.message.textContent =
+        "오늘의 테마는 정상 연결되어 있지만, 오늘 이미지는 아직 저장소에 없어요.";
+    } else {
+      elements.message.textContent = "선택한 날짜에 이미지가 없어요.";
+    }
     return;
   }
 

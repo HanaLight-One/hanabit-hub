@@ -69,19 +69,71 @@ h1 em {
   background: rgb(17 23 29 / 84%);
 }
 
-.emergency-card {
+.emergency-control {
+  margin-top: 14px;
+  border: 1px solid #573238;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgb(83 34 44 / 36%), var(--panel));
+  overflow: hidden;
+}
+
+.emergency-control summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 58px;
+  padding: 0 22px;
+  color: #ff8793;
+  cursor: pointer;
+  list-style: none;
+}
+
+.emergency-control summary::-webkit-details-marker {
+  display: none;
+}
+
+.emergency-control summary::after {
+  content: "펼치기";
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.emergency-control[open] summary {
+  border-bottom: 1px solid #573238;
+}
+
+.emergency-control[open] summary::after {
+  content: "접기";
+}
+
+.emergency-control summary:hover,
+.emergency-control summary:focus-visible {
+  background: rgb(255 107 122 / 6%);
+  outline: none;
+}
+
+.emergency-summary-title {
+  font-weight: 800;
+}
+
+.emergency-summary-copy {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.emergency-panel {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  margin-top: 14px;
-  padding: 28px;
-  border: 1px solid #573238;
-  border-radius: 20px;
-  background: linear-gradient(135deg, rgb(83 34 44 / 36%), var(--panel));
+  padding: 24px;
 }
 
-.emergency-card h2 {
+.emergency-panel h2 {
   margin: 0;
 }
 
@@ -204,9 +256,19 @@ h1 em {
     flex-direction: column;
   }
 
-  .emergency-card {
+  .emergency-control summary {
+    min-height: 52px;
+    padding: 0 16px;
+  }
+
+  .emergency-summary-copy {
+    display: none;
+  }
+
+  .emergency-panel {
     align-items: stretch;
     flex-direction: column;
+    padding: 20px 16px;
   }
 
   .danger-button {
