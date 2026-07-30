@@ -5,6 +5,7 @@
     "imageStudio": {
       "enabled": false,
       "dailyImagesRoot": "",
+      "dailyImagesRoots": [],
       "pilotImagesRoot": "",
       "stylesRoot": "",
       "stateRoot": "",

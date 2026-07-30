@@ -37,7 +37,7 @@ async function walkImages(root, source) {
     const entries = await readdir(current, { withFileTypes: true });
 
     for (const entry of entries) {
-      if (entry.name === ".trash") continue;
+      if (entry.name.startsWith(".")) continue;
       const fullPath = path.join(current, entry.name);
 
       if (entry.isDirectory()) {
@@ -86,35 +86,74 @@ async function inspectRoot(root) {
   }
 }
 
-export function createImageArchive({ dailyImagesRoot, pilotImagesRoot }) {
+function uniqueRoots(roots) {
+  const seen = new Set();
+  return roots.filter((root) => {
+    if (!root) return false;
+    const normalized = path.resolve(root).toLowerCase();
+    if (seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  });
+}
+
+export function createImageArchive({
+  dailyImagesRoot,
+  dailyImagesRoots = [],
+  pilotImagesRoot,
+}) {
+  if (!Array.isArray(dailyImagesRoots)) {
+    throw new TypeError("dailyImagesRoots는 배열이어야 합니다.");
+  }
+
   const roots = {
-    daily: dailyImagesRoot,
-    pilot: pilotImagesRoot,
+    daily: uniqueRoots([...dailyImagesRoots, dailyImagesRoot]),
+    pilot: uniqueRoots([pilotImagesRoot]),
   };
 
   for (const source of SOURCES) {
-    if (roots[source] && !path.isAbsolute(roots[source])) {
-      throw new TypeError(`${source} 이미지 루트는 절대경로여야 합니다.`);
+    for (const root of roots[source]) {
+      if (!path.isAbsolute(root)) {
+        throw new TypeError(`${source} 이미지 루트는 절대경로여야 합니다.`);
+      }
     }
   }
 
   async function list() {
     const inspections = await Promise.all(
-      SOURCES.map(async (source) => [source, await inspectRoot(roots[source])]),
+      SOURCES.map(async (source) => [
+        source,
+        await Promise.all(
+          roots[source].map(async (root) => ({
+            root,
+            inspection: await inspectRoot(root),
+          })),
+        ),
+      ]),
     );
     const sourceStates = Object.fromEntries(
-      inspections.map(([source, inspection]) => [
+      inspections.map(([source, rootInspections]) => [
         source,
-        Object.freeze({ available: inspection.available }),
+        Object.freeze({
+          available: rootInspections.some(({ inspection }) => inspection.available),
+        }),
       ]),
     );
     const imageGroups = await Promise.all(
-      inspections.map(([source, inspection]) =>
-        inspection.available ? walkImages(roots[source], source) : inspection.images,
+      inspections.flatMap(([source, rootInspections]) =>
+        rootInspections.map(({ root, inspection }) =>
+          inspection.available ? walkImages(root, source) : inspection.images,
+        ),
       ),
     );
 
-    const entries = imageGroups.flat();
+    const entriesById = new Map();
+    for (const entry of imageGroups.flat()) {
+      if (!entriesById.has(entry.publicRecord.id)) {
+        entriesById.set(entry.publicRecord.id, entry);
+      }
+    }
+    const entries = [...entriesById.values()];
     const images = entries
       .map((entry) => entry.publicRecord)
       .sort((left, right) => right.modifiedAt.localeCompare(left.modifiedAt));
@@ -131,16 +170,18 @@ export function createImageArchive({ dailyImagesRoot, pilotImagesRoot }) {
     }
 
     for (const source of SOURCES) {
-      const inspection = await inspectRoot(roots[source]);
-      if (!inspection.available) continue;
-      const entries = await walkImages(roots[source], source);
-      const match = entries.find((entry) => entry.publicRecord.id === id);
-      if (match) {
-        return Object.freeze({
-          target: match.target,
-          extension: match.extension,
-          record: match.publicRecord,
-        });
+      for (const root of roots[source]) {
+        const inspection = await inspectRoot(root);
+        if (!inspection.available) continue;
+        const entries = await walkImages(root, source);
+        const match = entries.find((entry) => entry.publicRecord.id === id);
+        if (match) {
+          return Object.freeze({
+            target: match.target,
+            extension: match.extension,
+            record: match.publicRecord,
+          });
+        }
       }
     }
     return null;

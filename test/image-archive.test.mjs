@@ -103,3 +103,49 @@ test("상대 이미지 루트를 거부한다", () => {
     /절대경로/,
   );
 });
+
+test("신규·기존 날짜별 저장소를 합치고 같은 이미지는 신규 저장소를 우선한다", async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-images-layered-"));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const primary = path.join(root, "daily-v2");
+  const legacy = path.join(root, "daily-images");
+  const relative = path.join("2026-07-30", "고딕", "01.png");
+  await mkdir(path.dirname(path.join(primary, relative)), { recursive: true });
+  await mkdir(path.dirname(path.join(legacy, relative)), { recursive: true });
+  await mkdir(path.join(legacy, "2026-07-29"), { recursive: true });
+  await writeFile(path.join(primary, relative), "primary");
+  await writeFile(path.join(legacy, relative), "legacy");
+  await writeFile(path.join(legacy, "2026-07-29", "legacy.png"), "legacy-only");
+
+  const archive = createImageArchive({
+    dailyImagesRoots: [primary, legacy],
+  });
+  const result = await archive.list();
+  const shared = result.images.find((image) => image.name === "01.png");
+  const resolved = await archive.find(shared.id);
+
+  assert.equal(result.images.length, 2);
+  assert.equal(resolved.target.startsWith(primary), true);
+  assert.equal(JSON.stringify(result).includes(root), false);
+});
+
+test("내부 점 폴더의 이미지 산출물을 아카이브에서 제외한다", async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-images-hidden-"));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const daily = path.join(root, "daily");
+  await mkdir(path.join(daily, "2026-07-30", ".responses-artifacts"), {
+    recursive: true,
+  });
+  await mkdir(path.join(daily, "2026-07-30", "final"), { recursive: true });
+  await writeFile(
+    path.join(daily, "2026-07-30", ".responses-artifacts", "01.png"),
+    "internal",
+  );
+  await writeFile(path.join(daily, "2026-07-30", "final", "01.png"), "final");
+
+  const archive = createImageArchive({ dailyImagesRoots: [daily] });
+  const result = await archive.list();
+
+  assert.equal(result.images.length, 1);
+  assert.equal(result.images[0].group, "final");
+});

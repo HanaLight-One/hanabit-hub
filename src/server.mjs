@@ -35,9 +35,12 @@ const creationOptions =
     : null;
 const imageArchive =
   imageStudioConfig?.enabled &&
-  (imageStudioConfig.dailyImagesRoot || imageStudioConfig.pilotImagesRoot)
+  (imageStudioConfig.dailyImagesRoot ||
+    imageStudioConfig.dailyImagesRoots?.length ||
+    imageStudioConfig.pilotImagesRoot)
     ? createImageArchive({
         dailyImagesRoot: imageStudioConfig.dailyImagesRoot,
+        dailyImagesRoots: imageStudioConfig.dailyImagesRoots,
         pilotImagesRoot: imageStudioConfig.pilotImagesRoot,
       })
     : null;

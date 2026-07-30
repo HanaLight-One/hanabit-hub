@@ -36,6 +36,19 @@ export function validateImageStudioConfig(config = {}) {
     validateOptionalAbsolutePath(config[field], `integrations.imageStudio.${field}`);
   }
 
+  if (
+    config.dailyImagesRoots !== undefined &&
+    !Array.isArray(config.dailyImagesRoots)
+  ) {
+    throw new Error("integrations.imageStudio.dailyImagesRoots는 배열이어야 합니다.");
+  }
+  for (const [index, root] of (config.dailyImagesRoots ?? []).entries()) {
+    validateOptionalAbsolutePath(
+      root,
+      `integrations.imageStudio.dailyImagesRoots[${index}]`,
+    );
+  }
+
   const generation = config.generation ?? {};
   for (const field of GENERATION_PATH_FIELDS) {
     validateOptionalAbsolutePath(

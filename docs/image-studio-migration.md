@@ -28,7 +28,7 @@ Image Studio의 코드는 Hanabit Hub 저장소에서 관리하되 운영 데이
 
 | 구분 | 설정 키 | 기존 사용처 |
 | --- | --- | --- |
-| 날짜별 이미지 | `dailyImagesRoot` | 이미지 목록·원본·다운로드·삭제·복원 |
+| 날짜별 이미지 | `dailyImagesRoot`, `dailyImagesRoots` | 이미지 목록·원본·다운로드·삭제·복원 |
 | 파일럿 이미지 | `pilotImagesRoot` | 이미지 목록·원본·다운로드·삭제·복원 |
 | 화풍 설정 | `stylesRoot` | 화풍 카드와 추가생성 컨텍스트 |
 | 운영 상태 | `stateRoot` | queue, trash, thumbnails, logs, worker lock |
@@ -52,7 +52,7 @@ Image Studio의 코드는 Hanabit Hub 저장소에서 관리하되 운영 데이
 
 - `stateRoot`가 바뀌면 기존 큐 이력, 휴지통, 복원 원위치 정보, 썸네일 캐시,
   활동 로그와 worker lock이 새 빈 상태로 갈라진다.
-- `dailyImagesRoot` 또는 `pilotImagesRoot`가 비어 있으면 목록, 원본 보기,
+- `dailyImagesRoot`, `dailyImagesRoots` 또는 `pilotImagesRoot`가 비어 있으면 목록, 원본 보기,
   슬라이드, 개별·일괄 다운로드가 동작하지 않는다.
 - `stylesRoot` 또는 자산 색인이 없으면 화풍 목록과 화풍·예배당 추가생성이
   동작하지 않는다.
