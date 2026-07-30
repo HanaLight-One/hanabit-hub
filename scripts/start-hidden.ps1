@@ -30,7 +30,31 @@ if ($port -lt 1024 -or $port -gt 65535) {
 
 $listener = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue
 if ($listener) {
-  throw "$port 포트가 이미 사용 중입니다."
+  try {
+    $health = Invoke-RestMethod `
+      -Uri "http://127.0.0.1:$port/api/health" `
+      -TimeoutSec 3 `
+      -ErrorAction Stop
+  } catch {
+    throw "$port 포트가 다른 프로세스에서 사용 중입니다."
+  }
+
+  if ($health.ok -ne $true -or $health.service -ne "hanabit-hub") {
+    throw "$port 포트가 다른 서비스에서 사용 중입니다."
+  }
+
+  Set-Content `
+    -Encoding ascii `
+    -LiteralPath (Join-Path $resolvedRoot "state\hub-$port.pid") `
+    -Value $listener[0].OwningProcess
+
+  [pscustomobject]@{
+    Ok = $true
+    Port = $port
+    ProcessId = $listener[0].OwningProcess
+    AlreadyRunning = $true
+  }
+  return
 }
 
 $nodePath = (Get-Command node.exe -ErrorAction Stop).Source
@@ -75,4 +99,5 @@ Set-Content `
   Ok = $true
   Port = $port
   ProcessId = $process.Id
+  AlreadyRunning = $false
 }

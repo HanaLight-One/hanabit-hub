@@ -46,8 +46,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 ## 로그인 자동 시작
 
 승인된 운영 환경에서는 현재 Windows 사용자가 로그인한 뒤 20초 후 8791을
-숨김 실행한다. 이미 8791이 실행 중이면 `start-hidden.ps1`의 포트 검사로 중복
-서버를 만들지 않는다.
+숨김 실행한다. 이미 Hanabit Hub가 8791에서 실행 중이면 정상 성공으로 끝나며
+중복 서버를 만들지 않는다. 다른 서비스가 8791을 사용 중이면 안전하게 실패한다.
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
