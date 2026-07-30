@@ -30,6 +30,8 @@ npm.cmd run dev
 - `npm.cmd start`: 일반 서버 실행
 - `npm.cmd run check`: JavaScript 문법과 기본 테스트 확인
 - `scripts/start-hidden.ps1`: 현재 checkout의 설정 포트로 서버를 숨김 실행
+- `scripts/register-live-autostart.ps1`: 승인된 8791 운영본을 로그인 자동 시작으로 등록
+- `scripts/unregister-live-autostart.ps1`: 8791 로그인 자동 시작 작업만 제거
 - `scripts/restart-codex.ps1`: 허용된 긴급 제어 API가 호출하는 Codex 전용 재기동 도우미
 
 ## 설정

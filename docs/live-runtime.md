@@ -41,7 +41,30 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 
 스크립트는 설정 포트가 비어 있는지 확인하고 Node 서버를 숨김 창으로 실행한다.
 표준 출력, 오류와 PID는 Git에서 제외된 `state` 아래에 기록한다. Windows
-자동 시작이나 예약 작업은 등록하지 않는다.
+자동 시작은 별도 승인 후 안정 운영 checkout에만 등록한다.
+
+## 로그인 자동 시작
+
+승인된 운영 환경에서는 현재 Windows 사용자가 로그인한 뒤 20초 후 8791을
+숨김 실행한다. 이미 8791이 실행 중이면 `start-hidden.ps1`의 포트 검사로 중복
+서버를 만들지 않는다.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\register-live-autostart.ps1
+```
+
+작업 이름은 `Hanabit Hub Live 8791`이며 현재 사용자 세션에서만 실행된다.
+실패하면 1분 간격으로 최대 3회 재시도한다. 등록 스크립트는 설정 포트가 정확히
+8791인 checkout만 허용한다.
+
+자동 시작만 제거할 때는 서버나 운영 데이터를 삭제하지 않고 다음 스크립트를
+사용한다.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\unregister-live-autostart.ps1
+```
 
 ## 배포 흐름
 
