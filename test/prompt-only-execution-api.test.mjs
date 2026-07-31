@@ -16,6 +16,13 @@ test("1장 실행 API는 정확한 확인 후 prompt-only worker만 시작한다
   const executor = {
     async start(id) { starts += 1; return { id, status: "processing", route: "prompt-only", count: 1 }; },
     async status(id) { return { id, status: "processing", progress: { completed: 0, total: 1 }, message: "생성 중" }; },
+    async list() {
+      return {
+        jobs: [{ id: ID, purpose: "free-play", status: "processing", stage: "planning", progress: { completed: 0, total: 1 } }],
+        activeCount: 1,
+        attentionCount: 0,
+      };
+    },
   };
   await withServer(executor, async (baseUrl) => {
     const headers = { origin: baseUrl, "sec-fetch-site": "same-origin", "content-type": "application/json" };
@@ -29,6 +36,10 @@ test("1장 실행 API는 정확한 확인 후 prompt-only worker만 시작한다
     assert.equal((await response.json()).count, 1);
     assert.equal(starts, 1);
     assert.equal((await fetch(`${baseUrl}/api/images/generation-jobs/${ID}`)).status, 200);
+    const listing = await fetch(`${baseUrl}/api/images/generation-jobs`);
+    assert.equal(listing.status, 200);
+    assert.equal((await listing.json()).activeCount, 1);
+    assert.equal((await fetch(`${baseUrl}/api/images/generation-jobs`, { method: "POST" })).status, 405);
   });
 });
 

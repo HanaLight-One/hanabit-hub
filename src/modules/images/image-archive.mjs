@@ -25,7 +25,15 @@ function classify(relative) {
   const album = parts[0] || "기타";
   const date = album.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
   const group = parts.length > 2 ? parts[1] : "미리보기";
-  return { date, album, group };
+  const category =
+    group !== "extra-requests"
+      ? "daily-theme"
+      : parts[2] === "theme-followup"
+        ? "theme-extra"
+        : parts[2] === "free-play"
+          ? "free-extra"
+          : "legacy-extra";
+  return { date, album, group, category };
 }
 
 async function walkImages(root, source) {

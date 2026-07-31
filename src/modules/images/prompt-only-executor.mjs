@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdir, open, readFile, rename, stat, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, readdir, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   buildImageStudioQueueContext,
@@ -7,6 +7,8 @@ import {
 } from "./image-studio-queue-context.mjs";
 
 const ID_PATTERN = /^[a-f0-9]{32}$/u;
+const STALE_AFTER_MS = 20 * 60 * 1000;
+const PURPOSES = new Set(["theme-followup", "free-play"]);
 
 function executionError(code, message) {
   return Object.assign(new Error(message), { code });
@@ -66,6 +68,7 @@ export function createPromptOnlyExecutor({
   launchWorker = defaultLaunch,
   buildContext = buildImageStudioQueueContext,
   writeContext = writeImageStudioQueueContext,
+  now = () => new Date(),
 }) {
   for (const [label, target] of Object.entries({
     jobRoot,
@@ -97,6 +100,7 @@ export function createPromptOnlyExecutor({
       draft.sourceImageId !== null ||
       draft.characters?.mode !== "none" ||
       draft.style?.mode !== "none" ||
+      !PURPOSES.has(draft.purpose) ||
       draft.executionEnabled !== false
     ) {
       throw executionError("NOT_PROMPT_ONLY", "프롬프트 자유 생성 초안만 실행할 수 있습니다.");
@@ -120,7 +124,7 @@ export function createPromptOnlyExecutor({
       throw error;
     }
 
-    const startedAt = new Date().toISOString();
+    const startedAt = now().toISOString();
     const job = {
       id: safeId,
       createdAt: draft.createdAt,
@@ -129,6 +133,7 @@ export function createPromptOnlyExecutor({
       prompt: draft.prompt,
       count: 1,
       mode: "natural",
+      purpose: draft.purpose,
       style: null,
       outputs: [],
       progress: { completed: 0, total: 1 },
@@ -155,44 +160,109 @@ export function createPromptOnlyExecutor({
       await writeJsonAtomic(target.job, {
         ...job,
         status: "failed",
-        failedAt: new Date().toISOString(),
+        failedAt: now().toISOString(),
         error: "실행 준비 또는 시작에 실패했습니다.",
       });
       throw error.code ? error : executionError("LAUNCH_FAILED", "이미지 worker를 시작하지 못했습니다.");
     }
   }
 
-  async function status(id) {
+  function normalizeJob(job, currentTime = now()) {
+    const id = validateId(job.id);
+    const startedAtMs = Date.parse(job.startedAt ?? job.createdAt ?? "");
+    const completedAtMs = Date.parse(job.completedAt ?? job.failedAt ?? "");
+    const elapsedMs = Number.isFinite(startedAtMs)
+      ? Math.max(0, (Number.isFinite(completedAtMs) ? completedAtMs : currentTime.getTime()) - startedAtMs)
+      : null;
+    const rawStatus = ["processing", "complete", "failed"].includes(job.status)
+      ? job.status
+      : "processing";
+    const stale = rawStatus === "processing" && elapsedMs !== null && elapsedMs >= STALE_AFTER_MS;
+    const status = stale ? "attention" : rawStatus;
+    const stage =
+      status === "attention"
+        ? "stalled"
+        : status === "complete"
+          ? "complete"
+          : status === "failed"
+            ? "failed"
+            : job.textApi
+              ? "generating"
+              : "planning";
+    const purpose = PURPOSES.has(job.purpose) ? job.purpose : "legacy-extra";
+    return Object.freeze({
+      id,
+      purpose,
+      status,
+      stage,
+      createdAt: String(job.createdAt ?? ""),
+      startedAt: String(job.startedAt ?? ""),
+      completedAt: String(job.completedAt ?? job.failedAt ?? ""),
+      durationMs: elapsedMs,
+      progress: {
+        completed: Math.max(0, Math.min(1, Number(job.progress?.completed) || 0)),
+        total: 1,
+      },
+      message:
+        stage === "complete"
+          ? "이미지 1장 생성 완료"
+          : stage === "failed"
+            ? "생성 작업을 완료하지 못했습니다. 내부 상태를 확인해주세요."
+            : stage === "stalled"
+              ? "20분 이상 갱신되지 않아 확인이 필요합니다."
+              : stage === "generating"
+                ? "이미지 1장을 생성하고 있어요."
+                : "무료 API가 장면을 준비하고 있어요.",
+    });
+  }
+
+  async function readJob(id) {
     const target = paths(id);
-    let job;
     try {
-      job = JSON.parse(await readFile(target.job, "utf8"));
+      return JSON.parse(await readFile(target.job, "utf8"));
     } catch (error) {
       if (error.code === "ENOENT" || error instanceof SyntaxError) {
         throw executionError("JOB_NOT_FOUND", "생성 작업을 찾을 수 없습니다.");
       }
       throw error;
     }
-    const knownStatus = ["processing", "complete", "failed"].includes(job.status)
-      ? job.status
-      : "processing";
+  }
+
+  async function status(id) {
+    return normalizeJob(await readJob(id));
+  }
+
+  async function list() {
+    let entries;
+    try {
+      entries = await readdir(jobRoot, { withFileTypes: true });
+    } catch (error) {
+      if (error.code === "ENOENT") return { jobs: [], activeCount: 0, attentionCount: 0 };
+      throw error;
+    }
+    const jobs = [];
+    for (const entry of entries) {
+      if (!entry.isFile() || !ID_PATTERN.test(entry.name.replace(/\.json$/u, ""))) continue;
+      try {
+        jobs.push(normalizeJob(JSON.parse(await readFile(path.join(jobRoot, entry.name), "utf8"))));
+      } catch (error) {
+        if (
+          !(error instanceof SyntaxError)
+          && error.code !== "ENOENT"
+          && error.code !== "INVALID_ID"
+        ) throw error;
+      }
+    }
+    jobs.sort((left, right) => right.startedAt.localeCompare(left.startedAt));
+    const recent = jobs.slice(0, 20);
     return Object.freeze({
-      id: validateId(id),
-      status: knownStatus,
-      progress: {
-        completed: Math.max(0, Math.min(1, Number(job.progress?.completed) || 0)),
-        total: 1,
-      },
-      message:
-        knownStatus === "complete"
-          ? "이미지 1장 생성 완료"
-          : knownStatus === "failed"
-            ? "생성 작업을 완료하지 못했습니다. 내부 상태를 확인해주세요."
-            : "이미지 1장을 생성하고 있어요.",
+      jobs: Object.freeze(recent),
+      activeCount: jobs.filter((job) => job.status === "processing").length,
+      attentionCount: jobs.filter((job) => job.status === "attention").length,
     });
   }
 
-  return Object.freeze({ start, status });
+  return Object.freeze({ start, status, list });
 }
 
 export { defaultLaunch };

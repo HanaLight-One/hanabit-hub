@@ -1,5 +1,6 @@
 const EXECUTE_PATTERN = /^\/api\/images\/generation-drafts\/([a-f0-9]{32})\/execute$/u;
 const STATUS_PATTERN = /^\/api\/images\/generation-jobs\/([a-f0-9]{32})$/u;
+const LIST_PATH = "/api/images/generation-jobs";
 const CONFIRMATION = "generate-one-prompt-only-image";
 
 function sameOrigin(request) {
@@ -36,9 +37,16 @@ function failure(response, sendJson, error) {
 export async function handlePromptOnlyExecutionRoute({ request, response, pathname, executor, sendJson }) {
   const execute = pathname.match(EXECUTE_PATTERN);
   const status = pathname.match(STATUS_PATTERN);
-  if (!execute && !status) return false;
+  const listing = pathname === LIST_PATH;
+  if (!execute && !status && !listing) return false;
   if (!executor) {
     sendJson(response, 404, { error: "Not found" });
+    return true;
+  }
+
+  if (listing) {
+    if (request.method !== "GET") sendJson(response, 405, { error: "Method not allowed" });
+    else sendJson(response, 200, await executor.list());
     return true;
   }
 

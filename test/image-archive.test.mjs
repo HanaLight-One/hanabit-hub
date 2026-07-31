@@ -32,9 +32,33 @@ test("날짜별 이미지 목록을 경로 없이 반환한다", async (context)
   assert.equal(dailyImage.date, "2026-07-29");
   assert.equal(dailyImage.album, "2026-07-29");
   assert.equal(dailyImage.group, "고딕");
+  assert.equal(dailyImage.category, "daily-theme");
   assert.match(dailyImage.id, /^[a-f0-9]{64}$/);
   assert.equal(JSON.stringify(result).includes(root), false);
   assert.equal("relative" in dailyImage, false);
+});
+
+test("추가 생성 목적과 기존 출력을 이동 없이 분류한다", async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-image-category-"));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const daily = path.join(root, "daily");
+  const files = [
+    ["theme-followup", "theme.png"],
+    ["free-play", "free.png"],
+  ];
+  for (const [purpose, name] of files) {
+    const directory = path.join(daily, "2026-08-01", "extra-requests", purpose, "job");
+    await mkdir(directory, { recursive: true });
+    await writeFile(path.join(directory, name), purpose);
+  }
+  const legacy = path.join(daily, "2026-08-01", "extra-requests", "legacy-job");
+  await mkdir(legacy, { recursive: true });
+  await writeFile(path.join(legacy, "legacy.png"), "legacy");
+
+  const result = await createImageArchive({ dailyImagesRoot: daily }).list();
+  assert.equal(result.images.find((image) => image.name === "theme.png").category, "theme-extra");
+  assert.equal(result.images.find((image) => image.name === "free.png").category, "free-extra");
+  assert.equal(result.images.find((image) => image.name === "legacy.png").category, "legacy-extra");
 });
 
 test("이미지 ID 기반 후속 API 주소를 제공한다", async (context) => {

@@ -43,6 +43,9 @@
             <h2 id="archive-title">날짜별 이미지</h2>
           </div>
           <div class="toolbar-controls">
+            <a id="generation-status" class="generation-status" href="/images/create#jobs">
+              생성 작업 확인 중
+            </a>
             <label class="date-filter">
               <span>날짜 선택</span>
               <select id="date-filter">
@@ -52,6 +55,14 @@
             <a class="toolbar-action" href="/images/create">＋ 추가 생성</a>
           </div>
         </div>
+
+        <nav id="category-tabs" class="category-tabs" aria-label="이미지 종류">
+          <button type="button" data-category="all" class="active">전체 <span>0</span></button>
+          <button type="button" data-category="daily-theme">오늘의 테마 <span>0</span></button>
+          <button type="button" data-category="theme-extra">오테 추가 <span>0</span></button>
+          <button type="button" data-category="free-extra">자유 추가 <span>0</span></button>
+          <button type="button" data-category="legacy-extra">이전 추가 <span>0</span></button>
+        </nav>
 
         <article id="theme-card" class="theme-card" aria-live="polite">
           <div class="theme-heading">

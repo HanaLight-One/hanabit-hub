@@ -34,6 +34,10 @@ test("/images/create가 안전한 추가생성 초안 화면을 제공한다", a
     assert.match(body, /maxlength="12000"/);
     assert.match(body, /id="preview-route"/);
     assert.match(body, /id="execute-button"/);
+    assert.match(body, /name="purpose"/);
+    assert.match(body, /value="theme-followup"/);
+    assert.match(body, /value="free-play"/);
+    assert.match(body, /id="jobs-list"/);
     assert.match(body, /1장 실제 생성/);
     assert.match(body, /disabled/);
     assert.equal(body.includes("<form action="), false);
@@ -61,6 +65,8 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(scriptBody, /generate-one-prompt-only-image/);
     assert.match(scriptBody, /window\.confirm/);
     assert.match(scriptBody, /\/api\/images\/generation-jobs/);
+    assert.match(scriptBody, /applySourcePurpose/);
+    assert.match(scriptBody, /purpose/);
     assert.equal(scriptBody.includes('method: "PUT"'), false);
     assert.equal(scriptBody.includes('method: "DELETE"'), false);
     assert.equal(scriptBody.includes("localStorage"), false);

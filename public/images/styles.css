@@ -183,6 +183,46 @@ h1 em { color: var(--accent); font-style: normal; }
   white-space: nowrap;
 }
 
+.generation-status {
+  min-height: 42px;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.generation-status.processing { border-color: rgb(216 255 82 / 34%); color: var(--accent); }
+.generation-status.attention,
+.generation-status.failed { border-color: rgb(255 107 127 / 45%); color: #ff8d9e; }
+.category-tabs {
+  margin: -12px 0 24px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.category-tabs button {
+  flex: 0 0 auto;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.category-tabs button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: rgb(216 255 82 / 8%);
+  color: var(--accent);
+}
+.category-tabs span { margin-left: 4px; opacity: .72; }
+
 .theme-card {
   position: relative;
   margin-bottom: 28px;
@@ -390,6 +430,8 @@ h1 em { color: var(--accent); font-style: normal; }
   .toolbar-controls { align-items: stretch; flex-direction: column; }
   .date-filter select { width: 100%; }
   .toolbar-action { text-align: center; }
+  .generation-status { text-align: center; }
+  .category-tabs { margin-top: -8px; padding-bottom: 4px; }
   .theme-heading { display: block; }
   .theme-heading time { display: block; margin-top: 12px; }
   .image-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }

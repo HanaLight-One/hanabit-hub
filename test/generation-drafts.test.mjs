@@ -34,6 +34,7 @@ test("인물과 화풍 없음은 긴 프롬프트 자유 생성 초안으로만 
     const prompt = "빛".repeat(8_500);
     const result = await store.create({
       prompt,
+      purpose: "free-play",
       mode: "new",
       sourceImageId: null,
       characters: { mode: "none", ids: [] },
@@ -54,6 +55,7 @@ test("초안은 현재 옵션과 존재하는 원본만 허용한다", async () 
     await assert.rejects(
       () => store.create({
         prompt: "새 장면",
+        purpose: "free-play",
         mode: "same-style",
         sourceImageId: null,
         characters: { mode: "auto", ids: [] },
@@ -64,12 +66,29 @@ test("초안은 현재 옵션과 존재하는 원본만 허용한다", async () 
     await assert.rejects(
       () => store.create({
         prompt: "새 장면",
+        purpose: "free-play",
         mode: "new",
         sourceImageId: null,
         characters: { mode: "custom", ids: ["없는 인물"] },
         style: { mode: "selected", id: "없는 화풍" },
       }),
       /등장인물/,
+    );
+  });
+});
+
+test("초안은 오테 추가와 자유 추가 목적만 허용한다", async () => {
+  await fixture(async ({ store }) => {
+    await assert.rejects(
+      () => store.create({
+        prompt: "분류할 수 없는 장면",
+        purpose: "unknown",
+        mode: "new",
+        sourceImageId: null,
+        characters: { mode: "none", ids: [] },
+        style: { mode: "none", id: null },
+      }),
+      /생성 목적/,
     );
   });
 });

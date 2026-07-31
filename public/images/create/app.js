@@ -6,6 +6,18 @@ const MODE_LABELS = Object.freeze({
 });
 const SAFE_SOURCE_ID = /^[a-f0-9]{64}$/;
 const PINK_BRIDGE_ID = "pink-bridge";
+const PURPOSE_LABELS = Object.freeze({
+  "theme-followup": "오테 추가",
+  "free-play": "자유 추가",
+  "legacy-extra": "이전 추가",
+});
+const STAGE_LABELS = Object.freeze({
+  planning: "무료 API 준비 중",
+  generating: "이미지 생성 중",
+  complete: "완료",
+  failed: "실패",
+  stalled: "확인 필요",
+});
 
 const elements = {
   form: document.querySelector("#creation-form"),
@@ -26,6 +38,7 @@ const elements = {
   sourceMessage: document.querySelector("#source-message"),
   previewSource: document.querySelector("#preview-source"),
   previewMode: document.querySelector("#preview-mode"),
+  previewPurpose: document.querySelector("#preview-purpose"),
   previewCharacters: document.querySelector("#preview-characters"),
   previewStyle: document.querySelector("#preview-style"),
   previewScene: document.querySelector("#preview-scene"),
@@ -33,6 +46,8 @@ const elements = {
   previewMessage: document.querySelector("#preview-message"),
   draftButton: document.querySelector("#draft-button"),
   executeButton: document.querySelector("#execute-button"),
+  jobsSummary: document.querySelector("#jobs-summary"),
+  jobsList: document.querySelector("#jobs-list"),
 };
 
 const params = new URLSearchParams(window.location.search);
@@ -50,6 +65,35 @@ let connectedStyleCount = 0;
 let connectedCharacterCount = 0;
 let previewPayload = null;
 let savedDraftId = null;
+let purposeTouched = false;
+
+function formatDateTime(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "—"
+    : new Intl.DateTimeFormat("ko-KR", {
+        timeZone: "Asia/Seoul",
+        dateStyle: "short",
+        timeStyle: "short",
+      }).format(date);
+}
+
+function formatDuration(milliseconds) {
+  if (!Number.isFinite(milliseconds)) return "—";
+  const seconds = Math.max(0, Math.round(milliseconds / 1000));
+  const minutes = Math.floor(seconds / 60);
+  return minutes ? `${minutes}분 ${seconds % 60}초` : `${seconds}초`;
+}
+
+function selectPurpose(value) {
+  const input = elements.form.querySelector(`input[name="purpose"][value="${value}"]`);
+  if (input) input.checked = true;
+}
+
+function applySourcePurpose(category) {
+  if (purposeTouched) return;
+  selectPurpose(["daily-theme", "theme-extra"].includes(category) ? "theme-followup" : "free-play");
+}
 
 function setSourceModesEnabled(enabled) {
   for (const input of sourceModes) input.disabled = !enabled;
@@ -198,6 +242,7 @@ async function loadSourceContext() {
     elements.sourceMeta.textContent = `${image.date ?? "날짜 없음"} · ${image.group}`;
     elements.sourceStatus.textContent = "이미지 연결됨";
     elements.previewSource.textContent = image.name;
+    applySourcePurpose(image.category);
 
     const recordResponse = await fetch(image.productionRecordUrl);
     if (recordResponse.status === 404) {
@@ -292,7 +337,10 @@ elements.scene.addEventListener("input", () => {
   elements.characterCount.textContent = elements.scene.value.length;
 });
 
-elements.form.addEventListener("input", () => {
+elements.form.addEventListener("input", (event) => {
+  if (event.target instanceof HTMLInputElement && event.target.name === "purpose") {
+    purposeTouched = true;
+  }
   previewPayload = null;
   savedDraftId = null;
   elements.draftButton.disabled = true;
@@ -317,6 +365,7 @@ elements.form.addEventListener("submit", (event) => {
     ? { mode: "custom", ids: selectedCharacters }
     : { mode: characterModeInput?.value === "none" ? "none" : "auto", ids: [] };
   const styleValue = data.get("style");
+  const purpose = data.get("purpose");
   const styleSelection =
     styleValue === "none"
       ? { mode: "none", id: null }
@@ -331,6 +380,7 @@ elements.form.addEventListener("submit", (event) => {
 
   previewPayload = {
     prompt: scene,
+    purpose,
     mode: data.get("mode"),
     sourceImageId,
     characters: characterSelection,
@@ -338,6 +388,7 @@ elements.form.addEventListener("submit", (event) => {
   };
 
   elements.previewMode.textContent = mode;
+  elements.previewPurpose.textContent = PURPOSE_LABELS[purpose] ?? "목적 확인 필요";
   elements.previewCharacters.textContent = characterSummary;
   elements.previewStyle.textContent = style;
   elements.previewScene.textContent = scene || "장면 요청이 비어 있어요.";
@@ -383,12 +434,17 @@ async function pollGeneration(id) {
     if (!response.ok) throw new Error();
     const result = await response.json();
     elements.previewMessage.textContent = result.message;
+    loadJobs();
     if (result.status === "complete") {
       elements.executeButton.textContent = "✓ 이미지 1장 생성 완료";
       return;
     }
     if (result.status === "failed") {
       elements.executeButton.textContent = "생성 실패 · 상태 확인 필요";
+      return;
+    }
+    if (result.status === "attention") {
+      elements.executeButton.textContent = "생성 지연 · 상태 확인 필요";
       return;
     }
     setTimeout(() => pollGeneration(id), 5_000);
@@ -419,9 +475,52 @@ elements.executeButton.addEventListener("click", async () => {
     if (!response.ok) throw new Error(result.error || "생성을 시작하지 못했습니다.");
     elements.executeButton.textContent = "이미지 1장 생성 중…";
     elements.previewMessage.textContent = "무료 API가 장면을 준비하고 있어요. 이 요청은 한 번만 실행됩니다.";
+    loadJobs();
     pollGeneration(result.id);
   } catch (error) {
     elements.previewMessage.textContent = error.message;
     elements.executeButton.textContent = "실행 상태 확인 필요";
   }
 });
+
+function renderJobs(payload) {
+  const jobs = Array.isArray(payload.jobs) ? payload.jobs.slice(0, 10) : [];
+  elements.jobsSummary.textContent = payload.attentionCount
+    ? `확인 필요 ${payload.attentionCount}건`
+    : payload.activeCount
+      ? `진행 중 ${payload.activeCount}건`
+      : jobs.length
+        ? "최근 작업이 모두 종료됐어요."
+        : "아직 생성 작업이 없어요.";
+  elements.jobsList.replaceChildren();
+  for (const job of jobs) {
+    const card = document.createElement("article");
+    card.className = `job-card ${job.status}`;
+    const top = document.createElement("div");
+    const purpose = document.createElement("strong");
+    purpose.textContent = PURPOSE_LABELS[job.purpose] ?? "추가 생성";
+    const stage = document.createElement("span");
+    stage.className = "job-stage";
+    stage.textContent = STAGE_LABELS[job.stage] ?? "상태 확인";
+    top.append(purpose, stage);
+    const message = document.createElement("p");
+    message.textContent = job.message;
+    const meta = document.createElement("small");
+    meta.textContent = `${job.progress.completed}/${job.progress.total} · ${formatDuration(job.durationMs)} · ${formatDateTime(job.startedAt)}`;
+    card.append(top, message, meta);
+    elements.jobsList.append(card);
+  }
+}
+
+async function loadJobs() {
+  try {
+    const response = await fetch("/api/images/generation-jobs", { cache: "no-store" });
+    if (!response.ok) throw new Error();
+    renderJobs(await response.json());
+  } catch {
+    elements.jobsSummary.textContent = "작업 상태를 불러오지 못했어요.";
+  }
+}
+
+loadJobs();
+setInterval(loadJobs, 10_000);

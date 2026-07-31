@@ -64,6 +64,18 @@
             </label>
           </fieldset>
 
+          <fieldset class="purpose-grid">
+            <legend>추가 생성 목적</legend>
+            <label class="purpose-card">
+              <input type="radio" name="purpose" value="theme-followup" />
+              <span><b>☀ 오테 추가</b><small>오늘의 테마 흐름을 이어 만들어요.</small></span>
+            </label>
+            <label class="purpose-card">
+              <input type="radio" name="purpose" value="free-play" checked />
+              <span><b>✦ 자유 추가</b><small>테마와 무관하게 마음대로 만들어요.</small></span>
+            </label>
+          </fieldset>
+
           <section class="character-field" aria-labelledby="character-title">
             <div class="field-heading">
               <div>
@@ -126,6 +138,8 @@
             <dd id="preview-source">없음</dd>
             <dt>생성 방식</dt>
             <dd id="preview-mode">새 장면</dd>
+            <dt>생성 목적</dt>
+            <dd id="preview-purpose">자유 추가</dd>
             <dt>등장인물</dt>
             <dd id="preview-characters">자동 선택</dd>
             <dt>화풍</dt>
@@ -145,6 +159,17 @@
             ⚡ 프롬프트로 1장 실제 생성
           </button>
         </aside>
+      </section>
+
+      <section id="jobs" class="jobs-section" aria-labelledby="jobs-title">
+        <div class="jobs-heading">
+          <div>
+            <p class="section-label">RECENT GENERATION</p>
+            <h2 id="jobs-title">최근 생성 작업</h2>
+          </div>
+          <p id="jobs-summary" aria-live="polite">작업 상태를 확인하는 중이에요.</p>
+        </div>
+        <div id="jobs-list" class="jobs-list" aria-live="polite"></div>
       </section>
     </main>
   </body>

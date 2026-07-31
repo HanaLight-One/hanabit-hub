@@ -5,6 +5,8 @@ const elements = {
   imageCount: document.querySelector("#image-count"),
   dateCount: document.querySelector("#date-count"),
   dateFilter: document.querySelector("#date-filter"),
+  categoryTabs: document.querySelector("#category-tabs"),
+  generationStatus: document.querySelector("#generation-status"),
   themeLabel: document.querySelector("#theme-label"),
   themeTitle: document.querySelector("#theme-title"),
   themeDate: document.querySelector("#theme-date"),
@@ -25,11 +27,27 @@ const elements = {
 const state = {
   images: [],
   selectedDate: "all",
+  selectedCategory: "all",
   currentOperationalDate: null,
   selectedImageId: null,
   lastFocused: null,
   themeRequest: 0,
+  previousActiveCount: null,
 };
+
+const CATEGORY_LABELS = Object.freeze({
+  "daily-theme": "오늘의 테마",
+  "theme-extra": "오테 추가",
+  "free-extra": "자유 추가",
+  "legacy-extra": "이전 추가",
+});
+const STAGE_LABELS = Object.freeze({
+  planning: "무료 API 준비 중",
+  generating: "이미지 생성 중",
+  complete: "최근 생성 완료",
+  failed: "최근 생성 실패",
+  stalled: "생성 확인 필요",
+});
 
 function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -64,13 +82,32 @@ function appendDefinitionList(target, rows) {
 }
 
 function visibleImages() {
-  return state.selectedDate === "all"
+  const dateImages = state.selectedDate === "all"
     ? state.images
     : state.images.filter((image) => (image.date ?? "undated") === state.selectedDate);
+  return state.selectedCategory === "all"
+    ? dateImages
+    : dateImages.filter((image) => image.category === state.selectedCategory);
+}
+
+function renderCategoryTabs() {
+  const dateImages = state.selectedDate === "all"
+    ? state.images
+    : state.images.filter((image) => (image.date ?? "undated") === state.selectedDate);
+  for (const button of elements.categoryTabs.querySelectorAll("button[data-category]")) {
+    const category = button.dataset.category;
+    const count = category === "all"
+      ? dateImages.length
+      : dateImages.filter((image) => image.category === category).length;
+    button.classList.toggle("active", category === state.selectedCategory);
+    button.setAttribute("aria-pressed", String(category === state.selectedCategory));
+    button.querySelector("span").textContent = count.toLocaleString("ko-KR");
+  }
 }
 
 function renderGrid() {
   const images = visibleImages();
+  renderCategoryTabs();
   elements.grid.replaceChildren();
   elements.message.hidden = images.length > 0;
   if (images.length === 0) {
@@ -80,7 +117,7 @@ function renderGrid() {
       elements.message.textContent =
         "오늘의 테마는 정상 연결되어 있지만, 오늘 이미지는 아직 저장소에 없어요.";
     } else {
-      elements.message.textContent = "선택한 날짜에 이미지가 없어요.";
+      elements.message.textContent = "선택한 날짜와 종류에 이미지가 없어요.";
     }
     return;
   }
@@ -102,7 +139,7 @@ function renderGrid() {
     const name = document.createElement("strong");
     name.textContent = image.name;
     const meta = document.createElement("span");
-    meta.textContent = `${image.date ?? "날짜 없음"} · ${image.group}`;
+    meta.textContent = `${image.date ?? "날짜 없음"} · ${CATEGORY_LABELS[image.category] ?? image.group}`;
     copy.append(name, meta);
     card.append(preview, copy);
     card.addEventListener("click", () => openPanel(image, card));
@@ -248,17 +285,28 @@ elements.dateFilter.addEventListener("change", () => {
   renderGrid();
   loadTheme();
 });
+elements.categoryTabs.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-category]");
+  if (!button) return;
+  state.selectedCategory = button.dataset.category;
+  renderGrid();
+});
 elements.close.addEventListener("click", closePanel);
 elements.backdrop.addEventListener("click", closePanel);
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && elements.panel.classList.contains("open")) closePanel();
 });
 
+async function loadImages() {
 try {
   const response = await fetch("/api/images");
   if (!response.ok) throw new Error("Archive request failed");
   const payload = await response.json();
   state.images = Array.isArray(payload.images) ? payload.images : [];
+  state.images = state.images.map((image) => ({
+    ...image,
+    category: image.category ?? (image.group === "extra-requests" ? "legacy-extra" : "daily-theme"),
+  }));
   const sourceCount = Object.values(payload.sources ?? {}).filter(
     (source) => source.available,
   ).length;
@@ -267,12 +315,39 @@ try {
     sourceCount > 0 ? ` ${sourceCount}개 저장소 연결됨` : " 저장소 연결 준비 중";
   renderFilters();
   renderGrid();
-  loadTheme();
+  return true;
 } catch {
   elements.message.textContent =
     "이미지 모듈을 아직 실제 저장소에 연결하지 않았어요. 설정 후 이곳에 표시됩니다.";
   elements.status.lastChild.textContent = " 이미지 모듈 준비 중";
   elements.imageCount.textContent = "0";
   elements.dateCount.textContent = "0";
-  loadTheme();
+  return false;
 }
+}
+
+async function loadGenerationStatus() {
+  try {
+    const response = await fetch("/api/images/generation-jobs", { cache: "no-store" });
+    if (!response.ok) throw new Error();
+    const payload = await response.json();
+    const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+    const highlighted = jobs.find((job) => job.status === "attention")
+      ?? jobs.find((job) => job.status === "processing")
+      ?? jobs[0];
+    elements.generationStatus.className = `generation-status ${highlighted?.status ?? "idle"}`;
+    elements.generationStatus.textContent = highlighted
+      ? `${STAGE_LABELS[highlighted.stage] ?? "생성 상태"} · ${highlighted.progress.completed}/${highlighted.progress.total}`
+      : "추가 생성 기록 없음";
+    if (state.previousActiveCount > 0 && payload.activeCount === 0) await loadImages();
+    state.previousActiveCount = payload.activeCount;
+  } catch {
+    elements.generationStatus.className = "generation-status attention";
+    elements.generationStatus.textContent = "생성 상태 확인 필요";
+  }
+}
+
+await loadImages();
+loadTheme();
+loadGenerationStatus();
+setInterval(loadGenerationStatus, 10_000);

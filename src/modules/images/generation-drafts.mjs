@@ -8,6 +8,7 @@ const MODES = new Set(["new", "same-combination", "same-characters", "same-style
 const SOURCE_MODES = new Set(["same-combination", "same-characters", "same-style"]);
 const CHARACTER_MODES = new Set(["auto", "none", "custom"]);
 const STYLE_MODES = new Set(["auto", "none", "selected"]);
+const PURPOSES = new Set(["theme-followup", "free-play"]);
 
 function draftError(code, message) {
   return Object.assign(new Error(message), { code });
@@ -72,6 +73,10 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
     const prompt = normalizePrompt(input.prompt);
     const mode = String(input.mode ?? "");
     if (!MODES.has(mode)) throw draftError("INVALID_MODE", "생성 방식이 올바르지 않습니다.");
+    const purpose = String(input.purpose ?? "");
+    if (!PURPOSES.has(purpose)) {
+      throw draftError("INVALID_PURPOSE", "추가 생성 목적이 올바르지 않습니다.");
+    }
 
     const suppliedSourceImageId = input.sourceImageId == null ? null : String(input.sourceImageId);
     if (suppliedSourceImageId !== null && !SOURCE_ID_PATTERN.test(suppliedSourceImageId)) {
@@ -107,6 +112,7 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
       status: "draft",
       executionEnabled: false,
       route,
+      purpose,
       prompt,
       mode,
       sourceImageId,
@@ -125,6 +131,7 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
       createdAt,
       status: "draft",
       route,
+      purpose,
       promptLength: prompt.length,
       executionEnabled: false,
     });

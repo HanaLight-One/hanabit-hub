@@ -102,6 +102,13 @@ export async function buildImageStudioQueueContext(
   }
 
   const count = Math.max(1, Math.min(20, Number(job.count) || 1));
+  const purposeDirectory = {
+    "theme-followup": "theme-followup",
+    "free-play": "free-play",
+  }[job.purpose];
+  const outputParts = purposeDirectory
+    ? ["extra-requests", purposeDirectory, job.id]
+    : ["extra-requests", job.id];
   const context = {
     version: 2,
     job: {
@@ -110,12 +117,12 @@ export async function buildImageStudioQueueContext(
       count,
       mode: job.mode,
       style_request: job.style || null,
+      purpose: purposeDirectory || null,
     },
     output_directory: path.join(
       outputRoot,
       operationalDate(now, { timezone, dayStartsAtHour }),
-      "extra-requests",
-      job.id,
+      ...outputParts,
     ),
     existing_outputs: Array.isArray(job.outputs) ? job.outputs : [],
     generation_rules: {

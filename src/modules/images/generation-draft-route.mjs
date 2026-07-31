@@ -52,7 +52,7 @@ export async function handleGenerationDraftRoute({ request, response, pathname, 
     sendJson(response, 201, await drafts.create(body));
   } catch (error) {
     if (error.code === "BODY_TOO_LARGE") sendJson(response, 413, { error: error.message });
-    else if (["INVALID_JSON", "INVALID_REQUEST", "INVALID_PROMPT", "INVALID_MODE", "INVALID_SOURCE", "INVALID_SELECTION"].includes(error.code)) {
+    else if (["INVALID_JSON", "INVALID_REQUEST", "INVALID_PROMPT", "INVALID_MODE", "INVALID_PURPOSE", "INVALID_SOURCE", "INVALID_SELECTION"].includes(error.code)) {
       sendJson(response, 400, { error: error.message });
     } else throw error;
   }

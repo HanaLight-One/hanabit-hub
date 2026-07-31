@@ -67,6 +67,25 @@ test("02시 운영일 경계와 설정 기반 출력 루트를 사용한다", as
   assert.equal(context.job.count, 2);
 });
 
+test("추가 생성 목적을 출력 하위 폴더에 분리한다", async () => {
+  const { assetIndexPath, outputRoot } = await fixture();
+  const context = await buildImageStudioQueueContext(
+    {
+      id: "free-test",
+      prompt: "자유로운 장면",
+      count: 1,
+      mode: "natural",
+      purpose: "free-play",
+    },
+    { assetIndexPath, outputRoot, now: new Date("2026-07-29T17:00:00Z") },
+  );
+  assert.equal(
+    context.output_directory,
+    path.join(outputRoot, "2026-07-30", "extra-requests", "free-play", "free-test"),
+  );
+  assert.equal(context.job.purpose, "free-play");
+});
+
 test("화풍과 예배당 선택은 외부 자산 색인만 사용한다", async () => {
   const { root, assetIndexPath, outputRoot } = await fixture();
   const style = await buildImageStudioQueueContext(

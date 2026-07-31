@@ -29,6 +29,10 @@ test("/images가 읽기 전용 이미지 화면을 제공한다", async () => {
     assert.match(body, /id="date-filter"/);
     assert.match(body, /id="theme-card"/);
     assert.match(body, /오늘의 테마/);
+    assert.match(body, /id="category-tabs"/);
+    assert.match(body, /오테 추가/);
+    assert.match(body, /자유 추가/);
+    assert.match(body, /id="generation-status"/);
     assert.equal(body.includes("삭제"), false);
   });
 });
@@ -45,6 +49,8 @@ test("이미지 화면의 스크립트와 스타일을 제공한다", async () =
     assert.match(script.headers.get("content-type"), /javascript/);
     assert.match(scriptBody, /currentOperationalDate/);
     assert.match(scriptBody, /· 오늘/);
+    assert.match(scriptBody, /\/api\/images\/generation-jobs/);
+    assert.match(scriptBody, /theme-extra/);
     assert.equal(style.status, 200);
     assert.match(style.headers.get("content-type"), /text\/css/);
   });
