@@ -35,6 +35,8 @@ npm.cmd run dev
 - `scripts/restart-codex.ps1`: 허용된 긴급 제어 API가 호출하는 Codex 전용 재기동 도우미
 - `npm.cmd run news:discord:check`: HANABIT NEWS LAB Guild·채널 연결만 확인
 - `npm.cmd run news:discord:test`: 연결 확인 후 `#news-log`에 테스트 메시지 1건 전송
+- `npm.cmd run news:discord:collect:dry`: 최근 Discord 공지 수집 대상을 쓰기 없이 확인
+- `npm.cmd run news:discord:collect`: 신규 Discord 공지를 로컬 뉴스 대기함에 저장
 
 ## 설정
 
@@ -66,3 +68,5 @@ Cloudflare Tunnel, 시작프로그램 및 예약 작업을 전환하지 않습�
 구조와 확장 기준은 [ARCHITECTURE.md](./ARCHITECTURE.md)를 참고하세요.
 Discord 뉴스 수집기의 일회성 연결 테스트는
 [docs/news-lab-discord.md](./docs/news-lab-discord.md)를 참고하세요.
+뉴스 수집부터 번역·판정·게시까지의 경계는
+[docs/news-pipeline.md](./docs/news-pipeline.md)를 참고하세요.
