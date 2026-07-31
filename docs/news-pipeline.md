@@ -24,3 +24,14 @@ npm.cmd run news:discord:collect
 
 아직 무료 AI 번역·판정, X 수집, Hub 화면, Discord `news-pending` 전송,
 DC 게시는 수행하지 않는다.
+
+## 실시간 감시
+
+`news:discord:watch`는 Discord Gateway의 새 메시지 이벤트를 즉시 수집한다.
+시작·재접속 시 최근 100건을 보충 확인하고, 장시간 연결의 안전망으로 10분마다
+같은 보충 확인을 반복한다. 모든 경로는 동일한 Discord 메시지 ID 중복 방지를
+사용한다.
+
+승인된 Windows 운영 환경에서는 `Hanabit News Discord Watcher` 로그인 예약
+작업이 현재 사용자 로그인 25초 후 감시기를 실행하며 실패 시 1분 간격으로 최대
+10회 재시작한다.

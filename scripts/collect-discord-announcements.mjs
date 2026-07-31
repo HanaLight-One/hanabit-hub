@@ -2,9 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ChannelType, Client, GatewayIntentBits } from "discord.js";
 import { loadDiscordNewsConfig, redactSecret } from "../src/modules/news/discord-config.mjs";
-import { normalizeDiscordAnnouncement } from "../src/modules/news/discord-announcement.mjs";
-import { downloadDiscordMedia } from "../src/modules/news/discord-media.mjs";
-import { createPendingNewsStore } from "../src/modules/news/news-item-store.mjs";
+import { createDiscordAnnouncementCollector } from "../src/modules/news/discord-announcement-collector.mjs";
 
 const PROJECT_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const stateRoot = path.join(PROJECT_ROOT, "state", "news");
@@ -22,7 +20,10 @@ let token = "";
 try {
   const config = loadDiscordNewsConfig();
   token = config.botToken;
-  const store = createPendingNewsStore({ root: stateRoot });
+  const collector = createDiscordAnnouncementCollector({
+    stateRoot,
+    channelId: config.openaiChannelId,
+  });
   client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -49,35 +50,7 @@ try {
     throw new Error("OpenAI Announcement 텍스트 채널을 찾지 못했습니다.");
   }
 
-  const messages = [...(await channel.messages.fetch({ limit })).values()].sort(
-    (left, right) => left.createdTimestamp - right.createdTimestamp,
-  );
-  const summary = { scanned: messages.length, eligible: 0, existing: 0, created: 0, media: 0 };
-
-  for (const message of messages) {
-    const normalized = normalizeDiscordAnnouncement(message, {
-      channelId: config.openaiChannelId,
-    });
-    if (!normalized) continue;
-    summary.eligible += 1;
-
-    if (await store.has(normalized.id)) {
-      summary.existing += 1;
-      continue;
-    }
-    if (dryRun) continue;
-
-    const result = await store.create(normalized.record, {
-      writeMedia: (destination) =>
-        downloadDiscordMedia(normalized.mediaCandidates, { destination }),
-    });
-    if (result.created) {
-      summary.created += 1;
-      summary.media += result.mediaCount;
-    } else {
-      summary.existing += 1;
-    }
-  }
+  const summary = await collector.collectRecent(channel, { limit, dryRun });
 
   console.log(
     `Discord 공지 수집 ${dryRun ? "드라이런" : "완료"}: ` +

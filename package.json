@@ -9,11 +9,12 @@
   "scripts": {
     "dev": "node --watch src/server.mjs",
     "start": "node src/server.mjs",
-    "check": "node --check src/server.mjs && node --check src/config.mjs && node --test",
+    "check": "node --check src/server.mjs && node --check src/config.mjs && node --check scripts/collect-discord-announcements.mjs && node --check scripts/watch-discord-announcements.mjs && node --test",
     "news:discord:check": "node scripts/check-news-discord.mjs",
     "news:discord:test": "node scripts/check-news-discord.mjs --send-log",
     "news:discord:collect": "node scripts/collect-discord-announcements.mjs",
-    "news:discord:collect:dry": "node scripts/collect-discord-announcements.mjs --dry-run"
+    "news:discord:collect:dry": "node scripts/collect-discord-announcements.mjs --dry-run",
+    "news:discord:watch": "node scripts/watch-discord-announcements.mjs"
   },
   "dependencies": {
     "discord.js": "^14.27.0",

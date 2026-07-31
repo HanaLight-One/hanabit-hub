@@ -37,6 +37,9 @@ npm.cmd run dev
 - `npm.cmd run news:discord:test`: 연결 확인 후 `#news-log`에 테스트 메시지 1건 전송
 - `npm.cmd run news:discord:collect:dry`: 최근 Discord 공지 수집 대상을 쓰기 없이 확인
 - `npm.cmd run news:discord:collect`: 신규 Discord 공지를 로컬 뉴스 대기함에 저장
+- `npm.cmd run news:discord:watch`: Gateway 새 공지를 실시간 감시하고 재접속 시 보충
+- `scripts/register-news-watcher-autostart.ps1`: 뉴스 감시기 로그인 자동 시작 등록
+- `scripts/unregister-news-watcher-autostart.ps1`: 뉴스 감시기 작업만 중지·삭제
 
 ## 설정
 
