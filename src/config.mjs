@@ -77,6 +77,16 @@ function validateConfig(config) {
     );
   }
 
+  const fortune = config.integrations?.fortune;
+  if (fortune?.enabled) {
+    if (!path.isAbsolute(fortune.outputRoot ?? "")) {
+      throw new Error("운세 연동에는 outputRoot 절대경로가 필요합니다.");
+    }
+    if (!path.isAbsolute(fortune.publisherStateRoot ?? "")) {
+      throw new Error("운세 연동에는 publisherStateRoot 절대경로가 필요합니다.");
+    }
+  }
+
   return config;
 }
 

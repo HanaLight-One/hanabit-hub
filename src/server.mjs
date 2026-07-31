@@ -9,6 +9,9 @@ import { handleDiscordTokenSetupRoute } from "./modules/news/discord-token-setup
 import { createNewsReader } from "./modules/news/news-reader.mjs";
 import { handleNewsListRoute } from "./modules/news/news-list-route.mjs";
 import { handleNewsMediaRoute } from "./modules/news/news-media-route.mjs";
+import { createFortuneArchive } from "./modules/fortune/fortune-archive.mjs";
+import { handleFortuneRoute } from "./modules/fortune/fortune-route.mjs";
+import { handleFortuneTextRoute } from "./modules/fortune/fortune-text-route.mjs";
 import { createCreationOptionsCatalog } from "./modules/images/creation-options.mjs";
 import { handleCreationOptionsRoute } from "./modules/images/creation-options-route.mjs";
 import { createImageArchive } from "./modules/images/image-archive.mjs";
@@ -89,6 +92,13 @@ const discordTokenSetup = createDiscordTokenSetup({
   envPath: path.join(APP_ROOT, ".env"),
 });
 const newsReader = createNewsReader({ root: path.join(APP_ROOT, "state", "news") });
+const fortuneConfig = config.integrations?.fortune;
+const fortuneArchive = fortuneConfig?.enabled
+  ? createFortuneArchive({
+      outputRoot: fortuneConfig.outputRoot,
+      publisherStateRoot: fortuneConfig.publisherStateRoot,
+    })
+  : null;
 
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -105,6 +115,8 @@ const PAGE_ROUTES = Object.freeze({
   "/setup/discord/": "setup/discord/index.html",
   "/news": "news/index.html",
   "/news/": "news/index.html",
+  "/fortune": "fortune/index.html",
+  "/fortune/": "fortune/index.html",
 });
 
 function sendJson(response, statusCode, payload) {
@@ -168,6 +180,7 @@ export function createServer({
   systemControl = codexControl,
   discordSetup = discordTokenSetup,
   news = newsReader,
+  fortune = fortuneArchive,
 } = {}) {
   return http.createServer(async (request, response) => {
     try {
@@ -226,6 +239,24 @@ export function createServer({
           response,
           pathname: url.pathname,
           reader: news,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
+        await handleFortuneRoute({ request, response, url, archive: fortune, sendJson })
+      ) {
+        return;
+      }
+
+      if (
+        await handleFortuneTextRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          archive: fortune,
           sendJson,
         })
       ) {

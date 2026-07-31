@@ -29,6 +29,38 @@ test("Image Studio 활성화 시 제작 기록 절대경로를 요구한다", ()
   );
 });
 
+test("운세 연동은 출력과 게시 상태 절대경로만 허용한다", () => {
+  const base = {
+    host: "127.0.0.1",
+    port: 8790,
+    operations: {
+      timezone: "Asia/Seoul",
+      dayStartsAtHour: 2,
+    },
+    allowedActions: [],
+  };
+  assert.throws(
+    () =>
+      validateConfig({
+        ...base,
+        integrations: {
+          fortune: { enabled: true, outputRoot: "output", publisherStateRoot: "C:\\state" },
+        },
+      }),
+    /outputRoot 절대경로/,
+  );
+  assert.throws(
+    () =>
+      validateConfig({
+        ...base,
+        integrations: {
+          fortune: { enabled: true, outputRoot: "C:\\output", publisherStateRoot: "state" },
+        },
+      }),
+    /publisherStateRoot 절대경로/,
+  );
+});
+
 test("서버 제어 allowlist는 알려진 작업만 허용한다", () => {
   assert.throws(
     () =>
