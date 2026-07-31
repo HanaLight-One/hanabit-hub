@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <title>Discord Bot Token 설정 · 하나빛 허브</title>
+    <link rel="stylesheet" href="/setup/discord/styles.css" />
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">OWNER ONLY · ONE-TIME SETUP</p>
+      <h1>Discord Bot Token<br /><span>일회성 보관함</span></h1>
+      <p class="description">
+        입력한 토큰은 노트북의 Git 제외 환경 파일에만 저장됩니다.
+        저장된 값은 이 화면이나 API 응답으로 다시 표시되지 않습니다.
+      </p>
+
+      <section class="vault" aria-labelledby="vault-title">
+        <div class="status-row">
+          <div>
+            <p class="label">HANABIT NEWS LAB</p>
+            <h2 id="vault-title">연결 비밀값</h2>
+          </div>
+          <span id="status-badge" class="badge">확인 중</span>
+        </div>
+
+        <form id="token-form" hidden>
+          <label for="bot-token">Discord Bot Token</label>
+          <input
+            id="bot-token"
+            name="bot-token"
+            type="password"
+            autocomplete="off"
+            autocapitalize="none"
+            spellcheck="false"
+            minlength="50"
+            maxlength="200"
+            required
+          />
+          <label class="confirmation">
+            <input id="confirm-once" type="checkbox" required />
+            저장 후 이 화면에서 토큰을 다시 확인하거나 수정할 수 없음을 확인했어요.
+          </label>
+          <button type="submit">노트북에 한 번만 저장</button>
+        </form>
+
+        <p id="result" class="result" role="status" aria-live="polite">
+          비밀값 저장소 상태를 확인하고 있어요.
+        </p>
+      </section>
+
+      <p class="footnote">
+        토큰을 채팅, 스크린샷, 이슈 또는 코드에 붙여넣지 마세요.
+      </p>
+    </main>
+    <script type="module" src="/setup/discord/app.js"></script>
+  </body>
+</html>

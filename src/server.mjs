@@ -4,6 +4,8 @@ import path from "node:path";
 import { APP_ROOT, loadConfig } from "./config.mjs";
 import { createCodexControl } from "./modules/system/codex-control.mjs";
 import { handleCodexControlRoute } from "./modules/system/codex-control-route.mjs";
+import { createDiscordTokenSetup } from "./modules/news/discord-token-setup.mjs";
+import { handleDiscordTokenSetupRoute } from "./modules/news/discord-token-setup-route.mjs";
 import { createCreationOptionsCatalog } from "./modules/images/creation-options.mjs";
 import { handleCreationOptionsRoute } from "./modules/images/creation-options-route.mjs";
 import { createImageArchive } from "./modules/images/image-archive.mjs";
@@ -80,6 +82,9 @@ const codexControl = createCodexControl({
   scriptPath: path.join(APP_ROOT, "scripts", "restart-codex.ps1"),
   auditRoot: path.join(APP_ROOT, "state"),
 });
+const discordTokenSetup = createDiscordTokenSetup({
+  envPath: path.join(APP_ROOT, ".env"),
+});
 
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -92,6 +97,8 @@ const PAGE_ROUTES = Object.freeze({
   "/images/": "images/index.html",
   "/images/create": "images/create/index.html",
   "/images/create/": "images/create/index.html",
+  "/setup/discord": "setup/discord/index.html",
+  "/setup/discord/": "setup/discord/index.html",
 });
 
 function sendJson(response, statusCode, payload) {
@@ -127,6 +134,15 @@ async function serveStatic(response, pathname) {
     response.writeHead(200, {
       "content-type": CONTENT_TYPES[path.extname(target)] ?? "application/octet-stream",
       "cache-control": "no-cache",
+      ...(pathname.startsWith("/setup/discord")
+        ? {
+            "content-security-policy":
+              "default-src 'self'; img-src 'self' data:; style-src 'self'; " +
+              "script-src 'self'; base-uri 'none'; frame-ancestors 'none'; " +
+              "form-action 'self'",
+            "referrer-policy": "no-referrer",
+          }
+        : {}),
       "x-content-type-options": "nosniff",
     });
     response.end(body);
@@ -144,6 +160,7 @@ export function createServer({
   thumbnails = imageThumbnails,
   themeService = themes,
   systemControl = codexControl,
+  discordSetup = discordTokenSetup,
 } = {}) {
   return http.createServer(async (request, response) => {
     try {
@@ -166,6 +183,18 @@ export function createServer({
           response,
           pathname: url.pathname,
           control: systemControl,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
+        await handleDiscordTokenSetupRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          setup: discordSetup,
           sendJson,
         })
       ) {
