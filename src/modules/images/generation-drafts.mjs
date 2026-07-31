@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const MAX_PROMPT_LENGTH = 12_000;
@@ -11,6 +11,13 @@ const STYLE_MODES = new Set(["auto", "none", "selected"]);
 
 function draftError(code, message) {
   return Object.assign(new Error(message), { code });
+}
+
+function validateDraftId(id) {
+  if (!/^[a-f0-9]{32}$/u.test(String(id ?? ""))) {
+    throw draftError("INVALID_DRAFT_ID", "안전한 생성 초안 ID가 필요합니다.");
+  }
+  return String(id);
 }
 
 function plainObject(value) {
@@ -123,7 +130,19 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
     });
   }
 
-  return Object.freeze({ create });
+  async function get(id) {
+    const safeId = validateDraftId(id);
+    try {
+      return JSON.parse(await readFile(path.join(root, `${safeId}.json`), "utf8"));
+    } catch (error) {
+      if (error.code === "ENOENT" || error instanceof SyntaxError) {
+        throw draftError("DRAFT_NOT_FOUND", "생성 초안을 찾을 수 없습니다.");
+      }
+      throw error;
+    }
+  }
+
+  return Object.freeze({ create, get });
 }
 
 export { MAX_PROMPT_LENGTH };

@@ -1,0 +1,85 @@
+import assert from "node:assert/strict";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import test from "node:test";
+import { createGenerationDraftStore } from "../src/modules/images/generation-drafts.mjs";
+import { createPromptOnlyExecutor } from "../src/modules/images/prompt-only-executor.mjs";
+
+async function fixture(callback) {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-prompt-executor-"));
+  const draftRoot = path.join(root, "drafts");
+  const jobRoot = path.join(root, "jobs");
+  const outputRoot = path.join(root, "output");
+  const assetIndexPath = path.join(root, "assets.json");
+  const pythonExecutablePath = path.join(root, "python.exe");
+  const responsesWorkerPath = path.join(root, "worker.py");
+  const freeTextRunnerPath = path.join(root, "free.ps1");
+  await mkdir(outputRoot, { recursive: true });
+  await Promise.all([
+    writeFile(assetIndexPath, JSON.stringify({ styles: {}, characters: {} }), "utf8"),
+    writeFile(pythonExecutablePath, "test", "utf8"),
+    writeFile(responsesWorkerPath, "test", "utf8"),
+    writeFile(freeTextRunnerPath, "test", "utf8"),
+  ]);
+  const catalog = { async list() { return { styles: [], characters: [] }; } };
+  const drafts = createGenerationDraftStore({ root: draftRoot, catalog, archive: null });
+  const launches = [];
+  const executor = createPromptOnlyExecutor({
+    draftStore: drafts,
+    jobRoot,
+    assetIndexPath,
+    outputRoot,
+    pythonExecutablePath,
+    responsesWorkerPath,
+    freeTextRunnerPath,
+    async launchWorker(input) { launches.push(input); return { pid: 1234 }; },
+  });
+  try { await callback({ drafts, executor, launches, jobRoot }); }
+  finally { await rm(root, { recursive: true, force: true }); }
+}
+
+test("프롬프트 자유 생성은 모의 worker에 1장으로 한 번만 전달한다", async () => {
+  await fixture(async ({ drafts, executor, launches, jobRoot }) => {
+    const draft = await drafts.create({
+      prompt: "자유로운 우주 정거장 장면",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "none", ids: [] },
+      style: { mode: "none", id: null },
+    });
+    const started = await executor.start(draft.id);
+    assert.deepEqual(started, { id: draft.id, status: "processing", route: "prompt-only", count: 1 });
+    assert.equal(launches.length, 1);
+    const job = JSON.parse(await readFile(path.join(jobRoot, `${draft.id}.json`), "utf8"));
+    const context = JSON.parse(
+      (await readFile(path.join(jobRoot, `${draft.id}.worker-context.json`), "utf8")).replace(/^\uFEFF/u, ""),
+    );
+    assert.equal(job.count, 1);
+    assert.equal(job.mode, "natural");
+    assert.equal(context.job.prompt, "자유로운 우주 정거장 장면");
+    assert.equal(context.generation_rules.one_image_per_call, true);
+    await assert.rejects(() => executor.start(draft.id), /이미 실행/);
+    assert.equal(launches.length, 1);
+    await writeFile(
+      path.join(jobRoot, `${draft.id}.json`),
+      JSON.stringify({ ...job, status: "failed", error: "SECRET C:\\internal\\worker.log" }),
+      "utf8",
+    );
+    assert.equal(JSON.stringify(await executor.status(draft.id)).includes("SECRET"), false);
+  });
+});
+
+test("안내 생성 초안은 실제 worker 실행을 거부한다", async () => {
+  await fixture(async ({ drafts, executor, launches }) => {
+    const draft = await drafts.create({
+      prompt: "자동으로 선택하는 장면",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "auto", ids: [] },
+      style: { mode: "auto", id: null },
+    });
+    await assert.rejects(() => executor.start(draft.id), /프롬프트 자유 생성/);
+    assert.equal(launches.length, 0);
+  });
+});

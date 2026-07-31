@@ -16,6 +16,8 @@ import { createCreationOptionsCatalog } from "./modules/images/creation-options.
 import { handleCreationOptionsRoute } from "./modules/images/creation-options-route.mjs";
 import { createGenerationDraftStore } from "./modules/images/generation-drafts.mjs";
 import { handleGenerationDraftRoute } from "./modules/images/generation-draft-route.mjs";
+import { createPromptOnlyExecutor } from "./modules/images/prompt-only-executor.mjs";
+import { handlePromptOnlyExecutionRoute } from "./modules/images/prompt-only-execution-route.mjs";
 import { createImageArchive } from "./modules/images/image-archive.mjs";
 import { handleImageContentRoute } from "./modules/images/image-content-route.mjs";
 import { handleImageDetailRoute } from "./modules/images/image-detail-route.mjs";
@@ -67,6 +69,24 @@ const generationDrafts =
         root: path.join(APP_ROOT, "state", "image-generation-drafts"),
         catalog: creationOptions,
         archive: imageArchive,
+      })
+    : null;
+const generationConfig = imageStudioConfig?.generation;
+const promptOnlyExecutor =
+  generationDrafts &&
+  generationConfig?.assetIndexPath &&
+  generationConfig?.outputRoot &&
+  generationConfig?.pythonExecutablePath &&
+  generationConfig?.responsesWorkerPath &&
+  generationConfig?.freeTextRunnerPath
+    ? createPromptOnlyExecutor({
+        draftStore: generationDrafts,
+        jobRoot: path.join(APP_ROOT, "state", "image-generation-jobs"),
+        assetIndexPath: generationConfig.assetIndexPath,
+        outputRoot: generationConfig.outputRoot,
+        pythonExecutablePath: generationConfig.pythonExecutablePath,
+        responsesWorkerPath: generationConfig.responsesWorkerPath,
+        freeTextRunnerPath: generationConfig.freeTextRunnerPath,
       })
     : null;
 const themeHistory =
@@ -192,6 +212,7 @@ export function createServer({
   news = newsReader,
   fortune = fortuneArchive,
   drafts = generationDrafts,
+  generationExecutor = promptOnlyExecutor,
 } = {}) {
   return http.createServer(async (request, response) => {
     try {
@@ -304,6 +325,18 @@ export function createServer({
           response,
           pathname: url.pathname,
           drafts,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
+        await handlePromptOnlyExecutionRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          executor: generationExecutor,
           sendJson,
         })
       ) {

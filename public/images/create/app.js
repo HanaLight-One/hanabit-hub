@@ -32,6 +32,7 @@ const elements = {
   previewRoute: document.querySelector("#preview-route"),
   previewMessage: document.querySelector("#preview-message"),
   draftButton: document.querySelector("#draft-button"),
+  executeButton: document.querySelector("#execute-button"),
 };
 
 const params = new URLSearchParams(window.location.search);
@@ -48,6 +49,7 @@ const characterLabels = new Map();
 let connectedStyleCount = 0;
 let connectedCharacterCount = 0;
 let previewPayload = null;
+let savedDraftId = null;
 
 function setSourceModesEnabled(enabled) {
   for (const input of sourceModes) input.disabled = !enabled;
@@ -292,8 +294,10 @@ elements.scene.addEventListener("input", () => {
 
 elements.form.addEventListener("input", () => {
   previewPayload = null;
+  savedDraftId = null;
   elements.draftButton.disabled = true;
   elements.draftButton.textContent = "격리 초안 저장";
+  elements.executeButton.hidden = true;
 });
 
 elements.form.addEventListener("submit", (event) => {
@@ -362,9 +366,62 @@ elements.draftButton.addEventListener("click", async () => {
         ? "프롬프트 자유 생성 초안을 저장했어요. Python과 무료 API는 실행하지 않았습니다."
         : "안내 생성 초안을 저장했어요. Python과 무료 API는 실행하지 않았습니다.";
     elements.draftButton.textContent = "격리 초안 저장 완료";
+    savedDraftId = result.id;
+    elements.executeButton.hidden = result.route !== "prompt-only";
   } catch (error) {
     elements.previewMessage.textContent = error.message;
     elements.draftButton.disabled = false;
     elements.draftButton.textContent = "격리 초안 다시 저장";
+  }
+});
+
+async function pollGeneration(id) {
+  try {
+    const response = await fetch(`/api/images/generation-jobs/${encodeURIComponent(id)}`, {
+      cache: "no-store",
+    });
+    if (!response.ok) throw new Error();
+    const result = await response.json();
+    elements.previewMessage.textContent = result.message;
+    if (result.status === "complete") {
+      elements.executeButton.textContent = "✓ 이미지 1장 생성 완료";
+      return;
+    }
+    if (result.status === "failed") {
+      elements.executeButton.textContent = "생성 실패 · 상태 확인 필요";
+      return;
+    }
+    setTimeout(() => pollGeneration(id), 5_000);
+  } catch {
+    elements.previewMessage.textContent = "생성 상태를 잠시 확인하지 못했어요. 다시 불러와 확인해주세요.";
+  }
+}
+
+elements.executeButton.addEventListener("click", async () => {
+  if (!savedDraftId) return;
+  const confirmed = window.confirm(
+    "이 프롬프트로 이미지 1장을 실제 생성할까요? 무료 API와 이미지 worker가 실행됩니다.",
+  );
+  if (!confirmed) return;
+
+  elements.executeButton.disabled = true;
+  elements.executeButton.textContent = "1장 생성 요청 중…";
+  try {
+    const response = await fetch(
+      `/api/images/generation-drafts/${encodeURIComponent(savedDraftId)}/execute`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ confirmation: "generate-one-prompt-only-image" }),
+      },
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "생성을 시작하지 못했습니다.");
+    elements.executeButton.textContent = "이미지 1장 생성 중…";
+    elements.previewMessage.textContent = "무료 API가 장면을 준비하고 있어요. 이 요청은 한 번만 실행됩니다.";
+    pollGeneration(result.id);
+  } catch (error) {
+    elements.previewMessage.textContent = error.message;
+    elements.executeButton.textContent = "실행 상태 확인 필요";
   }
 });
