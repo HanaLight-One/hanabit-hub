@@ -33,6 +33,8 @@ npm.cmd run dev
 - `scripts/register-live-autostart.ps1`: 승인된 8791 운영본을 로그인 자동 시작으로 등록
 - `scripts/unregister-live-autostart.ps1`: 8791 로그인 자동 시작 작업만 제거
 - `scripts/restart-codex.ps1`: 허용된 긴급 제어 API가 호출하는 Codex 전용 재기동 도우미
+- `npm.cmd run news:discord:check`: HANABIT NEWS LAB Guild·채널 연결만 확인
+- `npm.cmd run news:discord:test`: 연결 확인 후 `#news-log`에 테스트 메시지 1건 전송
 
 ## 설정
 
@@ -62,3 +64,5 @@ Cloudflare Tunnel, 시작프로그램 및 예약 작업을 전환하지 않습�
 - 배포와 Cloudflare 변경은 별도 승인 후 진행합니다.
 
 구조와 확장 기준은 [ARCHITECTURE.md](./ARCHITECTURE.md)를 참고하세요.
+Discord 뉴스 수집기의 일회성 연결 테스트는
+[docs/news-lab-discord.md](./docs/news-lab-discord.md)를 참고하세요.
