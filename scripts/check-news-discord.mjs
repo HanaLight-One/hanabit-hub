@@ -28,6 +28,13 @@ try {
   if (client.application?.id !== config.applicationId) {
     throw new Error("로그인한 Bot의 Application ID가 설정과 다릅니다.");
   }
+
+  if (!client.guilds.cache.has(config.guildId)) {
+    throw new Error(
+      "설정한 Guild를 찾지 못했습니다. " +
+        `Bot이 접근 가능한 Guild: ${client.guilds.cache.size}개`,
+    );
+  }
   const guild = await client.guilds.fetch(config.guildId);
 
   const channels = new Map();
