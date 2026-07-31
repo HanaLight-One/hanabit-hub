@@ -1,0 +1,135 @@
+import { readFile, readdir, stat } from "node:fs/promises";
+import path from "node:path";
+
+const ID_PATTERN = /^[a-f0-9]{32}$/u;
+const MEDIA_NAME_PATTERN = /^[a-zA-Z0-9_-]+\.(gif|jpe?g|png|webp)$/u;
+const CONTENT_TYPES = new Set(["image/gif", "image/jpeg", "image/png", "image/webp"]);
+
+function validateId(id) {
+  if (!ID_PATTERN.test(id)) throw new TypeError("올바르지 않은 뉴스 식별자입니다.");
+  return id;
+}
+
+function safeUrl(value) {
+  try {
+    const url = new URL(String(value ?? ""));
+    return ["http:", "https:"].includes(url.protocol) ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+function publicItem(record) {
+  const id = validateId(String(record?.id ?? ""));
+  const embeds = Array.isArray(record?.original?.embeds)
+    ? record.original.embeds.map((embed) => ({
+        title: String(embed?.title ?? ""),
+        description: String(embed?.description ?? ""),
+        url: safeUrl(embed?.url),
+        fields: Array.isArray(embed?.fields)
+          ? embed.fields.map((field) => ({
+              name: String(field?.name ?? ""),
+              value: String(field?.value ?? ""),
+            }))
+          : [],
+      }))
+    : [];
+  const media = Array.isArray(record?.media)
+    ? record.media
+        .map((entry) => {
+          const filename = path.basename(String(entry?.file ?? ""));
+          if (!MEDIA_NAME_PATTERN.test(filename)) return null;
+          return {
+            kind: String(entry?.kind ?? "image"),
+            contentType: CONTENT_TYPES.has(entry?.contentType) ? entry.contentType : null,
+            size: Number(entry?.size) || 0,
+            url: `/api/news/${id}/media/${encodeURIComponent(filename)}`,
+          };
+        })
+        .filter(Boolean)
+    : [];
+
+  return {
+    id,
+    source: {
+      type: String(record?.source?.type ?? ""),
+      url: safeUrl(record?.source?.url),
+      publishedAt: String(record?.source?.publishedAt ?? ""),
+    },
+    original: {
+      language: String(record?.original?.language ?? ""),
+      content: String(record?.original?.content ?? ""),
+      embeds,
+      links: Array.isArray(record?.original?.links)
+        ? record.original.links.map(safeUrl).filter(Boolean)
+        : [],
+    },
+    workflow: {
+      status: String(record?.workflow?.status ?? "unknown"),
+      hasTranslation: Boolean(record?.workflow?.translation),
+      hasTriage: Boolean(record?.workflow?.triage),
+      publishedToDc: Boolean(record?.workflow?.dcPublication),
+    },
+    collectedAt: String(record?.collectedAt ?? ""),
+    media,
+  };
+}
+
+export function createNewsReader({ root }) {
+  if (!path.isAbsolute(root)) throw new TypeError("뉴스 상태 루트는 절대경로여야 합니다.");
+  const pendingRoot = path.join(root, "pending");
+
+  async function readRecord(id) {
+    const target = path.join(pendingRoot, validateId(id), "item.json");
+    return JSON.parse(await readFile(target, "utf8"));
+  }
+
+  async function list() {
+    let entries;
+    try {
+      entries = await readdir(pendingRoot, { withFileTypes: true });
+    } catch (error) {
+      if (error.code === "ENOENT") return { items: [], total: 0, skipped: 0 };
+      throw error;
+    }
+
+    const items = [];
+    let skipped = 0;
+    for (const entry of entries) {
+      if (!entry.isDirectory() || !ID_PATTERN.test(entry.name)) continue;
+      try {
+        const item = publicItem(await readRecord(entry.name));
+        if (item.id !== entry.name) throw new Error("뉴스 ID가 일치하지 않습니다.");
+        items.push(item);
+      } catch {
+        skipped += 1;
+      }
+    }
+    items.sort((left, right) =>
+      String(right.source.publishedAt).localeCompare(String(left.source.publishedAt)),
+    );
+    return { items: items.slice(0, 100), total: items.length, skipped };
+  }
+
+  async function findMedia(id, filename) {
+    validateId(id);
+    if (!MEDIA_NAME_PATTERN.test(filename)) {
+      throw new TypeError("올바르지 않은 미디어 식별자입니다.");
+    }
+    const record = await readRecord(id);
+    const expected = `media/${filename}`;
+    const media = record.media?.find((entry) => entry.file === expected);
+    if (!media || !CONTENT_TYPES.has(media.contentType)) return null;
+
+    const mediaRoot = path.resolve(pendingRoot, id, "media");
+    const target = path.resolve(mediaRoot, filename);
+    if (!target.startsWith(`${mediaRoot}${path.sep}`)) {
+      throw new TypeError("미디어 경로가 대기함을 벗어났습니다.");
+    }
+    const info = await stat(target);
+    if (!info.isFile()) return null;
+    return { target, contentType: media.contentType, size: info.size };
+  }
+
+  return Object.freeze({ list, findMedia });
+}
