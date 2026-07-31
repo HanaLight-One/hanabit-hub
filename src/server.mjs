@@ -14,6 +14,8 @@ import { handleFortuneRoute } from "./modules/fortune/fortune-route.mjs";
 import { handleFortuneTextRoute } from "./modules/fortune/fortune-text-route.mjs";
 import { createCreationOptionsCatalog } from "./modules/images/creation-options.mjs";
 import { handleCreationOptionsRoute } from "./modules/images/creation-options-route.mjs";
+import { createGenerationDraftStore } from "./modules/images/generation-drafts.mjs";
+import { handleGenerationDraftRoute } from "./modules/images/generation-draft-route.mjs";
 import { createImageArchive } from "./modules/images/image-archive.mjs";
 import { handleImageContentRoute } from "./modules/images/image-content-route.mjs";
 import { handleImageDetailRoute } from "./modules/images/image-detail-route.mjs";
@@ -57,6 +59,14 @@ const imageThumbnails =
     ? createImageThumbnailService({
         archive: imageArchive,
         cacheRoot: path.join(imageStudioConfig.stateRoot, "thumbnails", "hub-v1"),
+      })
+    : null;
+const generationDrafts =
+  creationOptions
+    ? createGenerationDraftStore({
+        root: path.join(APP_ROOT, "state", "image-generation-drafts"),
+        catalog: creationOptions,
+        archive: imageArchive,
       })
     : null;
 const themeHistory =
@@ -181,6 +191,7 @@ export function createServer({
   discordSetup = discordTokenSetup,
   news = newsReader,
   fortune = fortuneArchive,
+  drafts = generationDrafts,
 } = {}) {
   return http.createServer(async (request, response) => {
     try {
@@ -281,6 +292,18 @@ export function createServer({
           response,
           pathname: url.pathname,
           catalog: creationOptionsCatalog,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
+        await handleGenerationDraftRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          drafts,
           sendJson,
         })
       ) {

@@ -1,0 +1,129 @@
+import { randomUUID } from "node:crypto";
+import { mkdir, rename, writeFile } from "node:fs/promises";
+import path from "node:path";
+
+const MAX_PROMPT_LENGTH = 12_000;
+const SOURCE_ID_PATTERN = /^[a-f0-9]{64}$/u;
+const MODES = new Set(["new", "same-combination", "same-characters", "same-style"]);
+const SOURCE_MODES = new Set(["same-combination", "same-characters", "same-style"]);
+const CHARACTER_MODES = new Set(["auto", "none", "custom"]);
+const STYLE_MODES = new Set(["auto", "none", "selected"]);
+
+function draftError(code, message) {
+  return Object.assign(new Error(message), { code });
+}
+
+function plainObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizePrompt(value) {
+  const prompt = String(value ?? "").trim();
+  if (prompt.length < 3) throw draftError("INVALID_PROMPT", "장면 요청을 3자 이상 입력해주세요.");
+  if (prompt.length > MAX_PROMPT_LENGTH) {
+    throw draftError("INVALID_PROMPT", `장면 요청은 ${MAX_PROMPT_LENGTH.toLocaleString("ko-KR")}자 이하여야 합니다.`);
+  }
+  return prompt;
+}
+
+function normalizeCharacters(value, allowedIds) {
+  if (!plainObject(value) || !CHARACTER_MODES.has(value.mode)) {
+    throw draftError("INVALID_SELECTION", "등장인물 선택 방식이 올바르지 않습니다.");
+  }
+  const ids = Array.isArray(value.ids) ? [...new Set(value.ids.map(String))] : [];
+  if (value.mode === "custom") {
+    if (ids.length < 1 || ids.length > 3 || ids.some((id) => !allowedIds.has(id))) {
+      throw draftError("INVALID_SELECTION", "등장인물은 현재 목록에서 최대 3명까지 선택할 수 있습니다.");
+    }
+  } else if (ids.length > 0) {
+    throw draftError("INVALID_SELECTION", "자동 또는 없음 선택에는 등장인물 ID를 보낼 수 없습니다.");
+  }
+  return Object.freeze({ mode: value.mode, ids: Object.freeze(ids) });
+}
+
+function normalizeStyle(value, allowedIds) {
+  if (!plainObject(value) || !STYLE_MODES.has(value.mode)) {
+    throw draftError("INVALID_SELECTION", "화풍 선택 방식이 올바르지 않습니다.");
+  }
+  const id = value.id == null ? null : String(value.id);
+  if (value.mode === "selected") {
+    if (!id || !allowedIds.has(id)) {
+      throw draftError("INVALID_SELECTION", "현재 화풍 목록에서 선택해주세요.");
+    }
+  } else if (id !== null) {
+    throw draftError("INVALID_SELECTION", "자동 또는 없음 선택에는 화풍 ID를 보낼 수 없습니다.");
+  }
+  return Object.freeze({ mode: value.mode, id });
+}
+
+export function createGenerationDraftStore({ root, catalog, archive }) {
+  if (!path.isAbsolute(root ?? "")) throw new TypeError("생성 초안 루트는 절대경로여야 합니다.");
+  if (!catalog) throw new TypeError("생성 옵션 카탈로그가 필요합니다.");
+
+  async function create(input) {
+    if (!plainObject(input)) throw draftError("INVALID_REQUEST", "생성 초안 JSON이 필요합니다.");
+    const prompt = normalizePrompt(input.prompt);
+    const mode = String(input.mode ?? "");
+    if (!MODES.has(mode)) throw draftError("INVALID_MODE", "생성 방식이 올바르지 않습니다.");
+
+    const suppliedSourceImageId = input.sourceImageId == null ? null : String(input.sourceImageId);
+    if (suppliedSourceImageId !== null && !SOURCE_ID_PATTERN.test(suppliedSourceImageId)) {
+      throw draftError("INVALID_SOURCE", "원본 이미지 ID가 올바르지 않습니다.");
+    }
+    const sourceImageId = mode === "new" ? null : suppliedSourceImageId;
+    if (SOURCE_MODES.has(mode) && sourceImageId === null) {
+      throw draftError("INVALID_SOURCE", "이 생성 방식에는 원본 이미지가 필요합니다.");
+    }
+    if (sourceImageId !== null && (!archive || !(await archive.find(sourceImageId)))) {
+      throw draftError("INVALID_SOURCE", "원본 이미지를 찾을 수 없습니다.");
+    }
+
+    const options = await catalog.list();
+    const characters = normalizeCharacters(
+      input.characters,
+      new Set(options.characters.map((item) => item.id)),
+    );
+    const style = normalizeStyle(
+      input.style,
+      new Set(options.styles.map((item) => item.id)),
+    );
+    const route =
+      mode === "new" && sourceImageId === null && characters.mode === "none" && style.mode === "none"
+        ? "prompt-only"
+        : "guided";
+    const id = randomUUID().replaceAll("-", "");
+    const createdAt = new Date().toISOString();
+    const record = {
+      schemaVersion: 1,
+      id,
+      createdAt,
+      status: "draft",
+      executionEnabled: false,
+      route,
+      prompt,
+      mode,
+      sourceImageId,
+      characters,
+      style,
+    };
+
+    await mkdir(root, { recursive: true });
+    const target = path.join(root, `${id}.json`);
+    const temporary = `${target}.${process.pid}.tmp`;
+    await writeFile(temporary, `${JSON.stringify(record, null, 2)}\n`, "utf8");
+    await rename(temporary, target);
+
+    return Object.freeze({
+      id,
+      createdAt,
+      status: "draft",
+      route,
+      promptLength: prompt.length,
+      executionEnabled: false,
+    });
+  }
+
+  return Object.freeze({ create });
+}
+
+export { MAX_PROMPT_LENGTH };

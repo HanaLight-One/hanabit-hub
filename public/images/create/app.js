@@ -29,7 +29,9 @@ const elements = {
   previewCharacters: document.querySelector("#preview-characters"),
   previewStyle: document.querySelector("#preview-style"),
   previewScene: document.querySelector("#preview-scene"),
+  previewRoute: document.querySelector("#preview-route"),
   previewMessage: document.querySelector("#preview-message"),
+  draftButton: document.querySelector("#draft-button"),
 };
 
 const params = new URLSearchParams(window.location.search);
@@ -45,6 +47,7 @@ const styleLabels = new Map([
 const characterLabels = new Map();
 let connectedStyleCount = 0;
 let connectedCharacterCount = 0;
+let previewPayload = null;
 
 function setSourceModesEnabled(enabled) {
   for (const input of sourceModes) input.disabled = !enabled;
@@ -287,18 +290,81 @@ elements.scene.addEventListener("input", () => {
   elements.characterCount.textContent = elements.scene.value.length;
 });
 
+elements.form.addEventListener("input", () => {
+  previewPayload = null;
+  elements.draftButton.disabled = true;
+  elements.draftButton.textContent = "격리 초안 저장";
+});
+
 elements.form.addEventListener("submit", (event) => {
   event.preventDefault();
   const data = new FormData(elements.form);
   const mode = MODE_LABELS[data.get("mode")] ?? MODE_LABELS.new;
-  const characters = selectedCharacterSummary();
+  const characterSummary = selectedCharacterSummary();
   const style = styleLabels.get(data.get("style")) ?? "자동 선택";
   const scene = elements.scene.value.trim();
+  const selectedCharacters = [
+    ...elements.characterGrid.querySelectorAll('input[name="character"]:checked'),
+  ].map((input) => input.value);
+  const characterModeInput = elements.characterGrid.querySelector(
+    'input[name="character-mode"]:checked',
+  );
+  const characterSelection = selectedCharacters.length
+    ? { mode: "custom", ids: selectedCharacters }
+    : { mode: characterModeInput?.value === "none" ? "none" : "auto", ids: [] };
+  const styleValue = data.get("style");
+  const styleSelection =
+    styleValue === "none"
+      ? { mode: "none", id: null }
+      : styleValue === "random"
+        ? { mode: "auto", id: null }
+        : { mode: "selected", id: styleValue };
+  const sourceImageId = data.get("mode") === "new" ? null : source;
+  const route =
+    data.get("mode") === "new" && characterSelection.mode === "none" && styleSelection.mode === "none"
+      ? "prompt-only"
+      : "guided";
+
+  previewPayload = {
+    prompt: scene,
+    mode: data.get("mode"),
+    sourceImageId,
+    characters: characterSelection,
+    style: styleSelection,
+  };
 
   elements.previewMode.textContent = mode;
-  elements.previewCharacters.textContent = characters;
+  elements.previewCharacters.textContent = characterSummary;
   elements.previewStyle.textContent = style;
   elements.previewScene.textContent = scene || "장면 요청이 비어 있어요.";
-  elements.previewMessage.textContent =
-    "미리보기만 갱신했어요. 서버나 생성 대기열로 전송되지 않았습니다.";
+  elements.previewRoute.textContent =
+    route === "prompt-only"
+      ? "프롬프트 자유 생성 · 자산 매칭 없음"
+      : "선택 자산을 보존하는 안내 생성";
+  elements.previewMessage.textContent = "미리보기를 확인했어요. 격리 초안으로 저장할 수 있습니다.";
+  elements.draftButton.disabled = !scene;
+});
+
+elements.draftButton.addEventListener("click", async () => {
+  if (!previewPayload) return;
+  elements.draftButton.disabled = true;
+  elements.draftButton.textContent = "초안 저장 중…";
+  try {
+    const response = await fetch("/api/images/generation-drafts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(previewPayload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "초안을 저장하지 못했습니다.");
+    elements.previewMessage.textContent =
+      result.route === "prompt-only"
+        ? "프롬프트 자유 생성 초안을 저장했어요. Python과 무료 API는 실행하지 않았습니다."
+        : "안내 생성 초안을 저장했어요. Python과 무료 API는 실행하지 않았습니다.";
+    elements.draftButton.textContent = "격리 초안 저장 완료";
+  } catch (error) {
+    elements.previewMessage.textContent = error.message;
+    elements.draftButton.disabled = false;
+    elements.draftButton.textContent = "격리 초안 다시 저장";
+  }
 });
