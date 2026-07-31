@@ -86,6 +86,7 @@ export function normalizeDiscordAnnouncement(message, { channelId }) {
   if (!/^\d{17,20}$/u.test(messageId) || !/^\d{17,20}$/u.test(channelId)) {
     throw new TypeError("Discord 메시지와 채널 ID가 필요합니다.");
   }
+  if (message?.type != null && Number(message.type) !== 0) return null;
 
   const content = cleanText(message?.content);
   const embeds = valuesOf(message?.embeds).map(normalizeEmbed).filter((embed) =>

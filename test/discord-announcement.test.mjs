@@ -52,3 +52,19 @@ test("비어 있는 Discord 시스템 메시지는 수집하지 않는다", () =
     null,
   );
 });
+
+test("내용이 있어도 Discord 시스템 메시지는 수집하지 않는다", () => {
+  assert.equal(
+    normalizeDiscordAnnouncement(
+      {
+        id: "1533000000000000000",
+        type: 12,
+        content: "Announcement channel followed",
+        embeds: [],
+        attachments: [],
+      },
+      { channelId },
+    ),
+    null,
+  );
+});
