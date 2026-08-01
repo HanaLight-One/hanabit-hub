@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#090c10" />
+    <meta name="description" content="하나빛 허브 화풍 파일 관리" />
+    <title>화풍 보관함 · Hanabit Hub</title>
+    <link rel="stylesheet" href="/images/styles.css" />
+    <link rel="stylesheet" href="/images/styles/page.css" />
+    <script src="/images/styles/app.js" type="module"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/images/create" aria-label="추가 이미지 생성실로 돌아가기">
+        <span class="brand-mark">H</span>
+        <span>HANABIT <b>STYLES</b></span>
+      </a>
+      <p id="connection" class="connection"><span></span> 화풍 보관함 확인 중</p>
+    </header>
+
+    <main>
+      <section class="style-hero">
+        <div>
+          <p class="eyebrow">STYLE VAULT</p>
+          <h1>화풍을<br /><em>가볍게 오가기.</em></h1>
+          <p class="intro">
+            운영 화풍 폴더 안의 TXT만 안전하게 내려받거나 추가합니다.
+            업로드가 성공하면 기존 Python 색인 빌더가 즉시 목록을 갱신해요.
+          </p>
+        </div>
+        <a class="back-link" href="/images/create">← 추가 이미지 생성실</a>
+      </section>
+
+      <section class="manager-layout">
+        <article class="upload-panel">
+          <p class="section-label">UPLOAD STYLE</p>
+          <h2>새 화풍 올리기</h2>
+          <p>파일명은 <code>[화풍] 이름.txt</code> 형식이어야 하며 기존 파일을 덮어쓰지 않아요.</p>
+          <form id="upload-form">
+            <label class="file-picker">
+              <span>TXT 파일 선택</span>
+              <input id="style-file" type="file" accept=".txt,text/plain" required />
+            </label>
+            <button id="upload-button" type="submit">업로드하고 색인 갱신</button>
+          </form>
+          <p id="upload-result" class="result" aria-live="polite">최대 512KB · 한 번에 한 파일</p>
+        </article>
+
+        <article class="index-panel">
+          <p class="section-label">INDEX STATUS</p>
+          <h2><strong id="indexed-count">—</strong> / <span id="style-count">—</span></h2>
+          <p>폴더의 화풍 수와 생성기가 인식한 색인 수를 비교합니다.</p>
+          <button id="reindex-button" type="button">색인 다시 확인</button>
+          <p id="index-result" class="result" aria-live="polite">상태를 불러오는 중이에요.</p>
+        </article>
+      </section>
+
+      <section class="catalog-section" aria-labelledby="catalog-title">
+        <div>
+          <p class="section-label">STYLE FILES</p>
+          <h2 id="catalog-title">운영 화풍 목록</h2>
+        </div>
+        <div id="style-list" class="style-list" aria-live="polite"></div>
+      </section>
+    </main>
+  </body>
+</html>
+

@@ -55,6 +55,11 @@ Image Studio 코드 이전 계획과 외부 설정 대상은
 `/images`의 전체 보기에는 현재 운영일 테마, 날짜별 보기에는 보관된 그날의
 테마를 표시합니다.
 
+Owner Only 허브의 `/images/styles`에서는 설정된 운영 화풍 폴더의 TXT를
+내려받거나 새 파일로 추가할 수 있습니다. 업로드가 성공하면 기존 Python 색인
+빌더를 실행해 생성기 목록을 갱신합니다. 같은 이름의 파일 덮어쓰기와 삭제는
+지원하지 않습니다.
+
 현재 Image Studio 이전 단계에서는 `config.local.json`에 기존 이미지·상태·
 파이프라인 경로를 기록하되 `integrations.imageStudio.enabled`를 `false`로
 유지합니다. 이는 경로 검증과 코드 분리를 위한 준비 설정이며 기존 8787 서버,

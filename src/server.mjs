@@ -25,6 +25,8 @@ import { handleImageDownloadRoute } from "./modules/images/image-download-route.
 import { handleImageListRoute } from "./modules/images/image-list-route.mjs";
 import { handleImageThumbnailRoute } from "./modules/images/image-thumbnail-route.mjs";
 import { createImageThumbnailService } from "./modules/images/image-thumbnails.mjs";
+import { createStyleAssetManager } from "./modules/images/style-assets.mjs";
+import { handleStyleAssetsRoute } from "./modules/images/style-assets-route.mjs";
 import { handleProductionRecordRoute } from "./modules/images/production-record-route.mjs";
 import { createProductionRecordStore } from "./modules/images/production-records.mjs";
 import { createThemeHistory } from "./modules/images/theme-history.mjs";
@@ -72,6 +74,19 @@ const generationDrafts =
       })
     : null;
 const generationConfig = imageStudioConfig?.generation;
+const styleAssets =
+  imageStudioConfig?.enabled &&
+  imageStudioConfig.stylesRoot &&
+  generationConfig?.assetIndexPath &&
+  generationConfig?.pipelineRoot &&
+  generationConfig?.pythonExecutablePath
+    ? createStyleAssetManager({
+        stylesRoot: imageStudioConfig.stylesRoot,
+        assetIndexPath: generationConfig.assetIndexPath,
+        pipelineRoot: generationConfig.pipelineRoot,
+        pythonExecutablePath: generationConfig.pythonExecutablePath,
+      })
+    : null;
 const promptOnlyExecutor =
   generationDrafts &&
   generationConfig?.assetIndexPath &&
@@ -141,6 +156,8 @@ const PAGE_ROUTES = Object.freeze({
   "/images/": "images/index.html",
   "/images/create": "images/create/index.html",
   "/images/create/": "images/create/index.html",
+  "/images/styles": "images/styles/index.html",
+  "/images/styles/": "images/styles/index.html",
   "/setup/discord": "setup/discord/index.html",
   "/setup/discord/": "setup/discord/index.html",
   "/news": "news/index.html",
@@ -182,7 +199,7 @@ async function serveStatic(response, pathname) {
     response.writeHead(200, {
       "content-type": CONTENT_TYPES[path.extname(target)] ?? "application/octet-stream",
       "cache-control": "no-cache",
-      ...(pathname.startsWith("/setup/discord")
+      ...(pathname.startsWith("/setup/discord") || pathname.startsWith("/images/styles")
         ? {
             "content-security-policy":
               "default-src 'self'; img-src 'self' data:; style-src 'self'; " +
@@ -213,6 +230,7 @@ export function createServer({
   fortune = fortuneArchive,
   drafts = generationDrafts,
   generationExecutor = promptOnlyExecutor,
+  styleAssetManager = styleAssets,
 } = {}) {
   return http.createServer(async (request, response) => {
     try {
@@ -301,6 +319,18 @@ export function createServer({
           response,
           url,
           service: themeService,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
+        await handleStyleAssetsRoute({
+          request,
+          response,
+          url,
+          manager: styleAssetManager,
           sendJson,
         })
       ) {
