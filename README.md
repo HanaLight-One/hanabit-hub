@@ -31,6 +31,7 @@ npm.cmd run dev
 - `npm.cmd start`: 일반 서버 실행
 - `npm.cmd run check`: JavaScript 문법과 기본 테스트 확인
 - `npm.cmd run news:build`: React 뉴스 검수실 번들 생성
+- `npm.cmd run notifications:build`: React 모바일 알림 설정 화면 번들 생성
 - `scripts/start-hidden.ps1`: 현재 checkout의 설정 포트로 서버를 숨김 실행
 - `scripts/register-live-autostart.ps1`: 승인된 8791 운영본을 로그인 자동 시작으로 등록
 - `scripts/unregister-live-autostart.ps1`: 8791 로그인 자동 시작 작업만 제거
@@ -88,3 +89,5 @@ Discord 뉴스 수집기의 일회성 연결 테스트는
 [docs/news-lab-discord.md](./docs/news-lab-discord.md)를 참고하세요.
 뉴스 수집부터 번역·판정·게시까지의 경계는
 [docs/news-pipeline.md](./docs/news-pipeline.md)를 참고하세요.
+모바일 Web Push의 연결 방법과 현재 자동화 범위는
+[docs/mobile-notifications.md](./docs/mobile-notifications.md)를 참고하세요.

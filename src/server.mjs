@@ -9,6 +9,8 @@ import { handleDiscordTokenSetupRoute } from "./modules/news/discord-token-setup
 import { createNewsReader } from "./modules/news/news-reader.mjs";
 import { createNewsApprovalService } from "./modules/news/news-approval.mjs";
 import { handleNewsApprovalRoute } from "./modules/news/news-approval-route.mjs";
+import { createPushNotificationService } from "./modules/notifications/push-notifications.mjs";
+import { handlePushNotificationRoute } from "./modules/notifications/push-notification-route.mjs";
 import { handleNewsListRoute } from "./modules/news/news-list-route.mjs";
 import { handleNewsMediaRoute } from "./modules/news/news-media-route.mjs";
 import { createFortuneArchive } from "./modules/fortune/fortune-archive.mjs";
@@ -140,6 +142,9 @@ const discordTokenSetup = createDiscordTokenSetup({
 });
 const newsReader = createNewsReader({ root: path.join(APP_ROOT, "state", "news") });
 const newsApproval = createNewsApprovalService({ root: path.join(APP_ROOT, "state", "news") });
+const pushNotifications = createPushNotificationService({
+  root: path.join(APP_ROOT, "state", "notifications"),
+});
 const fortuneConfig = config.integrations?.fortune;
 const fortuneArchive = fortuneConfig?.enabled
   ? createFortuneArchive({
@@ -165,6 +170,8 @@ const PAGE_ROUTES = Object.freeze({
   "/setup/discord/": "setup/discord/index.html",
   "/news": "news/index.html",
   "/news/": "news/index.html",
+  "/notifications": "notifications/index.html",
+  "/notifications/": "notifications/index.html",
   "/fortune": "fortune/index.html",
   "/fortune/": "fortune/index.html",
 });
@@ -202,7 +209,7 @@ async function serveStatic(response, pathname) {
     response.writeHead(200, {
       "content-type": CONTENT_TYPES[path.extname(target)] ?? "application/octet-stream",
       "cache-control": "no-cache",
-      ...(pathname.startsWith("/setup/discord") || pathname.startsWith("/images/styles") || pathname.startsWith("/news")
+      ...(pathname.startsWith("/setup/discord") || pathname.startsWith("/images/styles") || pathname.startsWith("/news") || pathname.startsWith("/notifications")
         ? {
             "content-security-policy":
               "default-src 'self'; img-src 'self' data:; style-src 'self'; " +
@@ -231,6 +238,7 @@ export function createServer({
   discordSetup = discordTokenSetup,
   news = newsReader,
   newsApprovalService = newsApproval,
+  notificationService = pushNotifications,
   fortune = fortuneArchive,
   drafts = generationDrafts,
   generationExecutor = promptOnlyExecutor,
@@ -269,6 +277,18 @@ export function createServer({
           response,
           pathname: url.pathname,
           setup: discordSetup,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
+        await handlePushNotificationRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          service: notificationService,
           sendJson,
         })
       ) {

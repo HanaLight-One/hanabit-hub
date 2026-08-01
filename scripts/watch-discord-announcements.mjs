@@ -13,6 +13,8 @@ import { runXFilteredStream } from "../src/modules/news/x-filtered-stream.mjs";
 import { createXStreamDiscordBridge } from "../src/modules/news/x-stream-discord-bridge.mjs";
 import { loadXStreamConfig } from "../src/modules/news/x-stream-config.mjs";
 import { createXStreamStatusNotifier } from "../src/modules/news/x-stream-status-notifier.mjs";
+import { createPushNotificationService } from "../src/modules/notifications/push-notifications.mjs";
+import { createNewsPushNotifier } from "../src/modules/news/news-push-notifier.mjs";
 
 const PROJECT_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const stateRoot = path.join(PROJECT_ROOT, "state", "news");
@@ -25,6 +27,7 @@ let client;
 let sources = [];
 let processor;
 let notifier;
+let pushNotifier;
 let token = "";
 let catchupInFlight = null;
 let xStreamController;
@@ -37,12 +40,16 @@ async function safeLog(message) {
 }
 
 async function catchUp(reason) {
-  if (!sources.length || !processor || !notifier) return;
+  if (!sources.length || !processor || !notifier || !pushNotifier) return;
   if (catchupInFlight) return catchupInFlight;
   catchupInFlight = (async () => {
     for (const source of sources) {
       const summary = await source.collector.collectRecent(source.channel, { limit: 10 });
-      for (const id of summary.ids) await notifier.notify(await processor.process(id));
+      for (const id of summary.ids) {
+        const processed = await processor.process(id);
+        await notifier.notify(processed);
+        await pushNotifier.notify(processed);
+      }
       await safeLog(
         `${source.label} 보충 확인(${reason}): 조회 ${summary.scanned}, ` +
           `기존 ${summary.existing}, 신규 ${summary.created}, 이미지 ${summary.media}`,
@@ -108,6 +115,7 @@ try {
       if (result.status === "created") {
         const processed = await processor.process(result.id);
         await notifier.notify(processed);
+        await pushNotifier.notify(processed);
         await safeLog(`${source.label} 새 항목 즉시 처리: 이미지 ${result.mediaCount}`);
       }
     } catch (error) {
@@ -151,6 +159,12 @@ try {
   }
   sources = channelEntries;
   notifier = createDiscordNewsNotifier({ stateRoot, pendingChannel });
+  pushNotifier = createNewsPushNotifier({
+    stateRoot,
+    pushNotifications: createPushNotificationService({
+      root: path.join(PROJECT_ROOT, "state", "notifications"),
+    }),
+  });
 
   if (xStreamConfig.enabled) {
     const xWatchChannel = channelEntries.find((entry) => entry.label === "X watch")?.channel;
