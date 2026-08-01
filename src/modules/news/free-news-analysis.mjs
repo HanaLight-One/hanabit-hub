@@ -83,7 +83,15 @@ function run(command, args, { cwd, timeoutMs = 600_000 } = {}) {
   });
 }
 
-export async function invokeFreeNewsAnalysis(record, { runnerPath, runtimeRoot, runProcess = run } = {}) {
+export async function invokeFreeNewsAnalysis(
+  record,
+  {
+    runnerPath,
+    runtimeRoot,
+    runProcess = run,
+    wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
+  } = {},
+) {
   if (!path.isAbsolute(runnerPath) || !path.isAbsolute(runtimeRoot) || !path.isAbsolute(POWERSHELL)) {
     throw new TypeError("무료 API runner와 실행 상태는 절대경로여야 합니다.");
   }
@@ -91,20 +99,29 @@ export async function invokeFreeNewsAnalysis(record, { runnerPath, runtimeRoot, 
   if (!runner.isFile()) throw new Error("무료 API runner를 사용할 수 없습니다.");
   const workRoot = path.join(runtimeRoot, record.id);
   const promptPath = path.join(workRoot, "prompt.txt");
-  const outputPath = path.join(workRoot, "output.json");
   await mkdir(workRoot, { recursive: true });
   try {
     await writeFile(promptPath, `${buildPrompt(record)}\n`, "utf8");
-    await runProcess(POWERSHELL, [
-      "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
-      "-File", runnerPath,
-      "-PromptFile", promptPath,
-      "-Output", outputPath,
-      "-MaxOutputTokens", "1800",
-    ], { cwd: workRoot });
-    const info = await stat(outputPath);
-    if (!info.isFile() || info.size > 256_000) throw new Error("무료 API 결과 크기가 올바르지 않습니다.");
-    return validateResult(parseJson(await readFile(outputPath, "utf8")));
+    let lastError;
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      const outputPath = path.join(workRoot, `output-${attempt}.json`);
+      try {
+        await runProcess(POWERSHELL, [
+          "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+          "-File", runnerPath,
+          "-PromptFile", promptPath,
+          "-Output", outputPath,
+          "-MaxOutputTokens", "1800",
+        ], { cwd: workRoot });
+        const info = await stat(outputPath);
+        if (!info.isFile() || info.size > 256_000) throw new Error("무료 API 결과 크기가 올바르지 않습니다.");
+        return validateResult(parseJson(await readFile(outputPath, "utf8")));
+      } catch (error) {
+        lastError = error;
+        if (attempt < 2) await wait(5_000);
+      }
+    }
+    throw lastError;
   } finally {
     await rm(workRoot, { recursive: true, force: true });
   }

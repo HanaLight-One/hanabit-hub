@@ -36,3 +36,34 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("무료 API 일시 실패는 한 번만 다시 시도하고 성공 결과를 사용한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-analysis-retry-"));
+  const runnerPath = path.join(root, "runner.ps1");
+  await writeFile(runnerPath, "test", "utf8");
+  let attempts = 0;
+  try {
+    const result = await invokeFreeNewsAnalysis({
+      id: "2".repeat(32),
+      source: { type: "x-post", account: "thsottiaux" },
+      original: { content: "Usage limits reset", embeds: [] },
+    }, {
+      runnerPath,
+      runtimeRoot: path.join(root, "runtime"),
+      async wait() {},
+      async runProcess(command, args) {
+        attempts += 1;
+        if (attempts === 1) throw new Error("temporary failure");
+        const outputPath = args[args.indexOf("-Output") + 1];
+        await writeFile(outputPath, JSON.stringify({
+          translation: { title: "초기화", body: "사용량이 초기화됐습니다." },
+          triage: { decision: "publish", confidence: 0.9, reason: "구체적인 변경", signals: [] },
+        }), "utf8");
+      },
+    });
+    assert.equal(attempts, 2);
+    assert.equal(result.triage.decision, "publish");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

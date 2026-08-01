@@ -24,8 +24,9 @@ npm.cmd run news:discord:collect
 ```
 
 수집 직후 기존 설정의 무료 텍스트 API runner가 한글 번역과
-`skip / review / publish` 판정을 JSON으로 반환한다. 형식이 틀리거나 API가 실패하면
-원문을 보존한 채 `translation_failed`로 닫고 자동 재시도하지 않는다. OpenAI 공식
+`skip / review / publish` 판정을 JSON으로 반환한다. 일시 실패와 잘못된 JSON은 호출
+안에서 한 번만 다시 시도하며, 두 번 모두 실패하면 원문을 보존한 채
+`translation_failed`로 닫고 이후 자동 재시도하지 않는다. OpenAI 공식
 Announcement는 모델 판정과 무관하게 최소 `publish` 게시 검토 후보로 올린다.
 
 `review`와 `publish` 항목은 하나빛 허브 `/news`와 Discord `#news-pending`에 글과
