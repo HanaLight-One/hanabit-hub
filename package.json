@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "node --watch src/server.mjs",
     "start": "node src/server.mjs",
-    "check": "node --check src/server.mjs && node --check src/config.mjs && node --check scripts/collect-discord-announcements.mjs && node --check scripts/watch-discord-announcements.mjs && node --check scripts/configure-x-filtered-stream.mjs && node --test",
+    "check": "npm run news:build && node --check src/server.mjs && node --check src/config.mjs && node --check scripts/collect-discord-announcements.mjs && node --check scripts/watch-discord-announcements.mjs && node --check scripts/configure-x-filtered-stream.mjs && node --test",
+    "news:build": "vite build --config vite.news.config.mjs",
     "news:discord:check": "node scripts/check-news-discord.mjs",
     "news:discord:test": "node scripts/check-news-discord.mjs --send-log",
     "news:discord:collect": "node scripts/collect-discord-announcements.mjs",
@@ -21,6 +22,11 @@
   "dependencies": {
     "discord.js": "^14.27.0",
     "dotenv": "^17.4.2",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "sharp": "^0.35.3"
+  },
+  "devDependencies": {
+    "vite": "^8.2.0"
   }
 }

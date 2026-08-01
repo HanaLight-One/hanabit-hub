@@ -33,6 +33,8 @@ test("뉴스 리더는 내부 경로와 Discord ID 없이 공개 계약을 반�
     assert.equal(payload.items[0].media[0].url, `/api/news/${id}/media/01-news.png`);
     assert.equal(payload.items[0].workflow.translation.title, "한글 제목");
     assert.equal(payload.items[0].workflow.triage.decision, "publish");
+    assert.equal(payload.items[0].workflow.canApproveForDc, true);
+    assert.equal(payload.items[0].workflow.dcApproval, null);
     assert.equal(serialized.includes(root), false);
     assert.equal(serialized.includes("secret-channel"), false);
     assert.equal(serialized.includes("secret-message"), false);

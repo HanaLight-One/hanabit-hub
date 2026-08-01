@@ -2,7 +2,8 @@
 
 하나빛의 로컬 관리자 허브입니다.
 
-현재 단계에서는 작고 안전한 Node.js 서버와 정적 프런트엔드로 시작합니다.
+현재 단계에서는 작고 안전한 Node.js 서버를 유지하면서 `/news`부터 React로
+단계적으로 전환합니다. 다른 화면은 기존 정적 프런트엔드를 그대로 사용합니다.
 기존 Image Studio, 이미지 저장소, 생성 파이프라인, 예약 작업은 이동하거나
 변경하지 않고 이후 독립 모듈로 연결합니다.
 
@@ -29,6 +30,7 @@ npm.cmd run dev
 - `npm.cmd run dev`: 파일 변경을 감지하는 개발 서버
 - `npm.cmd start`: 일반 서버 실행
 - `npm.cmd run check`: JavaScript 문법과 기본 테스트 확인
+- `npm.cmd run news:build`: React 뉴스 검수실 번들 생성
 - `scripts/start-hidden.ps1`: 현재 checkout의 설정 포트로 서버를 숨김 실행
 - `scripts/register-live-autostart.ps1`: 승인된 8791 운영본을 로그인 자동 시작으로 등록
 - `scripts/unregister-live-autostart.ps1`: 8791 로그인 자동 시작 작업만 제거
@@ -75,6 +77,7 @@ Cloudflare Tunnel, 시작프로그램 및 예약 작업을 전환하지 않습�
 - 저장소·파이프라인·예약 작업의 기존 파일 위치를 옮기지 않습니다.
 - 임의 명령 실행이나 임의 경로 접근 API를 만들지 않습니다.
 - 서버 작업은 코드에 명시된 allowlist만 허용합니다.
+- 뉴스 DC 승인은 게시 대기 영수증만 저장하며 실제 게시자를 실행하지 않습니다.
 - Codex 긴급 재기동은 `allowedActions`에 `restart-codex`가 있을 때만 활성화되며,
   임의 명령·경로·인수를 받지 않습니다.
 - `.env`, 키, 토큰, 쿠키, 세션, 로그, 상태 파일을 커밋하지 않습니다.

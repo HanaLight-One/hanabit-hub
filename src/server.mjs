@@ -7,6 +7,8 @@ import { handleCodexControlRoute } from "./modules/system/codex-control-route.mj
 import { createDiscordTokenSetup } from "./modules/news/discord-token-setup.mjs";
 import { handleDiscordTokenSetupRoute } from "./modules/news/discord-token-setup-route.mjs";
 import { createNewsReader } from "./modules/news/news-reader.mjs";
+import { createNewsApprovalService } from "./modules/news/news-approval.mjs";
+import { handleNewsApprovalRoute } from "./modules/news/news-approval-route.mjs";
 import { handleNewsListRoute } from "./modules/news/news-list-route.mjs";
 import { handleNewsMediaRoute } from "./modules/news/news-media-route.mjs";
 import { createFortuneArchive } from "./modules/fortune/fortune-archive.mjs";
@@ -137,6 +139,7 @@ const discordTokenSetup = createDiscordTokenSetup({
   envPath: path.join(APP_ROOT, ".env"),
 });
 const newsReader = createNewsReader({ root: path.join(APP_ROOT, "state", "news") });
+const newsApproval = createNewsApprovalService({ root: path.join(APP_ROOT, "state", "news") });
 const fortuneConfig = config.integrations?.fortune;
 const fortuneArchive = fortuneConfig?.enabled
   ? createFortuneArchive({
@@ -199,7 +202,7 @@ async function serveStatic(response, pathname) {
     response.writeHead(200, {
       "content-type": CONTENT_TYPES[path.extname(target)] ?? "application/octet-stream",
       "cache-control": "no-cache",
-      ...(pathname.startsWith("/setup/discord") || pathname.startsWith("/images/styles")
+      ...(pathname.startsWith("/setup/discord") || pathname.startsWith("/images/styles") || pathname.startsWith("/news")
         ? {
             "content-security-policy":
               "default-src 'self'; img-src 'self' data:; style-src 'self'; " +
@@ -227,6 +230,7 @@ export function createServer({
   systemControl = codexControl,
   discordSetup = discordTokenSetup,
   news = newsReader,
+  newsApprovalService = newsApproval,
   fortune = fortuneArchive,
   drafts = generationDrafts,
   generationExecutor = promptOnlyExecutor,
@@ -277,6 +281,18 @@ export function createServer({
           response,
           pathname: url.pathname,
           reader: news,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
+        await handleNewsApprovalRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          approvalService: newsApprovalService,
           sendJson,
         })
       ) {

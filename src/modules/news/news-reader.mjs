@@ -87,6 +87,16 @@ function publicItem(record) {
             reason: safeText(record.workflow.triage.reason, 400),
           }
         : null,
+      canApproveForDc:
+        record?.workflow?.status === "pending_review" &&
+        ["review", "publish"].includes(record?.workflow?.triage?.decision) &&
+        !record?.workflow?.dcPublication,
+      dcApproval: record?.workflow?.dcApproval?.status === "approved"
+        ? {
+            status: "approved",
+            approvedAt: String(record.workflow.dcApproval.approvedAt ?? ""),
+          }
+        : null,
       publishedToDc: Boolean(record?.workflow?.dcPublication),
     },
     collectedAt: String(record?.collectedAt ?? ""),
