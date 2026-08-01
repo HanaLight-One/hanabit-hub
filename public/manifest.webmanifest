@@ -1,0 +1,11 @@
+{
+  "name": "하나빛 허브",
+  "short_name": "하나빛",
+  "description": "하나빛의 Owner Only 관리자 허브",
+  "start_url": "/notifications",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#090c10",
+  "theme_color": "#090c10",
+  "lang": "ko"
+}

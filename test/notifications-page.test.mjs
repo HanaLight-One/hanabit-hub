@@ -11,9 +11,14 @@ test("모바일 알림 React 화면과 Service Worker를 제공한다", async ()
     const body = await page.text();
     const script = await (await fetch(`${baseUrl}/notifications/app.js`)).text();
     const worker = await (await fetch(`${baseUrl}/notification-sw.js`)).text();
+    const manifestResponse = await fetch(`${baseUrl}/manifest.webmanifest`);
+    const manifest = await manifestResponse.json();
     assert.equal(body.includes('id="notifications-root"'), true);
+    assert.equal(body.includes('rel="manifest"'), true);
     assert.equal(script.includes("send-missed-you-notification"), true);
     assert.equal(script.includes("localStorage"), false);
     assert.equal(worker.includes('addEventListener("push"'), true);
+    assert.equal(manifest.display, "standalone");
+    assert.match(manifestResponse.headers.get("content-type"), /application\/manifest\+json/u);
   } finally { await new Promise((resolve) => server.close(resolve)); }
 });
