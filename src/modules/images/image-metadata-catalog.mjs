@@ -13,6 +13,19 @@ function safeText(value, maximum) {
   return result && result.length <= maximum ? result : null;
 }
 
+function safePrompt(value) {
+  const prompt = safeText(value, 12_000);
+  if (!prompt) return null;
+  const internalPath = /(?:[a-z]:[\\/]|file:\/\/|\\\\)/iu;
+  const sanitized = prompt
+    .split(/\r?\n/u)
+    .map((line) => internalPath.test(line) ? "[내부 참조 경로 숨김]" : line)
+    .filter((line, index, lines) => line !== "[내부 참조 경로 숨김]" || lines[index - 1] !== line)
+    .join("\n")
+    .trim();
+  return sanitized || null;
+}
+
 function safeDate(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
@@ -94,7 +107,7 @@ export function createImageMetadataCatalog({ database, archive, jobRoot, dailyMa
     }
     const styleLabel = styleId == null ? null : optionLabels.styles.get(styleId) ?? styleId;
     const indexedAt = now().toISOString();
-    const prompt = safeText(job.prompt, 12_000);
+    const prompt = safePrompt(job.prompt);
     const createdAt = safeDate(job.completedAt ?? job.startedAt ?? job.createdAt);
     const durationMs = elapsed(job.startedAt ?? job.createdAt, job.completedAt);
     const retryCount = Number.isInteger(job.retryCount) && job.retryCount >= 0 ? job.retryCount : null;

@@ -81,7 +81,7 @@ test("완료된 운영 오테 manifest만 이미지 제작 기록으로 연결�
       id: "11-05_chapel-text-styled-01",
       status: "complete",
       final_output: "05_chapel-text-styled/01.png",
-      final_prompt: "성당 다과회",
+      final_prompt: "성당 다과회\nReference: C:\\private\\anchors\\heila.png\n따뜻한 오후",
       characters: ["헤일라", "리벨라"],
       relationship: { id: "saintess_friends_heila_ribella" },
       style_id: "고딕",
@@ -101,7 +101,8 @@ test("완료된 운영 오테 manifest만 이미지 제작 기록으로 연결�
     assert.deepEqual(await catalog.synchronize(), { assets: 1, metadata: 1 });
     const image = (await archive.list()).images[0];
     const record = await catalog.get(image.id);
-    assert.equal(record.prompt, "성당 다과회");
+    assert.equal(record.prompt, "성당 다과회\n[내부 참조 경로 숨김]\n따뜻한 오후");
+    assert.equal(record.prompt.includes("C:\\"), false);
     assert.deepEqual(record.characters, ["헤일라", "리벨라"]);
     assert.equal(record.style, "고딕");
     assert.equal(record.relationGroup, "saintess_friends_heila_ribella");
