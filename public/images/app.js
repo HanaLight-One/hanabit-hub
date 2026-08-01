@@ -19,6 +19,9 @@ const elements = {
   basicRecord: document.querySelector("#basic-record"),
   recordMessage: document.querySelector("#record-message"),
   productionRecord: document.querySelector("#production-record"),
+  promptRecord: document.querySelector("#prompt-record"),
+  promptSummary: document.querySelector("#prompt-summary"),
+  promptText: document.querySelector("#prompt-text"),
   createLink: document.querySelector("#create-link"),
   originalLink: document.querySelector("#original-link"),
   downloadLink: document.querySelector("#download-link"),
@@ -56,11 +59,13 @@ function formatBytes(bytes) {
 }
 
 function formatDateTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
   return new Intl.DateTimeFormat("ko-KR", {
     timeZone: "Asia/Seoul",
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(new Date(value));
+  }).format(date);
 }
 
 function formatDuration(milliseconds) {
@@ -216,6 +221,9 @@ async function loadTheme() {
 async function loadProductionRecord(image) {
   const requestedImageId = image.id;
   elements.productionRecord.replaceChildren();
+  elements.promptRecord.hidden = true;
+  elements.promptRecord.open = false;
+  elements.promptText.textContent = "";
   elements.recordMessage.hidden = false;
   elements.recordMessage.textContent = "제작 기록을 확인하는 중이에요.";
 
@@ -230,19 +238,52 @@ async function loadProductionRecord(image) {
     if (!response.ok) throw new Error("Production record request failed");
     const { record } = await response.json();
     elements.recordMessage.hidden = true;
+    const characterLabels = record.characters.length
+      ? record.characters.join(", ")
+      : record.characterMode === "none"
+        ? "선택 안 함"
+        : record.characterMode === "auto"
+          ? "자동 선택 · 세부 기록 없음"
+          : "기록 없음";
+    const styleLabel = record.style
+      ?? (record.styleMode === "none"
+        ? "화풍 없음"
+        : record.styleMode === "prompt"
+          ? "프롬프트 화풍 사용"
+          : record.styleMode === "auto"
+            ? "자동 선택 · 세부 기록 없음"
+            : "기록 없음");
+    const imageAnchors = record.useImageAnchors == null
+      ? "기록 없음"
+      : record.useImageAnchors ? "사용" : "사용 안 함";
     appendDefinitionList(elements.productionRecord, [
-      ["등장인물", record.characters.join(", ")],
+      ["등장인물", characterLabels],
       ["관계 그룹", record.relationGroup],
-      ["화풍", record.style],
+      ["화풍", styleLabel],
+      ["이미지 앵커", imageAnchors],
+      ["생성 목적", record.purpose],
       ["생성 시각", formatDateTime(record.createdAt)],
-      ["소요 시간", formatDuration(record.durationMs)],
-      ["재시도", `${record.retryCount}회`],
+      ["소요 시간", record.durationMs == null ? null : formatDuration(record.durationMs)],
+      ["재시도", record.retryCount == null ? null : `${record.retryCount}회`],
     ]);
+    if (record.prompt) {
+      elements.promptRecord.hidden = false;
+      elements.promptSummary.textContent = `${record.prompt.length.toLocaleString("ko-KR")}자 프롬프트 펼치기`;
+      elements.promptText.textContent = record.prompt;
+    }
   } catch {
     if (state.selectedImageId !== requestedImageId) return;
     elements.recordMessage.textContent = "제작 기록을 불러오지 못했어요.";
   }
 }
+
+elements.promptRecord.addEventListener("toggle", () => {
+  if (elements.promptRecord.hidden) return;
+  const length = elements.promptText.textContent.length.toLocaleString("ko-KR");
+  elements.promptSummary.textContent = elements.promptRecord.open
+    ? `${length}자 프롬프트 접기`
+    : `${length}자 프롬프트 펼치기`;
+});
 
 function openPanel(image, trigger) {
   state.selectedImageId = image.id;

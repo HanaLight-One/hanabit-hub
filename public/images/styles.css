@@ -342,6 +342,32 @@ h1 em { color: var(--accent); font-style: normal; }
 
 .detail-panel.open { transform: translateX(0); }
 
+.prompt-record {
+  margin-top: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 3%);
+}
+
+.prompt-record summary {
+  padding: 14px 16px;
+  color: var(--muted);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.prompt-record pre {
+  max-height: 320px;
+  margin: 0;
+  padding: 0 16px 16px;
+  overflow: auto;
+  color: var(--text);
+  font: inherit;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .panel-head {
   display: flex;
   align-items: start;

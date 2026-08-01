@@ -79,16 +79,17 @@ HTTP 라우트는 검증과 응답만 맡고 실제 동작은 같은 기능 폴�
 | 저장 대상 | 위치 | 현재 역할 | Git |
 | --- | --- | --- | --- |
 | 뉴스 운영 대기함 | `state/news/` | 현재 수집·번역·검토의 원본 저장소 | 제외 |
-| 뉴스 사건 원장 | `state/hanabit-hub.sqlite` | 스키마 v1 준비 완료, 운영 읽기·쓰기는 아직 미연결 | 제외 |
+| Hub SQLite | `state/hanabit-hub.sqlite` | 뉴스 원장 v1은 미연결, 이미지 제작 기록 v2는 운영 색인·조회 | 제외 |
 | Push 구독·키 | `state/notifications/` | 모바일 Web Push 상태 | 제외 |
 | 이미지 생성 초안·작업 | `state/image-generation-*` | Hub가 만든 초안과 1장 작업 상태 | 제외 |
 | 이미지·테마·제작 기록 | 외부 설정 루트 | 기존 저장소를 이동 없이 연결 | 외부 |
 | 운세 결과·게시 상태 | 외부 설정 루트 | 읽기 전용 연결 | 외부 |
 
 SQLite 스키마는 `src/modules/database/hub-database.mjs`, 뉴스 원장 연산은
-`src/modules/news/news-ledger.mjs`, 상세 설명은 `docs/database.md`에 있다.
-현재 테이블은 뉴스 사건, 출처, 분석, 승인, 게시 영수증이며 기존 JSON을 아직
-대체하지 않는다.
+`src/modules/news/news-ledger.mjs`, 이미지 색인은
+`src/modules/images/image-metadata-catalog.mjs`에 있다. 뉴스 테이블은 기존 JSON을
+아직 대체하지 않으며, 이미지 테이블은 폴더를 이동하지 않고 안전한 상대 저장 키와
+Hub 생성 메타데이터를 웹 제작 기록에 연결한다.
 
 ## 뉴스 자동화 흐름
 

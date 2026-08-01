@@ -37,8 +37,13 @@ import { createThemeHistory } from "./modules/images/theme-history.mjs";
 import { handleThemeRoute } from "./modules/images/theme-route.mjs";
 import { createThemeService } from "./modules/images/theme-service.mjs";
 import { createTopicThemeSource } from "./modules/images/topic-theme-source.mjs";
+import { openHubDatabase } from "./modules/database/hub-database.mjs";
+import { createImageMetadataCatalog } from "./modules/images/image-metadata-catalog.mjs";
 
 const PUBLIC_ROOT = path.join(APP_ROOT, "public");
+const IS_MAIN = Boolean(
+  process.argv[1] && path.resolve(process.argv[1]) === path.join(APP_ROOT, "src", "server.mjs"),
+);
 const config = await loadConfig();
 const imageStudioConfig = config.integrations?.imageStudio;
 const productionRecordStore =
@@ -152,6 +157,24 @@ const fortuneArchive = fortuneConfig?.enabled
       publisherStateRoot: fortuneConfig.publisherStateRoot,
     })
   : null;
+
+let runtimeDatabase = null;
+let runtimeRecordStore = productionRecordStore;
+if (IS_MAIN && imageArchive && generationConfig?.outputRoot) {
+  runtimeDatabase = openHubDatabase({
+    filePath: path.join(APP_ROOT, "state", "hanabit-hub.sqlite"),
+  });
+  runtimeRecordStore = createImageMetadataCatalog({
+    database: runtimeDatabase,
+    archive: imageArchive,
+    jobRoot: path.join(APP_ROOT, "state", "image-generation-jobs"),
+    optionsCatalog: creationOptions,
+    legacyStore: productionRecordStore,
+  });
+  await runtimeRecordStore.synchronize().catch(() => {
+    console.error("이미지 제작 기록 DB의 시작 색인을 완료하지 못했습니다.");
+  });
+}
 
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -496,8 +519,10 @@ export function createServer({
   });
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === path.join(APP_ROOT, "src", "server.mjs")) {
-  createServer().listen(config.port, config.host, () => {
+if (IS_MAIN) {
+  const server = createServer({ recordStore: runtimeRecordStore });
+  server.once("close", () => runtimeDatabase?.close());
+  server.listen(config.port, config.host, () => {
     console.log(`Hanabit Hub listening on http://${config.host}:${config.port}`);
   });
 }

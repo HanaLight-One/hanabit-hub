@@ -63,6 +63,7 @@ async function walkImages(root, source) {
       results.push(
         Object.freeze({
           target: fullPath,
+          storageKey: relative,
           extension: path.extname(entry.name).toLowerCase(),
           publicRecord: Object.freeze({
           id,
@@ -186,6 +187,7 @@ export function createImageArchive({
         if (match) {
           return Object.freeze({
             target: match.target,
+            storageKey: match.storageKey,
             extension: match.extension,
             record: match.publicRecord,
           });
@@ -195,5 +197,48 @@ export function createImageArchive({
     return null;
   }
 
-  return Object.freeze({ find, list });
+  async function findByTarget(target) {
+    if (!path.isAbsolute(target ?? "")) return null;
+    const resolvedTarget = path.resolve(target).toLowerCase();
+    for (const source of SOURCES) {
+      for (const root of roots[source]) {
+        const inspection = await inspectRoot(root);
+        if (!inspection.available) continue;
+        const entries = await walkImages(root, source);
+        const match = entries.find(
+          (entry) => path.resolve(entry.target).toLowerCase() === resolvedTarget,
+        );
+        if (match) {
+          return Object.freeze({
+            target: match.target,
+            storageKey: match.storageKey,
+            extension: match.extension,
+            record: match.publicRecord,
+          });
+        }
+      }
+    }
+    return null;
+  }
+
+  async function listIndexable() {
+    const entriesById = new Map();
+    for (const source of SOURCES) {
+      for (const root of roots[source]) {
+        const inspection = await inspectRoot(root);
+        if (!inspection.available) continue;
+        for (const entry of await walkImages(root, source)) {
+          if (!entriesById.has(entry.publicRecord.id)) {
+            entriesById.set(entry.publicRecord.id, Object.freeze({
+              storageKey: entry.storageKey,
+              record: entry.publicRecord,
+            }));
+          }
+        }
+      }
+    }
+    return Object.freeze([...entriesById.values()]);
+  }
+
+  return Object.freeze({ find, findByTarget, list, listIndexable });
 }

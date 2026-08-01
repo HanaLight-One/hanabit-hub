@@ -92,3 +92,40 @@ test("저장소가 연결되지 않았을 때 기능 존재를 노출하지 않�
     assert.equal(body.error, "Not found");
   });
 });
+
+test("DB 제작 기록 API는 프롬프트와 선택 정보만 반환하고 저장 경로는 숨긴다", async () => {
+  const imageId = "a".repeat(64);
+  const recordStore = { async get() { return {
+    schemaVersion: 2,
+    imageId,
+    jobId: "b".repeat(32),
+    prompt: "달빛 아래 세 인물의 다과회",
+    characterIds: ["pink-bridge", "헤일라", "리벨라"],
+    characters: ["핑크브릿지", "헤일라", "리벨라"],
+    characterMode: "custom",
+    relationGroup: null,
+    style: "고딕",
+    styleMode: "selected",
+    styleId: "gothic",
+    useImageAnchors: false,
+    purpose: "free-play",
+    generationMode: "guided-cast",
+    createdAt: "2026-08-01T02:02:34.000Z",
+    durationMs: 154000,
+    retryCount: null,
+    metadataSource: "hub-job",
+  }; } };
+
+  await withServer(recordStore, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/images/${imageId}/production-record`);
+    const body = await response.json();
+    const serialized = JSON.stringify(body);
+
+    assert.equal(response.status, 200);
+    assert.equal(body.record.prompt, "달빛 아래 세 인물의 다과회");
+    assert.deepEqual(body.record.characters, ["핑크브릿지", "헤일라", "리벨라"]);
+    assert.equal(body.record.useImageAnchors, false);
+    assert.equal(serialized.includes("storage_key"), false);
+    assert.equal(serialized.includes("C:\\"), false);
+  });
+});
