@@ -43,5 +43,9 @@ export function createXWatchCollector({
     return summary;
   }
 
-  return Object.freeze({ collectMessage, collectRecent });
+  async function hasPost(post) {
+    return store.has(xPostId(post));
+  }
+
+  return Object.freeze({ collectMessage, collectRecent, hasPost });
 }

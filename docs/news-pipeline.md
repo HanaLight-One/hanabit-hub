@@ -54,3 +54,35 @@ OpenAI Developers, Sam Altman, Romain Huet, Greg Brockman 계정만 허용한다
 승인된 Windows 운영 환경에서는 `Hanabit News Discord Watcher` 로그인 예약
 작업이 현재 사용자 로그인 25초 후 감시기를 실행하며 실패 시 1분 간격으로 최대
 10회 재시작한다.
+
+## X 자동 감지 준비
+
+공식 X Filtered Stream 어댑터는 allowlist 계정의 새 게시물을 감지해 해당 링크와
+답글·인용 원문 링크를 같은 `#x-watch` 메시지에 전달한다. 이후 단계는 기존 Discord
+수집·무료 API 번역·판정 경계를 그대로 사용한다. 리포스트는 규칙에서 제외하며 실제
+DC 게시 잠금은 변경하지 않는다.
+
+X API는 사용량 기반 유료 서비스이므로 기본값은 반드시 비활성이다.
+
+```dotenv
+X_STREAM_ENABLED=false
+X_BEARER_TOKEN=
+```
+
+설정된 출처로 만들 규칙은 외부 변경 없이 먼저 확인할 수 있다.
+
+```powershell
+npm.cmd run news:x:rules:preview
+```
+
+Bearer Token과 X API 크레딧을 준비하고 사용자가 과금형 감시 활성화를 승인한 뒤에만
+아래 명령으로 `hanabit-news-v1` 태그의 규칙을 등록·교체한다. 다른 태그의 규칙은
+삭제하지 않는다.
+
+```powershell
+npm.cmd run news:x:rules:sync
+```
+
+마지막으로 `X_STREAM_ENABLED=true`로 바꾸고 Discord 감시기를 다시 시작한다. 토큰이
+없거나 활성화 값이 false이면 X API 요청을 전혀 보내지 않는다. 인증 실패는 비밀값을
+출력하지 않고 연결을 닫으며, 일시적인 연결 실패만 제한된 지수 백오프로 재접속한다.

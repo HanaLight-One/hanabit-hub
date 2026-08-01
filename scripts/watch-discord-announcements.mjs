@@ -9,6 +9,9 @@ import { loadDiscordNewsConfig, redactSecret } from "../src/modules/news/discord
 import { createNewsProcessor } from "../src/modules/news/news-processor.mjs";
 import { createXWatchCollector } from "../src/modules/news/x-watch-collector.mjs";
 import { loadXSourceAllowlist } from "../src/modules/news/x-watch-source.mjs";
+import { runXFilteredStream } from "../src/modules/news/x-filtered-stream.mjs";
+import { createXStreamDiscordBridge } from "../src/modules/news/x-stream-discord-bridge.mjs";
+import { loadXStreamConfig } from "../src/modules/news/x-stream-config.mjs";
 
 const PROJECT_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const stateRoot = path.join(PROJECT_ROOT, "state", "news");
@@ -23,6 +26,7 @@ let processor;
 let notifier;
 let token = "";
 let catchupInFlight = null;
+let xStreamController;
 
 async function safeLog(message) {
   const line = `${new Date().toISOString()} ${message}\n`;
@@ -62,12 +66,14 @@ async function reportError(prefix, error) {
 
 async function shutdown(signal) {
   await safeLog(`Discord 공지 감시기 종료 요청: ${signal}`).catch(() => {});
+  xStreamController?.abort();
   client?.destroy();
   process.exit(0);
 }
 
 try {
   const config = loadDiscordNewsConfig();
+  const xStreamConfig = loadXStreamConfig();
   const hubConfig = await loadConfig();
   const runnerPath = hubConfig.integrations?.imageStudio?.generation?.freeTextRunnerPath;
   if (!path.isAbsolute(runnerPath ?? "")) {
@@ -78,10 +84,11 @@ try {
     stateRoot,
     channelId: config.openaiChannelId,
   });
+  const allowedXHandles = await loadXSourceAllowlist(xSourcesPath);
   const xCollector = createXWatchCollector({
     stateRoot,
     channelId: config.xWatchChannelId,
-    allowedHandles: await loadXSourceAllowlist(xSourcesPath),
+    allowedHandles: allowedXHandles,
   });
   processor = createNewsProcessor({ stateRoot, runnerPath });
   client = new Client({
@@ -137,6 +144,32 @@ try {
   }
   sources = channelEntries;
   notifier = createDiscordNewsNotifier({ stateRoot, pendingChannel });
+
+  if (xStreamConfig.enabled) {
+    const xWatchChannel = channelEntries.find((entry) => entry.label === "X watch")?.channel;
+    const xStreamBridge = createXStreamDiscordBridge({
+      channel: xWatchChannel,
+      allowedHandles: allowedXHandles,
+      collector: xCollector,
+    });
+    xStreamController = new AbortController();
+    runXFilteredStream({
+      bearerToken: xStreamConfig.bearerToken,
+      signal: xStreamController.signal,
+      async onEvent(event) {
+        const result = await xStreamBridge.forwardEvent(event);
+        if (result.status === "forwarded") {
+          await safeLog(`X 스트림 새 게시물 전달: 문맥 ${result.contextCount}`);
+        }
+      },
+      async onError(error) {
+        await reportError("X 스트림 연결 실패", error);
+      },
+    }).catch((error) => reportError("X 스트림 종료 실패", error));
+    await safeLog("X 공식 Filtered Stream 감시 시작");
+  } else {
+    await safeLog("X 공식 Filtered Stream 비활성");
+  }
 
   await catchUp("시작");
   await safeLog("Discord 공지와 X 링크 실시간 감시 시작");
