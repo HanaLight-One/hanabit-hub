@@ -14,7 +14,7 @@ function failureCode(error) {
   return "unknown";
 }
 
-export function createNewsProcessor({ stateRoot, runnerPath, analyze = invokeFreeNewsAnalysis, now = () => new Date() }) {
+export function createNewsProcessor({ stateRoot, runnerPath, analyze = invokeFreeNewsAnalysis, codexReviewer = null, now = () => new Date() }) {
   if (!path.isAbsolute(stateRoot) || !path.isAbsolute(runnerPath)) {
     throw new TypeError("뉴스 상태와 무료 API runner는 절대경로여야 합니다.");
   }
@@ -29,14 +29,40 @@ export function createNewsProcessor({ stateRoot, runnerPath, analyze = invokeFre
       if (record.workflow?.status !== "pending_translation") return record;
       try {
         const result = await analyze(record, { runnerPath, runtimeRoot });
-        const decision = OFFICIAL_TYPES.has(record.source?.type) ? "publish" : result.triage.decision;
+        let finalTriage = result.triage;
+        let freeTriage = null;
+        let codexReview = null;
+        if (codexReviewer) {
+          try {
+            const reviewed = await codexReviewer.review(record, result);
+            if (reviewed.status === "complete") {
+              freeTriage = result.triage;
+              finalTriage = { ...reviewed.result, signals: ["codex-review"] };
+              codexReview = {
+                status: "complete",
+                reviewedAt: reviewed.reviewedAt,
+                ...reviewed.result,
+              };
+            } else if (["daily_limit", "failed"].includes(reviewed.status)) {
+              codexReview = {
+                status: reviewed.status,
+                reviewedAt: reviewed.reviewedAt ?? now().toISOString(),
+              };
+            }
+          } catch {
+            codexReview = { status: "failed", reviewedAt: now().toISOString() };
+          }
+        }
+        const decision = OFFICIAL_TYPES.has(record.source?.type) ? "publish" : finalTriage.decision;
         return store.update(id, (current) => ({
           ...current,
           workflow: {
             ...current.workflow,
             status: decision === "skip" ? "ignored" : "pending_review",
             translation: result.translation,
-            triage: { ...result.triage, decision },
+            freeTriage,
+            triage: { ...finalTriage, decision },
+            codexReview,
             analysisFailure: null,
             processedAt: now().toISOString(),
           },

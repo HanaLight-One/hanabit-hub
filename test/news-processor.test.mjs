@@ -6,7 +6,7 @@ import test from "node:test";
 import { createPendingNewsStore } from "../src/modules/news/news-item-store.mjs";
 import { createNewsProcessor } from "../src/modules/news/news-processor.mjs";
 
-async function fixture(source, analyze, callback) {
+async function fixture(source, analyze, callback, { codexReviewer = null } = {}) {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-processor-"));
   const runnerPath = path.join(root, "runner.ps1");
   await writeFile(runnerPath, "test", "utf8");
@@ -14,7 +14,7 @@ async function fixture(source, analyze, callback) {
   const id = "f".repeat(32);
   await store.create({ id, source, original: { content: "news", embeds: [] }, workflow: { status: "pending_translation", dcPublication: null } });
   try {
-    const processor = createNewsProcessor({ stateRoot: root, runnerPath, analyze, now: () => new Date("2026-08-01T04:00:00Z") });
+    const processor = createNewsProcessor({ stateRoot: root, runnerPath, analyze, codexReviewer, now: () => new Date("2026-08-01T04:00:00Z") });
     await callback({ processor, store, id });
   } finally { await rm(root, { recursive: true, force: true }); }
 }
@@ -71,4 +71,30 @@ test("번역 실패 항목은 사람 요청으로만 한 번 다시 분석한다
     assert.equal(retried.workflow.analysisFailure, null);
     await assert.rejects(() => processor.retry(id), /번역 실패한 뉴스만/);
   });
+});
+
+test("애매한 무료 판정은 Codex 검토 결과를 최종 판정으로 보존한다", async () => {
+  const codexReviewer = {
+    async review() {
+      return {
+        status: "complete",
+        reviewedAt: "2026-08-01T04:00:00.000Z",
+        result: {
+          decision: "publish",
+          confidence: 0.88,
+          importance: "medium",
+          reason: "부모 글과 결합하면 제품 활용 범위 확장을 시사한다.",
+          advice: "사람이 이미지를 확인한 뒤 게시 후보로 검토하세요.",
+        },
+      };
+    },
+  };
+  await fixture({ type: "x-post" }, async () => result("review"), async ({ processor, store, id }) => {
+    await processor.process(id);
+    const saved = await store.read(id);
+    assert.equal(saved.workflow.status, "pending_review");
+    assert.equal(saved.workflow.freeTriage.decision, "review");
+    assert.equal(saved.workflow.triage.decision, "publish");
+    assert.equal(saved.workflow.codexReview.status, "complete");
+  }, { codexReviewer });
 });

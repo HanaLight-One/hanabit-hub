@@ -124,7 +124,7 @@ export async function invokeFreeNewsAnalysis(
   try {
     await writeFile(promptPath, `${buildPrompt(record)}\n`, "utf8");
     let lastError;
-    for (let attempt = 1; attempt <= 2; attempt += 1) {
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
       const outputPath = path.join(workRoot, `output-${attempt}.json`);
       try {
         await runProcess(POWERSHELL, [
@@ -139,7 +139,7 @@ export async function invokeFreeNewsAnalysis(
         return validateResult(parseJson(await readFile(outputPath, "utf8")));
       } catch (error) {
         lastError = error;
-        if (attempt < 2) await wait(5_000);
+        if (attempt < 3) await wait(5_000);
       }
     }
     throw lastError;

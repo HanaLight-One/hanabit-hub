@@ -32,10 +32,37 @@ npm.cmd run news:discord:collect
 모델은 이미지를 봤다고 가정하지 않고 부모·인용 글의 텍스트 문맥만 사용한다.
 따라서 이미지가 보존된 `skip` 항목은 허브의 기본 확인 목록과 `이미지 확인` 필터에
 남겨, 텍스트 판정만으로 중요한 밈·스크린샷 문맥을 놓치지 않게 한다.
-일시 실패와 잘못된 JSON은 호출
-안에서 한 번만 다시 시도하며, 두 번 모두 실패하면 원문을 보존한 채
-`translation_failed`로 닫고 안전한 실패 종류만 기록한다. 이후 자동 재시도하지 않으며
-허브에서 사람이 명시적으로 누른 경우에만 한 번 더 분석한다. OpenAI 공식
+
+무료 판정이 `review`, 신뢰도 72% 미만, 부모 문맥이 있는 48자 이하 답글 또는
+이미지가 있는 `skip`이면 선택적으로 Codex 심층검토로 승격한다. Codex는 무료 단계가
+모은 원문·부모 문맥·번역·판정만 받고 이미지 픽셀은 받지 않는다. 실행은
+`--ephemeral`, `--sandbox read-only`, JSON Schema 출력으로 고정하며 하루 최대 4건만
+허용한다. 검토 결과가 `publish`여도 실제 게시하지 않고 사람 승인 가능한
+`pending_review`까지만 전환한다. 날짜별 영수증은 같은 항목의 토큰 중복 사용을 막는다.
+
+Codex 검토는 컴퓨터별 `config.local.json`에서만 활성화한다.
+`executablePath`에는 npm 전역 설치의
+`node_modules/@openai/codex/bin/codex.js` 절대경로를 넣는다. PowerShell 래퍼는
+Windows 인수 해석 차이를 피하기 위해 사용하지 않는다.
+
+```json
+{
+  "integrations": {
+    "news": {
+      "codexReview": {
+        "enabled": false,
+        "executablePath": "",
+        "dailyLimit": 4
+      }
+    }
+  }
+}
+```
+
+무료 분석은 최초 호출 뒤 최대 두 번 더 시도한다. 세 번 모두 실패한 경우에만
+`translation_failed`로 닫고, 이후에는 사람의 명시적 다시 분석 요청을 기다린다.
+원문은 그대로 보존하고 로그에는 안전한 실패 종류만 기록한다. 실패 카드의 수동
+재분석도 같은 3회 정책을 새로 적용한다. OpenAI 공식
 Announcement는 모델 판정과 무관하게 최소 `publish` 게시 검토 후보로 올린다.
 
 `review`와 `publish` 항목은 하나빛 허브 `/news`와 Discord `#news-pending`에 글과

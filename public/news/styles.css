@@ -39,6 +39,7 @@ h1 em { color: var(--accent); font-style: normal; }
 .decision { background: #202831; color: #c8d0d8; }
 .decision-publish { background: rgb(216 255 82 / 12%); color: var(--accent); }
 .decision-review { background: rgb(255 220 129 / 12%); color: #ffdc81; }
+.codex-badge { background: rgb(118 171 255 / 14%); color: #9bc0ff; }
 .source-label { margin: 14px 0 0; color: var(--accent); font-size: 12px; font-weight: 800; }
 .translation-box { margin-top: 18px; padding: 18px; border: 1px solid rgb(216 255 82 / 28%); border-radius: 14px; background: rgb(216 255 82 / 6%); }
 .translation-box h2 { margin: 0; font-size: 20px; }
@@ -57,6 +58,10 @@ h1 em { color: var(--accent); font-style: normal; }
 .triage-box dl div { display: grid; gap: 6px; }
 .triage-box dt { color: var(--accent); font-size: 12px; font-weight: 800; }
 .triage-box dd { margin: 0; line-height: 1.65; }
+.free-triage { opacity: .82; }
+.codex-triage { border-color: rgb(118 171 255 / 42%); background: rgb(118 171 255 / 6%); }
+.codex-triage dt { color: #9bc0ff; }
+.codex-review-note { margin: 14px 0 0; padding: 13px 15px; border: 1px solid rgb(118 171 255 / 30%); border-radius: 12px; background: rgb(118 171 255 / 6%); color: #b8cff6; line-height: 1.55; }
 .original-box { margin-top: 20px; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .original-box summary { cursor: pointer; color: #cbd2d8; font-weight: 700; }
 .original-box[open] summary { margin-bottom: 16px; color: var(--accent); }

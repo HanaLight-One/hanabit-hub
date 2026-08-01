@@ -32,6 +32,13 @@
       "enabled": false,
       "outputRoot": "",
       "publisherStateRoot": ""
+    },
+    "news": {
+      "codexReview": {
+        "enabled": false,
+        "executablePath": "",
+        "dailyLimit": 4
+      }
     }
   },
   "operations": {

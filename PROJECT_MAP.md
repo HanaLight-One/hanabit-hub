@@ -67,7 +67,7 @@ HTTP 라우트는 검증과 응답만 맡고 실제 동작은 같은 기능 폴�
 | 데이터베이스 | `src/modules/database/` | SQLite 연결과 순차 스키마 마이그레이션 |
 | 이미지 | `src/modules/images/` | 아카이브, 테마, 제작 기록, 화풍, 생성 초안과 1장 실행 |
 | 운세 | `src/modules/fortune/` | 날짜별 운세와 안전한 게시 상태 읽기 |
-| 뉴스 | `src/modules/news/` | Discord/X 수집, 번역·판정·조언, 실패 재분석, 대기함, 승인과 알림 |
+| 뉴스 | `src/modules/news/` | Discord/X 수집, 무료 번역·판정, 제한된 Codex 심층검토, 실패 재분석, 승인과 알림 |
 | 모바일 알림 | `src/modules/notifications/` | Web Push 구독과 제한된 알림 전송 |
 | 시스템 | `src/modules/system/` | allowlist 기반 Codex 상태·긴급 재기동 |
 
@@ -97,6 +97,8 @@ Hub 생성 메타데이터를 웹 제작 기록에 연결한다.
 Discord Announcement ─┐
                       ├─> Discord watcher ─> JSON 대기함 ─> 무료 API 번역·판정
 X Filtered Stream ─> #x-watch ┘                         │
+                                      애매한 X만 ─> Codex 심층검토(일 4건)
+                                                         │
                                                          ├─> #news-pending
                                                          ├─> 모바일 Push
                                                          └─> /news 필터·사람 검토·실패 재분석·승인
@@ -109,6 +111,8 @@ X Filtered Stream ─> #x-watch ┘                         │
 `config/news-x-sources.json`이고 비밀 토큰은 코드나 지도에 기록하지 않는다.
 뉴스 재분석은 `POST /api/news/:id/analysis-retry`에서 명시적 확인값을 받은
 `translation_failed` 항목에만 허용하며 이미지 분석 API는 호출하지 않는다.
+Codex 검토 실행기와 날짜별 사용 영수증은
+`src/modules/news/codex-news-review.mjs`, `state/news/codex-review/`에 있다.
 
 ## 이미지와 운세 연결 경계
 

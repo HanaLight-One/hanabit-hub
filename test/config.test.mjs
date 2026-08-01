@@ -79,3 +79,20 @@ test("서버 제어 allowlist는 알려진 작업만 허용한다", () => {
     /알 수 없는 작업/,
   );
 });
+
+test("Codex 뉴스 검토는 고정 실행 경로와 제한된 일일 상한만 허용한다", () => {
+  const base = {
+    host: "127.0.0.1",
+    port: 8790,
+    operations: { timezone: "Asia/Seoul", dayStartsAtHour: 2 },
+    allowedActions: [],
+  };
+  assert.throws(() => validateConfig({
+    ...base,
+    integrations: { news: { codexReview: { enabled: true, executablePath: "codex.ps1", dailyLimit: 4 } } },
+  }), /executablePath 절대경로/);
+  assert.throws(() => validateConfig({
+    ...base,
+    integrations: { news: { codexReview: { enabled: true, executablePath: "C:\\codex.ps1", dailyLimit: 99 } } },
+  }), /일일 상한/);
+});

@@ -12,6 +12,7 @@ import { createNewsReader } from "./modules/news/news-reader.mjs";
 import { createNewsApprovalService } from "./modules/news/news-approval.mjs";
 import { handleNewsApprovalRoute } from "./modules/news/news-approval-route.mjs";
 import { createNewsProcessor } from "./modules/news/news-processor.mjs";
+import { createCodexNewsReviewer } from "./modules/news/codex-news-review.mjs";
 import { handleNewsAnalysisRetryRoute } from "./modules/news/news-analysis-retry-route.mjs";
 import { createPushNotificationService } from "./modules/notifications/push-notifications.mjs";
 import { handlePushNotificationRoute } from "./modules/notifications/push-notification-route.mjs";
@@ -151,10 +152,19 @@ const discordTokenSetup = createDiscordTokenSetup({
   envPath: path.join(APP_ROOT, ".env"),
 });
 const newsReader = createNewsReader({ root: path.join(APP_ROOT, "state", "news") });
+const newsCodexReviewConfig = config.integrations?.news?.codexReview;
+const newsCodexReviewer = newsCodexReviewConfig?.enabled
+  ? createCodexNewsReviewer({
+      stateRoot: path.join(APP_ROOT, "state", "news"),
+      executablePath: newsCodexReviewConfig.executablePath,
+      dailyLimit: newsCodexReviewConfig.dailyLimit,
+    })
+  : null;
 const newsProcessor = path.isAbsolute(generationConfig?.freeTextRunnerPath ?? "")
   ? createNewsProcessor({
       stateRoot: path.join(APP_ROOT, "state", "news"),
       runnerPath: generationConfig.freeTextRunnerPath,
+      codexReviewer: newsCodexReviewer,
     })
   : null;
 const newsApproval = createNewsApprovalService({ root: path.join(APP_ROOT, "state", "news") });

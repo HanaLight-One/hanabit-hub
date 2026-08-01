@@ -46,7 +46,7 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
   }
 });
 
-test("무료 API 일시 실패는 한 번만 다시 시도하고 성공 결과를 사용한다", async () => {
+test("무료 API 일시 실패는 최대 두 번 다시 시도하고 성공 결과를 사용한다", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-analysis-retry-"));
   const runnerPath = path.join(root, "runner.ps1");
   await writeFile(runnerPath, "test", "utf8");
@@ -62,7 +62,7 @@ test("무료 API 일시 실패는 한 번만 다시 시도하고 성공 결과�
       async wait() {},
       async runProcess(command, args) {
         attempts += 1;
-        if (attempts === 1) throw new Error("temporary failure");
+        if (attempts < 3) throw new Error("temporary failure");
         const outputPath = args[args.indexOf("-Output") + 1];
         await writeFile(outputPath, JSON.stringify({
           translation: { title: "초기화", body: "사용량이 초기화됐습니다." },
@@ -70,7 +70,7 @@ test("무료 API 일시 실패는 한 번만 다시 시도하고 성공 결과�
         }), "utf8");
       },
     });
-    assert.equal(attempts, 2);
+    assert.equal(attempts, 3);
     assert.equal(result.triage.decision, "publish");
   } finally {
     await rm(root, { recursive: true, force: true });

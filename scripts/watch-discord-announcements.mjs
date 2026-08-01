@@ -7,6 +7,7 @@ import { createDiscordAnnouncementCollector } from "../src/modules/news/discord-
 import { createDiscordNewsNotifier } from "../src/modules/news/discord-news-notifier.mjs";
 import { loadDiscordNewsConfig, redactSecret } from "../src/modules/news/discord-config.mjs";
 import { createNewsProcessor } from "../src/modules/news/news-processor.mjs";
+import { createCodexNewsReviewer } from "../src/modules/news/codex-news-review.mjs";
 import { createXWatchCollector } from "../src/modules/news/x-watch-collector.mjs";
 import { loadXSourceAllowlist } from "../src/modules/news/x-watch-source.mjs";
 import { runXFilteredStream } from "../src/modules/news/x-filtered-stream.mjs";
@@ -87,6 +88,14 @@ try {
   if (!path.isAbsolute(runnerPath ?? "")) {
     throw new Error("뉴스 번역용 무료 API runner가 준비되지 않았습니다.");
   }
+  const codexReviewConfig = hubConfig.integrations?.news?.codexReview;
+  const codexReviewer = codexReviewConfig?.enabled
+    ? createCodexNewsReviewer({
+        stateRoot,
+        executablePath: codexReviewConfig.executablePath,
+        dailyLimit: codexReviewConfig.dailyLimit,
+      })
+    : null;
   token = config.botToken;
   const announcementCollector = createDiscordAnnouncementCollector({
     stateRoot,
@@ -98,7 +107,7 @@ try {
     channelId: config.xWatchChannelId,
     allowedHandles: allowedXHandles,
   });
-  processor = createNewsProcessor({ stateRoot, runnerPath });
+  processor = createNewsProcessor({ stateRoot, runnerPath, codexReviewer });
   client = new Client({
     intents: [
       GatewayIntentBits.Guilds,

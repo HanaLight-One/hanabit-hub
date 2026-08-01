@@ -23,6 +23,17 @@ function safeText(value, maximum) {
   return String(value ?? "").trim().slice(0, maximum);
 }
 
+function publicTriage(value) {
+  if (!value || !["skip", "review", "publish"].includes(value.decision)) return null;
+  return {
+    decision: value.decision,
+    confidence: Math.max(0, Math.min(1, Number(value.confidence) || 0)),
+    importance: ["low", "medium", "high"].includes(value.importance) ? value.importance : null,
+    reason: safeText(value.reason, 500),
+    advice: safeText(value.advice, 600) || null,
+  };
+}
+
 function publicItem(record) {
   const id = validateId(String(record?.id ?? ""));
   const embeds = Array.isArray(record?.original?.embeds)
@@ -52,6 +63,11 @@ function publicItem(record) {
         })
         .filter(Boolean)
     : [];
+  const triage = publicTriage(record?.workflow?.triage);
+  const freeTriage = publicTriage(record?.workflow?.freeTriage);
+  const codexReviewStatus = ["complete", "daily_limit", "failed"].includes(record?.workflow?.codexReview?.status)
+    ? record.workflow.codexReview.status
+    : null;
 
   return {
     id,
@@ -89,15 +105,13 @@ function publicItem(record) {
             body: safeText(record.workflow.translation.body, 4_000),
           }
         : null,
-      triage: record?.workflow?.triage && ["skip", "review", "publish"].includes(record.workflow.triage.decision)
+      triage,
+      freeTriage,
+      codexReview: codexReviewStatus
         ? {
-            decision: record.workflow.triage.decision,
-            confidence: Math.max(0, Math.min(1, Number(record.workflow.triage.confidence) || 0)),
-            importance: ["low", "medium", "high"].includes(record.workflow.triage.importance)
-              ? record.workflow.triage.importance
-              : null,
-            reason: safeText(record.workflow.triage.reason, 400),
-            advice: safeText(record.workflow.triage.advice, 500) || null,
+            status: codexReviewStatus,
+            reviewedAt: String(record.workflow.codexReview.reviewedAt ?? ""),
+            ...(codexReviewStatus === "complete" ? publicTriage(record.workflow.codexReview) : {}),
           }
         : null,
       analysisFailure: record?.workflow?.status === "translation_failed"

@@ -105,6 +105,25 @@ function fallbackAdvice(item) {
   return "현재 정보만으로는 뉴스 가치가 낮아 보류를 권해요. 이미지에 핵심 정보가 보일 때만 다시 검토하세요.";
 }
 
+function TriageBox({ triage, label, advice, className = "" }) {
+  return (
+    <section className={`triage-box ${className}`.trim()}>
+      <div>
+        <span>{label}</span>
+        <strong>{DECISION_LABELS[triage.decision]}</strong>
+      </div>
+      <dl>
+        <div><dt>산정 근거</dt><dd>{triage.reason}</dd></div>
+        <div><dt>하나빛 조언</dt><dd>{advice}</dd></div>
+      </dl>
+      <small>
+        신뢰도 {Math.round(triage.confidence * 100)}%
+        {triage.importance && ` · 중요도 ${IMPORTANCE_LABELS[triage.importance]}`}
+      </small>
+    </section>
+  );
+}
+
 function ApprovalPanel({ item, confirming, busy, error, onBegin, onCancel, onApprove }) {
   if (item.workflow.publishedToDc) {
     return <div className="approval approved">DC 게시 완료 영수증이 확인됐어요.</div>;
@@ -145,12 +164,15 @@ function ApprovalPanel({ item, confirming, busy, error, onBegin, onCancel, onApp
 
 function NewsCard({ item, confirming, busy, error, onBegin, onCancel, onApprove, onRetry }) {
   const triage = item.workflow.triage;
+  const freeTriage = item.workflow.freeTriage;
+  const codexReview = item.workflow.codexReview;
   return (
     <article className="news-card">
       <div className="card-top">
         <div className="badges">
           <span className="status">{STATUS_LABELS[item.workflow.status] ?? "상태 확인 필요"}</span>
           {triage && <span className={`decision decision-${triage.decision}`}>{DECISION_LABELS[triage.decision]}</span>}
+          {codexReview?.status === "complete" && <span className="decision codex-badge">Codex 검토 완료</span>}
         </div>
         <time>{formatDate(item.source.publishedAt)}</time>
       </div>
@@ -184,21 +206,29 @@ function NewsCard({ item, confirming, busy, error, onBegin, onCancel, onApprove,
         </section>
       )}
 
+      {freeTriage && (
+        <TriageBox
+          triage={freeTriage}
+          label="무료 API 1차 판정"
+          advice={freeTriage.advice || "애매함을 감지해 Codex 하나빛에게 전달했어요."}
+          className="free-triage"
+        />
+      )}
+
       {triage && (
-        <section className="triage-box">
-          <div>
-            <span>판정</span>
-            <strong>{DECISION_LABELS[triage.decision]}</strong>
-          </div>
-          <dl>
-            <div><dt>산정 근거</dt><dd>{triage.reason}</dd></div>
-            <div><dt>하나빛 조언</dt><dd>{needsImageReview(item) ? fallbackAdvice(item) : triage.advice || fallbackAdvice(item)}</dd></div>
-          </dl>
-          <small>
-            신뢰도 {Math.round(triage.confidence * 100)}%
-            {triage.importance && ` · 중요도 ${IMPORTANCE_LABELS[triage.importance]}`}
-          </small>
-        </section>
+        <TriageBox
+          triage={triage}
+          label={codexReview?.status === "complete" ? "Codex 하나빛 심층검토" : "무료 API 판정"}
+          advice={needsImageReview(item) ? fallbackAdvice(item) : triage.advice || fallbackAdvice(item)}
+          className={codexReview?.status === "complete" ? "codex-triage" : ""}
+        />
+      )}
+
+      {codexReview?.status === "daily_limit" && (
+        <p className="codex-review-note">오늘의 Codex 심층검토 상한에 도달해 사람 확인으로 남겼어요.</p>
+      )}
+      {codexReview?.status === "failed" && (
+        <p className="codex-review-note">Codex 심층검토를 완료하지 못해 무료 API 판정을 보존했어요.</p>
       )}
 
       {item.media.length > 0 && (

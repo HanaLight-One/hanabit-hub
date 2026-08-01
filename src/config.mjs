@@ -12,6 +12,7 @@ const DEFAULT_CONFIG = Object.freeze({
   integrations: {
     imageStudio: { enabled: false },
     fortune: { enabled: false },
+    news: { codexReview: { enabled: false, executablePath: "", dailyLimit: 4 } },
   },
   operations: {
     timezone: "Asia/Seoul",
@@ -84,6 +85,16 @@ function validateConfig(config) {
     }
     if (!path.isAbsolute(fortune.publisherStateRoot ?? "")) {
       throw new Error("운세 연동에는 publisherStateRoot 절대경로가 필요합니다.");
+    }
+  }
+
+  const codexReview = config.integrations?.news?.codexReview;
+  if (codexReview?.enabled) {
+    if (!path.isAbsolute(codexReview.executablePath ?? "")) {
+      throw new Error("Codex 뉴스 검토에는 executablePath 절대경로가 필요합니다.");
+    }
+    if (!Number.isInteger(codexReview.dailyLimit) || codexReview.dailyLimit < 1 || codexReview.dailyLimit > 12) {
+      throw new Error("Codex 뉴스 검토 일일 상한은 1부터 12 사이여야 합니다.");
     }
   }
 
