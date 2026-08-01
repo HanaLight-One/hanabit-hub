@@ -97,6 +97,41 @@ const MIGRATIONS = Object.freeze([
         ON image_generation_metadata(job_id);
     `,
   },
+  {
+    version: 3,
+    name: "daily image manifest metadata source",
+    sql: `
+      DROP INDEX IF EXISTS image_generation_job_id_idx;
+      ALTER TABLE image_generation_metadata RENAME TO image_generation_metadata_v2;
+
+      CREATE TABLE image_generation_metadata (
+        image_id TEXT PRIMARY KEY REFERENCES image_assets(id) ON DELETE CASCADE,
+        job_id TEXT,
+        prompt TEXT,
+        character_mode TEXT NOT NULL CHECK (character_mode IN ('auto', 'none', 'custom', 'unknown')),
+        character_ids_json TEXT NOT NULL,
+        character_labels_json TEXT NOT NULL,
+        style_mode TEXT NOT NULL CHECK (style_mode IN ('auto', 'none', 'selected', 'prompt', 'rendering', 'unknown')),
+        style_id TEXT,
+        style_label TEXT,
+        relation_group TEXT,
+        use_image_anchors INTEGER CHECK (use_image_anchors IN (0, 1) OR use_image_anchors IS NULL),
+        purpose TEXT,
+        generation_mode TEXT,
+        created_at TEXT,
+        duration_ms INTEGER CHECK (duration_ms >= 0 OR duration_ms IS NULL),
+        retry_count INTEGER CHECK (retry_count >= 0 OR retry_count IS NULL),
+        metadata_source TEXT NOT NULL CHECK (metadata_source IN ('hub-job', 'daily-manifest', 'legacy-record')),
+        indexed_at TEXT NOT NULL
+      ) STRICT;
+
+      INSERT INTO image_generation_metadata SELECT * FROM image_generation_metadata_v2;
+      DROP TABLE image_generation_metadata_v2;
+
+      CREATE INDEX image_generation_job_id_idx
+        ON image_generation_metadata(job_id);
+    `,
+  },
 ]);
 
 function migrate(database, now) {

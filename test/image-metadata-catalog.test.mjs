@@ -63,6 +63,58 @@ test("완료된 Hub 작업을 이미지 ID와 연결해 프롬프트와 선택 �
   }
 });
 
+test("완료된 운영 오테 manifest만 이미지 제작 기록으로 연결한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-daily-manifest-db-"));
+  const imageRoot = path.join(root, "daily-v2");
+  const jobRoot = path.join(root, "hub-jobs");
+  const datedRoot = path.join(imageRoot, "2026-08-01");
+  const output = path.join(datedRoot, "05_chapel-text-styled", "01.png");
+  await mkdir(path.dirname(output), { recursive: true });
+  await mkdir(jobRoot, { recursive: true });
+  await writeFile(output, "image", "utf8");
+  await writeFile(path.join(datedRoot, "manifest.json"), JSON.stringify({
+    date: "2026-08-01",
+    status: "complete",
+    production_eligible: true,
+    test_run: false,
+    jobs: [{
+      id: "11-05_chapel-text-styled-01",
+      status: "complete",
+      final_output: "05_chapel-text-styled/01.png",
+      final_prompt: "성당 다과회",
+      characters: ["헤일라", "리벨라"],
+      relationship: { id: "saintess_friends_heila_ribella" },
+      style_id: "고딕",
+      rendering: "selected style preset",
+      requires_reference_inspection: false,
+      group: "05_chapel-text-styled",
+      attempts: 2,
+      attempt_started_at: "2026-08-01T02:00:00.000Z",
+      completed_at: "2026-08-01T02:02:34.000Z",
+    }],
+  }), "utf8");
+
+  const database = openHubDatabase({ filePath: path.join(root, "hub.sqlite") });
+  const archive = createImageArchive({ dailyImagesRoot: imageRoot });
+  try {
+    const catalog = createImageMetadataCatalog({ database, archive, jobRoot, dailyManifestRoot: imageRoot });
+    assert.deepEqual(await catalog.synchronize(), { assets: 1, metadata: 1 });
+    const image = (await archive.list()).images[0];
+    const record = await catalog.get(image.id);
+    assert.equal(record.prompt, "성당 다과회");
+    assert.deepEqual(record.characters, ["헤일라", "리벨라"]);
+    assert.equal(record.style, "고딕");
+    assert.equal(record.relationGroup, "saintess_friends_heila_ribella");
+    assert.equal(record.useImageAnchors, false);
+    assert.equal(record.durationMs, 154_000);
+    assert.equal(record.retryCount, 1);
+    assert.equal(record.metadataSource, "daily-manifest");
+  } finally {
+    database.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("아카이브 밖 결과 경로와 완료되지 않은 작업은 색인하지 않는다", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-image-db-boundary-"));
   const imageRoot = path.join(root, "images");

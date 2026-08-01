@@ -1,6 +1,8 @@
 const statusElement = document.querySelector("#server-status");
 const codexStatusElement = document.querySelector("#codex-control-status");
 const restartCodexButton = document.querySelector("#restart-codex");
+const codexUsageValue = document.querySelector("#codex-usage-value");
+const codexUsageReset = document.querySelector("#codex-usage-reset");
 
 try {
   const response = await fetch("/api/health");
@@ -60,3 +62,29 @@ restartCodexButton.addEventListener("click", async () => {
 });
 
 await loadCodexControl();
+
+function describeWindow(minutes) {
+  if (minutes === 10_080) return "주간 한도";
+  if (minutes && minutes % 1_440 === 0) return `${minutes / 1_440}일 한도`;
+  if (minutes && minutes % 60 === 0) return `${minutes / 60}시간 한도`;
+  return "Codex 한도";
+}
+
+async function loadCodexUsage() {
+  try {
+    const response = await fetch("/api/system/codex/usage");
+    const usage = await response.json();
+    const window = usage.primary ?? usage.secondary;
+    if (!response.ok || !usage.available || !window) throw new Error("Unavailable");
+    codexUsageValue.textContent = `${Math.round(window.remainingPercent)}%`;
+    const reset = window.resetsAt
+      ? new Intl.DateTimeFormat("ko-KR", { dateStyle: "short", timeStyle: "short" }).format(new Date(window.resetsAt))
+      : null;
+    codexUsageReset.textContent = `${describeWindow(window.durationMinutes)}${reset ? ` · ${reset} 초기화` : ""}`;
+  } catch {
+    codexUsageValue.textContent = "--%";
+    codexUsageReset.textContent = "Codex 로그인 상태에서 다시 확인해 주세요.";
+  }
+}
+
+await loadCodexUsage();

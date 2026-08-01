@@ -2,7 +2,9 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 const JOB_FILE_PATTERN = /^[a-f0-9]{32}\.json$/u;
+const DATE_DIRECTORY_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 const MAX_JOB_BYTES = 2 * 1024 * 1024;
+const MAX_MANIFEST_BYTES = 16 * 1024 * 1024;
 const CHARACTER_MODES = new Set(["auto", "none", "custom"]);
 const STYLE_MODES = new Set(["auto", "none", "selected", "prompt", "rendering"]);
 
@@ -55,9 +57,12 @@ function publicRecord(row) {
   });
 }
 
-export function createImageMetadataCatalog({ database, archive, jobRoot, optionsCatalog = null, legacyStore = null, now = () => new Date() }) {
+export function createImageMetadataCatalog({ database, archive, jobRoot, dailyManifestRoot = null, optionsCatalog = null, legacyStore = null, now = () => new Date() }) {
   if (!database || !archive?.findByTarget || !archive?.listIndexable) throw new TypeError("이미지 DB와 아카이브가 필요합니다.");
   if (!path.isAbsolute(jobRoot ?? "")) throw new TypeError("이미지 작업 루트는 절대경로여야 합니다.");
+  if (dailyManifestRoot != null && !path.isAbsolute(dailyManifestRoot)) {
+    throw new TypeError("Daily manifest root must be an absolute path.");
+  }
   let syncInFlight = null;
 
   async function labels() {
@@ -72,7 +77,7 @@ export function createImageMetadataCatalog({ database, archive, jobRoot, options
     }
   }
 
-  function upsert(image, job, optionLabels) {
+  function upsert(image, job, optionLabels, metadataSource = "hub-job") {
     const characterMode = CHARACTER_MODES.has(job.characters?.mode) ? job.characters.mode : "unknown";
     const characterIds = characterMode === "custom"
       ? [...new Set((Array.isArray(job.characters?.ids) ? job.characters.ids : []).map((value) => safeText(value, 80)).filter(Boolean))].slice(0, 20)
@@ -112,7 +117,7 @@ export function createImageMetadataCatalog({ database, archive, jobRoot, options
           character_labels_json, style_mode, style_id, style_label,
           relation_group, use_image_anchors, purpose, generation_mode, created_at, duration_ms,
           retry_count, metadata_source, indexed_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'hub-job', ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(image_id) DO UPDATE SET
           job_id = excluded.job_id,
           prompt = excluded.prompt,
@@ -148,6 +153,7 @@ export function createImageMetadataCatalog({ database, archive, jobRoot, options
         createdAt,
         durationMs,
         retryCount,
+        metadataSource,
         indexedAt,
       );
       database.exec("COMMIT");
@@ -155,6 +161,74 @@ export function createImageMetadataCatalog({ database, archive, jobRoot, options
       database.exec("ROLLBACK");
       throw error;
     }
+  }
+
+  async function synchronizeDailyManifests(optionLabels) {
+    if (!dailyManifestRoot) return 0;
+    let directories;
+    try {
+      directories = await readdir(dailyManifestRoot, { withFileTypes: true });
+    } catch (error) {
+      if (error.code === "ENOENT") return 0;
+      throw error;
+    }
+
+    let metadata = 0;
+    for (const directory of directories) {
+      if (!directory.isDirectory() || !DATE_DIRECTORY_PATTERN.test(directory.name)) continue;
+      const datedRoot = path.join(dailyManifestRoot, directory.name);
+      const manifestPath = path.join(datedRoot, "manifest.json");
+      try {
+        const info = await stat(manifestPath);
+        if (info.size > MAX_MANIFEST_BYTES) continue;
+        const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+        if (
+          manifest.status !== "complete" ||
+          manifest.production_eligible !== true ||
+          manifest.test_run === true ||
+          !Array.isArray(manifest.jobs)
+        ) continue;
+
+        for (const manifestJob of manifest.jobs.slice(0, 64)) {
+          if (manifestJob?.status !== "complete") continue;
+          const relativeOutput = safeText(manifestJob.final_output ?? manifestJob.output, 512);
+          if (!relativeOutput || path.isAbsolute(relativeOutput)) continue;
+          const output = path.resolve(datedRoot, relativeOutput);
+          if (output !== datedRoot && !output.startsWith(`${datedRoot}${path.sep}`)) continue;
+          const image = await archive.findByTarget(output);
+          if (!image) continue;
+          const characters = Array.isArray(manifestJob.characters)
+            ? manifestJob.characters.map((value) => safeText(value, 80)).filter(Boolean)
+            : [];
+          const styleId = safeText(manifestJob.style_id, 120);
+          const rendering = safeText(manifestJob.rendering, 120);
+          const attempts = Number.isInteger(manifestJob.attempts) && manifestJob.attempts > 0
+            ? manifestJob.attempts
+            : null;
+          upsert(image, {
+            id: `${manifest.date ?? directory.name}/${manifestJob.id ?? path.basename(relativeOutput)}`,
+            prompt: manifestJob.final_prompt,
+            characters: { mode: characters.length ? "custom" : "none", ids: characters },
+            style: styleId
+              ? { mode: "selected", id: styleId }
+              : rendering
+                ? { mode: "rendering", id: rendering }
+                : { mode: "none" },
+            relationGroup: manifestJob.relationship?.id,
+            useImageAnchors: Boolean(manifestJob.requires_reference_inspection),
+            purpose: "daily-theme",
+            executionMode: manifestJob.group,
+            startedAt: manifestJob.attempt_started_at,
+            completedAt: manifestJob.completed_at,
+            retryCount: attempts == null ? null : attempts - 1,
+          }, optionLabels, "daily-manifest");
+          metadata += 1;
+        }
+      } catch (error) {
+        if (error.code !== "ENOENT" && !(error instanceof SyntaxError)) throw error;
+      }
+    }
+    return metadata;
   }
 
   async function synchronize() {
@@ -192,8 +266,8 @@ export function createImageMetadataCatalog({ database, archive, jobRoot, options
       try {
         entries = await readdir(jobRoot, { withFileTypes: true });
       } catch (error) {
-        if (error.code === "ENOENT") return { assets: assets.length, metadata: 0 };
-        throw error;
+        if (error.code === "ENOENT") entries = [];
+        else throw error;
       }
       const optionLabels = await labels();
       let metadata = 0;
@@ -216,6 +290,7 @@ export function createImageMetadataCatalog({ database, archive, jobRoot, options
           if (error.code !== "ENOENT" && !(error instanceof SyntaxError)) throw error;
         }
       }
+      metadata += await synchronizeDailyManifests(optionLabels);
       return { assets: assets.length, metadata };
     })();
     try {

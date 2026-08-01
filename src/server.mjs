@@ -4,6 +4,8 @@ import path from "node:path";
 import { APP_ROOT, loadConfig } from "./config.mjs";
 import { createCodexControl } from "./modules/system/codex-control.mjs";
 import { handleCodexControlRoute } from "./modules/system/codex-control-route.mjs";
+import { createCodexUsageService } from "./modules/system/codex-usage.mjs";
+import { handleCodexUsageRoute } from "./modules/system/codex-usage-route.mjs";
 import { createDiscordTokenSetup } from "./modules/news/discord-token-setup.mjs";
 import { handleDiscordTokenSetupRoute } from "./modules/news/discord-token-setup-route.mjs";
 import { createNewsReader } from "./modules/news/news-reader.mjs";
@@ -142,6 +144,7 @@ const codexControl = createCodexControl({
   scriptPath: path.join(APP_ROOT, "scripts", "restart-codex.ps1"),
   auditRoot: path.join(APP_ROOT, "state"),
 });
+const codexUsage = createCodexUsageService();
 const discordTokenSetup = createDiscordTokenSetup({
   envPath: path.join(APP_ROOT, ".env"),
 });
@@ -168,6 +171,9 @@ if (IS_MAIN && imageArchive && generationConfig?.outputRoot) {
     database: runtimeDatabase,
     archive: imageArchive,
     jobRoot: path.join(APP_ROOT, "state", "image-generation-jobs"),
+    dailyManifestRoot: generationConfig.workspaceRoot
+      ? path.join(generationConfig.workspaceRoot, "outputs", "daily-v2")
+      : null,
     optionsCatalog: creationOptions,
     legacyStore: productionRecordStore,
   });
@@ -259,6 +265,7 @@ export function createServer({
   thumbnails = imageThumbnails,
   themeService = themes,
   systemControl = codexControl,
+  systemUsage = codexUsage,
   discordSetup = discordTokenSetup,
   news = newsReader,
   newsApprovalService = newsApproval,
@@ -289,6 +296,18 @@ export function createServer({
           response,
           pathname: url.pathname,
           control: systemControl,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
+        await handleCodexUsageRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          usage: systemUsage,
           sendJson,
         })
       ) {

@@ -39,3 +39,9 @@ DB 제약이 플랫폼별 외부 ID 중복, 승인 없는 게시, 사건별 이�
 JSON을 이미지 폴더와 대조해 자동 색인하며, 아카이브 밖의 결과는 거부한다. 기존
 이미지에 메타데이터가 없으면 내용을 추측하지 않는다. 자세한 계약은
 `docs/production-records.md`를 참고한다.
+
+## 스키마 버전 3 — 오테 manifest 연결
+
+`image_generation_metadata.metadata_source`에 `daily-manifest`를 추가했다. 완료된 운영
+manifest만 읽기 전용으로 색인하며 외부 이미지, Python 및 Windows 예약 작업은 수정하지
+않는다. 상세 경계는 `docs/codex-usage-and-daily-manifests.md`를 참고한다.

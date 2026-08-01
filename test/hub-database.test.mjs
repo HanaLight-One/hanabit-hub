@@ -11,9 +11,9 @@ test("허브 DB는 뉴스와 이미지 스키마를 반복 실행해도 한 번�
   try {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const database = openHubDatabase({ filePath, now: () => new Date("2026-08-01T00:00:00Z") });
-      assert.equal(databaseSchemaVersion(database), 2);
+      assert.equal(databaseSchemaVersion(database), 3);
       const migrations = database.prepare("SELECT version, name FROM schema_migrations").all();
-      assert.equal(migrations.length, 2);
+      assert.equal(migrations.length, 3);
       const tables = database.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row) => row.name);
       for (const expected of ["news_stories", "news_sources", "news_analysis", "news_approvals", "news_publications", "image_assets", "image_generation_metadata"]) {
         assert.equal(tables.includes(expected), true);
