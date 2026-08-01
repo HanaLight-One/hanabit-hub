@@ -10,12 +10,12 @@ function stableIndex(seed, length) {
   return digest.readUInt32BE(0) % length;
 }
 
-function characterPackage(character) {
+function characterPackage(character, { includeImageAnchor = true } = {}) {
   return {
     name: character.name,
     anchor_text: character.anchor_text,
     height_text: character.height_text,
-    image_anchor_path: character.image_anchor_path,
+    image_anchor_path: includeImageAnchor ? character.image_anchor_path : null,
   };
 }
 
@@ -60,21 +60,29 @@ function applyGuidedStyle(context, style, index, seed) {
   return true;
 }
 
-function guidedCastPackage(characterIds, index) {
+function guidedCastPackage(characterIds, index, { includeImageAnchors = false } = {}) {
   const characters = index.characters || {};
+  const mixedCast = characterIds.length > 1;
   const selected = characterIds.map((id) => {
     if (id === "pink-bridge") {
-      const appearance = String(index.pink_bridge?.appearance_prompt ?? "").trim();
+      const guest = characters["핑크브릿지"]?.source === "special_guest"
+        ? characters["핑크브릿지"]
+        : null;
+      const appearance = String(
+        mixedCast && guest?.anchor_text
+          ? guest.anchor_text
+          : index.pink_bridge?.appearance_prompt ?? "",
+      ).trim();
       if (!appearance) throw new Error("핑크브릿지 외형 앵커를 자산 색인에서 찾지 못했습니다.");
       return {
         name: "핑크브릿지",
         anchor_text: appearance,
-        height_text: "",
+        height_text: mixedCast ? String(guest?.height_text ?? "") : "",
         image_anchor_path: null,
       };
     }
     if (!characters[id]) throw new Error(`선택한 인물을 자산 색인에서 찾지 못했습니다: ${id}`);
-    return characterPackage(characters[id]);
+    return characterPackage(characters[id], { includeImageAnchor: includeImageAnchors });
   });
   const ordinaryNames = characterIds.filter((id) => id !== "pink-bridge");
   const matchingGroup = (index.relationship_groups || []).find(
@@ -228,7 +236,10 @@ export async function buildImageStudioQueueContext(
     if (characterIds.length < 1 || characterIds.length > 6) {
       throw new Error("실제 생성에는 1명부터 최대 6명의 인물 선택이 필요합니다.");
     }
-    const castPackage = guidedCastPackage(characterIds, index);
+    const imageAnchorsEnabled = job.useImageAnchors === true;
+    const castPackage = guidedCastPackage(characterIds, index, {
+      includeImageAnchors: imageAnchorsEnabled,
+    });
     context.job.mode = "cast";
     context.cast_packages = [castPackage];
     context.slots = Array.from({ length: count }, (_, indexValue) => ({
@@ -239,6 +250,7 @@ export async function buildImageStudioQueueContext(
     context.guided_selection = {
       character_ids: characterIds,
       style_id: hasDraftStyle ? context.selected_style.id : null,
+      image_anchors_enabled: imageAnchorsEnabled,
     };
     return context;
   }

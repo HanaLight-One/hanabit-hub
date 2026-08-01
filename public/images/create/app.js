@@ -29,6 +29,7 @@ const elements = {
   characterGrid: document.querySelector("#character-grid"),
   characterStatus: document.querySelector("#character-status"),
   characterToggle: document.querySelector("#character-toggle"),
+  useImageAnchors: document.querySelector("#use-image-anchors"),
   styleGrid: document.querySelector("#style-grid"),
   styleStatus: document.querySelector("#style-status"),
   styleToggle: document.querySelector("#style-toggle"),
@@ -43,6 +44,7 @@ const elements = {
   previewPurpose: document.querySelector("#preview-purpose"),
   previewCharacters: document.querySelector("#preview-characters"),
   previewStyle: document.querySelector("#preview-style"),
+  previewImageAnchors: document.querySelector("#preview-image-anchors"),
   previewSceneDetails: document.querySelector("#preview-scene-details"),
   previewSceneSummary: document.querySelector("#preview-scene-summary"),
   previewScene: document.querySelector("#preview-scene"),
@@ -379,6 +381,7 @@ elements.form.addEventListener("submit", (event) => {
           ? { mode: "rendering", id: styleValue.slice("render:".length) }
           : { mode: "selected", id: styleValue };
   const sourceImageId = data.get("mode") === "new" ? null : source;
+  const useImageAnchors = data.has("use-image-anchors");
   const route =
     data.get("mode") === "new" && characterSelection.mode === "none" && ["prompt", "rendering"].includes(styleSelection.mode)
       ? "prompt-only"
@@ -391,12 +394,16 @@ elements.form.addEventListener("submit", (event) => {
     sourceImageId,
     characters: characterSelection,
     style: styleSelection,
+    useImageAnchors,
   };
 
   elements.previewMode.textContent = mode;
   elements.previewPurpose.textContent = PURPOSE_LABELS[purpose] ?? "목적 확인 필요";
   elements.previewCharacters.textContent = characterSummary;
   elements.previewStyle.textContent = style;
+  elements.previewImageAnchors.textContent = useImageAnchors
+    ? "사용 · 선택 화풍 우선"
+    : "사용 안 함 · 텍스트 외형 앵커만";
   elements.previewScene.textContent = scene || "장면 요청이 비어 있어요.";
   elements.previewSceneSummary.textContent = scene
     ? `${scene.length.toLocaleString("ko-KR")}자 프롬프트 펼치기`

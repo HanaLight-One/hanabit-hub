@@ -135,6 +135,7 @@ export function createPromptOnlyExecutor({
       purpose: draft.purpose,
       characters: draft.characters,
       style: draft.style,
+      useImageAnchors: draft.useImageAnchors === true,
       outputs: [],
       progress: { completed: 0, total: 1 },
       requestedBy: "hanabit-hub-owner",

@@ -113,6 +113,10 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
       input.style,
       new Set(options.styles.map((item) => item.id)),
     );
+    if (input.useImageAnchors != null && typeof input.useImageAnchors !== "boolean") {
+      throw draftError("INVALID_SELECTION", "이미지 앵커 사용 여부가 올바르지 않습니다.");
+    }
+    const useImageAnchors = input.useImageAnchors === true;
     const route =
       mode === "new" && sourceImageId === null && characters.mode === "none" && NO_ASSET_STYLE_MODES.has(style.mode)
         ? "prompt-only"
@@ -132,6 +136,7 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
       sourceImageId,
       characters,
       style,
+      useImageAnchors,
     };
     const executionMode = classifyDraftExecution(record);
 

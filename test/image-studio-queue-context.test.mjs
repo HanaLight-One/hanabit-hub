@@ -23,6 +23,12 @@ async function fixture() {
         },
       },
       characters: {
+        핑크브릿지: {
+          name: "핑크브릿지",
+          source: "special_guest",
+          anchor_text: "adult Pink-Bridge guest identity only",
+          height_text: "average height",
+        },
         노아: {
           name: "노아",
           anchor_text: "adult character identity",
@@ -135,6 +141,7 @@ test("핑크브릿지와 일반 인물을 함께 선택하면 한 cast와 참조
       purpose: "free-play",
       characters: { mode: "custom", ids: ["pink-bridge", "노아", "리벨라"] },
       style: { mode: "selected", id: "calm" },
+      useImageAnchors: true,
     },
     { assetIndexPath, outputRoot },
   );
@@ -142,8 +149,31 @@ test("핑크브릿지와 일반 인물을 함께 선택하면 한 cast와 참조
   assert.deepEqual(context.guided_selection.character_ids, ["pink-bridge", "노아", "리벨라"]);
   assert.equal(context.selected_style.id, "calm");
   assert.equal(context.cast_packages[0].characters.length, 3);
+  assert.match(context.cast_packages[0].characters[0].anchor_text, /guest identity only/);
   assert.equal(context.cast_packages[0].characters[0].image_anchor_path, null);
   assert.match(context.cast_packages[0].characters[1].image_anchor_path, /noah\.png$/u);
+  assert.equal(context.guided_selection.image_anchors_enabled, true);
+});
+
+test("이미지 앵커를 끄면 일반 인물도 텍스트 외형 앵커만 전달한다", async () => {
+  const { assetIndexPath, outputRoot } = await fixture();
+  const context = await buildImageStudioQueueContext(
+    {
+      id: "text-anchor-cast",
+      prompt: "노아와 리벨라의 다과회",
+      count: 1,
+      mode: "guided-cast",
+      purpose: "free-play",
+      characters: { mode: "custom", ids: ["노아", "리벨라"] },
+      style: { mode: "selected", id: "calm" },
+      useImageAnchors: false,
+    },
+    { assetIndexPath, outputRoot },
+  );
+  assert.equal(context.guided_selection.image_anchors_enabled, false);
+  assert.equal(context.cast_packages[0].characters[0].image_anchor_path, null);
+  assert.equal(context.cast_packages[0].characters[1].image_anchor_path, null);
+  assert.equal(context.selected_style.id, "calm");
 });
 
 test("인물 없는 고정 렌더링도 locked style worker 문맥을 사용한다", async () => {

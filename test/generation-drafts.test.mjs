@@ -49,6 +49,7 @@ test("인물과 화풍 없음은 긴 프롬프트 자유 생성 초안으로만 
     assert.equal(saved.prompt, prompt);
     assert.equal(saved.status, "draft");
     assert.equal(saved.executionEnabled, false);
+    assert.equal(saved.useImageAnchors, false);
   });
 });
 
@@ -61,9 +62,12 @@ test("핑크브릿지를 포함한 최대 6명은 실제 실행 가능한 안내
       sourceImageId: null,
       characters: { mode: "custom", ids: CHARACTER_IDS },
       style: { mode: "none", id: null },
+      useImageAnchors: true,
     });
     assert.equal(result.route, "guided");
     assert.equal(result.executionMode, "guided-cast");
+    const saved = await store.get(result.id);
+    assert.equal(saved.useImageAnchors, true);
   });
 });
 

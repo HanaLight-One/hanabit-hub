@@ -27,6 +27,11 @@ test("자산 색인에서 안전한 화풍 이름만 제공한다", async (conte
         },
       ],
       characters: {
+        핑크브릿지: {
+          name: "핑크브릿지",
+          source: "special_guest",
+          anchor_text: "guest identity only",
+        },
         헤일라: {
           name: "헤일라",
           anchor_text: "internal identity prompt",

@@ -20,6 +20,12 @@ async function fixture(callback, { now } = {}) {
     writeFile(assetIndexPath, JSON.stringify({
       styles: { calm: { id: "calm", filename: "calm.txt", content: "calm ink style" } },
       characters: {
+        핑크브릿지: {
+          name: "핑크브릿지",
+          source: "special_guest",
+          anchor_text: "adult Pink-Bridge guest identity only",
+          height_text: "average height",
+        },
         헤일라: {
           name: "헤일라",
           anchor_text: "adult Haila identity anchor",
@@ -101,6 +107,7 @@ test("핑크브릿지와 일반 인물을 함께 선택해 외형 앵커와 참�
       sourceImageId: null,
       characters: { mode: "custom", ids: ["pink-bridge", "헤일라"] },
       style: { mode: "none", id: null },
+      useImageAnchors: true,
     });
     const started = await executor.start(draft.id);
     assert.equal(started.executionMode, "guided-cast");
@@ -114,8 +121,9 @@ test("핑크브릿지와 일반 인물을 함께 선택해 외형 앵커와 참�
     assert.equal(context.job.mode, "cast");
     assert.match(context.job.prompt, /분홍 노을/);
     assert.deepEqual(context.guided_selection.character_ids, ["pink-bridge", "헤일라"]);
-    assert.match(context.cast_packages[0].characters[0].anchor_text, /Pink-Bridge/);
+    assert.match(context.cast_packages[0].characters[0].anchor_text, /guest identity only/);
     assert.match(context.cast_packages[0].characters[1].anchor_text, /Haila/);
+    assert.match(context.cast_packages[0].characters[1].image_anchor_path, /haila\.png$/u);
   });
 });
 

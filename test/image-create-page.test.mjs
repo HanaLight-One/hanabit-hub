@@ -48,12 +48,15 @@ test("/images/create가 안전한 추가생성 초안 화면을 제공한다", a
 
 test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", async () => {
   await withServer(async (baseUrl) => {
-    const [script, style] = await Promise.all([
+    const [page, script, style] = await Promise.all([
+      fetch(`${baseUrl}/images/create`),
       fetch(`${baseUrl}/images/create/app.js`),
       fetch(`${baseUrl}/images/create/styles.css`),
     ]);
+    const body = await page.text();
     const scriptBody = await script.text();
 
+    assert.equal(page.status, 200);
     assert.equal(script.status, 200);
     assert.equal(style.status, 200);
     assert.match(scriptBody, /fetch\(`\/api\/images\//);
@@ -70,6 +73,8 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(scriptBody, /선택 인물로 1장 실제 생성/);
     assert.match(scriptBody, /MAX_CUSTOM_CHARACTERS = 6/);
     assert.doesNotMatch(scriptBody, /pinkBridge\.checked = false/);
+    assert.match(body, /이미지 앵커 사용/);
+    assert.match(scriptBody, /useImageAnchors/);
     assert.match(scriptBody, /선택 자산 실제 생성 · 연결 준비 중/);
     assert.match(scriptBody, /previewSceneDetails\.open = false/);
     assert.match(scriptBody, /window\.confirm/);

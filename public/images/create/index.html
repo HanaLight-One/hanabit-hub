@@ -87,6 +87,13 @@
             </div>
             <div id="character-grid" class="option-grid character-grid"
               aria-labelledby="character-title" aria-live="polite" hidden></div>
+            <label class="image-anchor-toggle">
+              <input id="use-image-anchors" name="use-image-anchors" type="checkbox" />
+              <span>
+                <b>이미지 앵커 사용</b>
+                <small>인물 닮음은 강해지지만 참조 이미지의 화풍·소품이 따라올 수 있어요.</small>
+              </span>
+            </label>
           </section>
 
           <section class="style-field" aria-labelledby="style-title">
@@ -145,6 +152,8 @@
             <dd id="preview-characters">자동 선택</dd>
             <dt>화풍</dt>
             <dd id="preview-style">자동 선택</dd>
+            <dt>이미지 앵커</dt>
+            <dd id="preview-image-anchors">사용 안 함</dd>
             <dt>장면 요청</dt>
             <dd class="preview-scene-cell">
               <details id="preview-scene-details" class="preview-scene-details">

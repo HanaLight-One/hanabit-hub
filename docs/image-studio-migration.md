@@ -46,6 +46,12 @@ Image Studio의 코드는 Hanabit Hub 저장소에서 관리하되 운영 데이
 전달한다. 핑크브릿지는 텍스트 외형 앵커, 일반 인물은 텍스트 외형 앵커와 참조 이미지를
 한 cast에 함께 담는다. 기존 외부 worker가 `cast` 모드를 지원하지 않는 환경에서는
 `patches/image-studio-worker-cast.patch`를 동일 버전의 worker에 먼저 적용해야 한다.
+
+이미지 참조는 생성실의 `이미지 앵커 사용`을 명시적으로 켠 요청에만 전달하며 기본값은
+꺼짐이다. 켠 경우에도 worker는 참조 이미지의 화풍·배경·소품·동물을 복사하지 않고
+선택한 locked style을 우선한다. 핑크브릿지 단독은 기존 완성형 외형 프롬프트를,
+다른 인물과 섞인 cast는 `special_guest`의 identity-only 앵커를 사용한다. 특별 게스트
+파서 확장은 `patches/daily-image-pipeline-special-guests.patch`로 재현한다.
 | 무료 텍스트 runner | `generation.freeTextRunnerPath` | 장면 JSON 생성 |
 | Responses bridge | `generation.codexResponsesBridgePath` | ChatGPT Codex 이미지 도구 연결 |
 

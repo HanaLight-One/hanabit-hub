@@ -1,0 +1,21 @@
+--- a/build_index.py
++++ b/build_index.py
+@@ -111,10 +111,14 @@ def parse_main_characters(text: str) -> tuple[dict[str, Any], dict[str, str]]:
+ 
+ 
+ def parse_guest_characters(text: str) -> dict[str, Any]:
+-    luka_marker = re.search(r"(?m)^\[\s*루카\b.*\]\s*$", text)
+-    blocks = [text]
+-    if luka_marker:
+-        blocks = [text[: luka_marker.start()], text[luka_marker.start() :]]
++    name_markers = list(
++        re.finditer(r"(?m)^(?:\[[^\n]+\]\s*\n)?이름:\s*(.+?)\s*$", text)
++    )
++    blocks = []
++    for index, marker in enumerate(name_markers):
++        start = 0 if index == 0 else marker.start()
++        end = name_markers[index + 1].start() if index + 1 < len(name_markers) else len(text)
++        blocks.append(text[start:end])
+ 
+     characters: dict[str, Any] = {}
+     for block in blocks:

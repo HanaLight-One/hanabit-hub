@@ -52,18 +52,22 @@ export function createCreationOptionsCatalog({ assetIndexPath }) {
     const rawCharacters = Array.isArray(index.characters)
       ? index.characters.map((character) => [character?.name, character])
       : Object.entries(index.characters ?? {});
+    const pinkBridgeAvailable = Boolean(
+      String(index.pink_bridge?.appearance_prompt ?? "").trim(),
+    );
     const seenCharacters = new Set();
     const characters = rawCharacters
       .map(([key, character]) => normalizeCharacter(character, key))
       .filter(
         (character) =>
           character &&
+          !(pinkBridgeAvailable && character.id === "핑크브릿지") &&
           !seenCharacters.has(character.id) &&
           seenCharacters.add(character.id),
       )
       .sort((left, right) => left.label.localeCompare(right.label, "ko"));
     if (
-      String(index.pink_bridge?.appearance_prompt ?? "").trim() &&
+      pinkBridgeAvailable &&
       !seenCharacters.has("pink-bridge")
     ) {
       characters.unshift(
