@@ -50,7 +50,7 @@ function normalizeEmbed(embed) {
   };
 }
 
-function mediaFromMessage(message) {
+export function discordMediaCandidates(message) {
   const candidates = [];
 
   for (const attachment of valuesOf(message?.attachments)) {
@@ -92,7 +92,7 @@ export function normalizeDiscordAnnouncement(message, { channelId }) {
   const embeds = valuesOf(message?.embeds).map(normalizeEmbed).filter((embed) =>
     embed.title || embed.description || embed.url || embed.fields.length,
   );
-  const mediaCandidates = mediaFromMessage(message);
+  const mediaCandidates = discordMediaCandidates(message);
   const embedTexts = embeds.flatMap((embed) => [
     embed.title,
     embed.description,

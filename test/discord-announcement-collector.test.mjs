@@ -22,10 +22,12 @@ test("실시간과 보충 수집은 같은 중복 방지 저장소를 사용한�
     const collector = createDiscordAnnouncementCollector({ stateRoot, channelId });
     assert.deepEqual(await collector.collectMessage(message), {
       status: "created",
+      id: "a4c76abbe46395fd35aea45ce72a0afc",
       mediaCount: 0,
     });
     assert.deepEqual(await collector.collectMessage(message), {
       status: "existing",
+      id: "a4c76abbe46395fd35aea45ce72a0afc",
       mediaCount: 0,
     });
 
@@ -39,6 +41,7 @@ test("실시간과 보충 수집은 같은 중복 방지 저장소를 사용한�
       existing: 1,
       created: 0,
       media: 0,
+      ids: ["a4c76abbe46395fd35aea45ce72a0afc"],
     });
   } finally {
     await rm(stateRoot, { recursive: true, force: true });

@@ -11,9 +11,9 @@ export function createDiscordAnnouncementCollector({
 
   async function collectMessage(message, { dryRun = false } = {}) {
     const normalized = normalizeDiscordAnnouncement(message, { channelId });
-    if (!normalized) return { status: "ignored", mediaCount: 0 };
-    if (await store.has(normalized.id)) return { status: "existing", mediaCount: 0 };
-    if (dryRun) return { status: "candidate", mediaCount: 0 };
+    if (!normalized) return { status: "ignored", id: null, mediaCount: 0 };
+    if (await store.has(normalized.id)) return { status: "existing", id: normalized.id, mediaCount: 0 };
+    if (dryRun) return { status: "candidate", id: normalized.id, mediaCount: 0 };
 
     const result = await store.create(normalized.record, {
       writeMedia: (destination) =>
@@ -21,6 +21,7 @@ export function createDiscordAnnouncementCollector({
     });
     return {
       status: result.created ? "created" : "existing",
+      id: normalized.id,
       mediaCount: result.mediaCount ?? 0,
     };
   }
@@ -38,6 +39,7 @@ export function createDiscordAnnouncementCollector({
       existing: 0,
       created: 0,
       media: 0,
+      ids: [],
     };
 
     for (const message of messages) {
@@ -46,6 +48,7 @@ export function createDiscordAnnouncementCollector({
       summary.eligible += 1;
       if (result.status === "existing") summary.existing += 1;
       if (result.status === "created") summary.created += 1;
+      if (result.id) summary.ids.push(result.id);
       summary.media += result.mediaCount;
     }
     return summary;

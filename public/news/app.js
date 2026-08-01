@@ -23,6 +23,8 @@ function statusLabel(status) {
     pending_translation: "번역 대기",
     pending_triage: "판정 대기",
     pending_review: "게시 검토",
+    ignored: "보류 · 정보성 낮음",
+    translation_failed: "번역 확인 필요",
     published: "게시 완료",
   }[status] ?? "상태 확인 필요";
 }
@@ -47,6 +49,25 @@ function renderItem(item) {
   top.append(element("time", null, formatDate(item.source.publishedAt)));
   article.append(top);
 
+  if (item.source.label || item.source.account) {
+    article.append(element("p", "source-label", `${item.source.label ?? item.source.account} · ${item.source.type === "x-post" ? "X" : "Discord"}`));
+  }
+
+  if (item.workflow.translation) {
+    const translated = element("section", "translation-box");
+    translated.append(element("h2", null, item.workflow.translation.title));
+    translated.append(element("p", null, item.workflow.translation.body));
+    if (item.workflow.triage) {
+      const triage = item.workflow.triage;
+      translated.append(element(
+        "small",
+        `triage triage-${triage.decision}`,
+        `${triage.decision === "publish" ? "바로 게시 후보" : triage.decision === "review" ? "검토 후보" : "보류"} · ${triage.reason}`,
+      ));
+    }
+    article.append(translated);
+  }
+
   if (item.original.content) article.append(element("p", "original-content", item.original.content));
   for (const embed of item.original.embeds) article.append(renderEmbed(embed));
 
@@ -63,7 +84,7 @@ function renderItem(item) {
   }
 
   const links = new Map(item.original.links.map((url) => [url, "원문 링크"]));
-  if (item.source.url) links.set(item.source.url, "Discord 원문");
+  if (item.source.url) links.set(item.source.url, item.source.type === "x-post" ? "X 원문" : "Discord 원문");
   if (links.size) {
     const linkRow = element("div", "link-row");
     for (const [url, label] of links) {

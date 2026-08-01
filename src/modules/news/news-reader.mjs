@@ -19,6 +19,10 @@ function safeUrl(value) {
   }
 }
 
+function safeText(value, maximum) {
+  return String(value ?? "").trim().slice(0, maximum);
+}
+
 function publicItem(record) {
   const id = validateId(String(record?.id ?? ""));
   const embeds = Array.isArray(record?.original?.embeds)
@@ -53,6 +57,8 @@ function publicItem(record) {
     id,
     source: {
       type: String(record?.source?.type ?? ""),
+      account: safeText(record?.source?.account, 40) || null,
+      label: safeText(record?.source?.label, 80) || null,
       url: safeUrl(record?.source?.url),
       publishedAt: String(record?.source?.publishedAt ?? ""),
     },
@@ -68,6 +74,19 @@ function publicItem(record) {
       status: String(record?.workflow?.status ?? "unknown"),
       hasTranslation: Boolean(record?.workflow?.translation),
       hasTriage: Boolean(record?.workflow?.triage),
+      translation: record?.workflow?.translation
+        ? {
+            title: safeText(record.workflow.translation.title, 120),
+            body: safeText(record.workflow.translation.body, 4_000),
+          }
+        : null,
+      triage: record?.workflow?.triage && ["skip", "review", "publish"].includes(record.workflow.triage.decision)
+        ? {
+            decision: record.workflow.triage.decision,
+            confidence: Math.max(0, Math.min(1, Number(record.workflow.triage.confidence) || 0)),
+            reason: safeText(record.workflow.triage.reason, 400),
+          }
+        : null,
       publishedToDc: Boolean(record?.workflow?.dcPublication),
     },
     collectedAt: String(record?.collectedAt ?? ""),

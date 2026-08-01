@@ -17,6 +17,12 @@ async function exists(target) {
   }
 }
 
+async function writeJsonAtomic(target, value) {
+  const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
+  await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+  await rename(temporary, target);
+}
+
 export function createPendingNewsStore({ root }) {
   if (!path.isAbsolute(root)) throw new TypeError("뉴스 상태 루트는 절대경로여야 합니다.");
   const pendingRoot = path.join(root, "pending");
@@ -27,6 +33,34 @@ export function createPendingNewsStore({ root }) {
 
   async function has(id) {
     return exists(targetFor(id));
+  }
+
+  async function read(id) {
+    return JSON.parse(await readFile(path.join(targetFor(id), "item.json"), "utf8"));
+  }
+
+  async function update(id, transform) {
+    const safeId = validateId(id);
+    const current = await read(safeId);
+    const next = await transform(structuredClone(current));
+    if (!next || next.id !== safeId) {
+      throw new TypeError("뉴스 갱신 결과의 ID가 일치하지 않습니다.");
+    }
+    await writeJsonAtomic(path.join(targetFor(safeId), "item.json"), next);
+    return next;
+  }
+
+  async function mediaFiles(id) {
+    const safeId = validateId(id);
+    const target = targetFor(safeId);
+    const record = await read(safeId);
+    return (Array.isArray(record.media) ? record.media : []).map((entry) => {
+      const filename = path.basename(String(entry.file ?? ""));
+      if (!/^[a-zA-Z0-9_-]+\.(gif|jpe?g|png|webp)$/u.test(filename)) {
+        throw new TypeError("안전하지 않은 뉴스 미디어 이름입니다.");
+      }
+      return { target: path.join(target, "media", filename), filename };
+    });
   }
 
   async function create(record, { writeMedia = async () => [] } = {}) {
@@ -56,5 +90,5 @@ export function createPendingNewsStore({ root }) {
     }
   }
 
-  return Object.freeze({ has, create });
+  return Object.freeze({ has, read, update, mediaFiles, create });
 }

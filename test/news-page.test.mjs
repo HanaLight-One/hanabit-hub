@@ -15,6 +15,8 @@ test("뉴스 대기함 화면과 스크립트를 제공한다", async () => {
     assert.equal(body.includes('id="news-list"'), true);
     assert.equal(script.includes("localStorage"), false);
     assert.equal(script.includes('fetch("/api/news"'), true);
+    assert.equal(script.includes("translation-box"), true);
+    assert.equal(script.includes("바로 게시 후보"), true);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

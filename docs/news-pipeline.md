@@ -10,9 +10,10 @@
 
 ## 현재 단계
 
-Discord 전용 일회성 수집 명령만 제공한다. 최신 메시지의 글, Embed, 링크와
-Discord CDN 이미지를 `state/news/pending/<뉴스 ID>/`에 보존한다. 같은 Discord
-메시지는 다시 실행해도 중복 생성하지 않는다.
+Discord Gateway 감시기가 `#openai-announcements`와 `#x-watch`를 함께 감시한다.
+OpenAI 공지의 글, Embed, 링크와 Discord CDN 이미지를 보존하고, `#x-watch`에서는
+등록된 X 계정의 `/status/<ID>` 링크만 공식 X oEmbed를 통해 원문으로 보충한다.
+같은 Discord 메시지와 같은 X 게시물은 다시 관측해도 중복 생성하지 않는다.
 
 ```powershell
 # 쓰지 않고 대상 개수만 확인
@@ -22,13 +23,23 @@ npm.cmd run news:discord:collect:dry
 npm.cmd run news:discord:collect
 ```
 
-아직 무료 AI 번역·판정, X 수집, Hub 화면, Discord `news-pending` 전송,
-DC 게시는 수행하지 않는다.
+수집 직후 기존 설정의 무료 텍스트 API runner가 한글 번역과
+`skip / review / publish` 판정을 JSON으로 반환한다. 형식이 틀리거나 API가 실패하면
+원문을 보존한 채 `translation_failed`로 닫고 자동 재시도하지 않는다. OpenAI 공식
+Announcement는 모델 판정과 무관하게 최소 `publish` 게시 검토 후보로 올린다.
+
+`review`와 `publish` 항목은 하나빛 허브 `/news`와 Discord `#news-pending`에 글과
+보존 이미지를 한 번만 표시한다. `skip`은 허브에 보류 상태로 남긴다. 실제 DC 게시는
+아직 연결하지 않으며 별도 승인·게시 영수증·중복 방지가 완성될 때까지 자동 전송하지 않는다.
+
+X 계정 allowlist는 `config/news-x-sources.json`에서 관리한다. 현재 Tibo, OpenAI,
+OpenAI Developers, Sam Altman, Romain Huet, Greg Brockman 계정만 허용한다. 임의 호스트,
+임의 계정과 상태 게시물이 아닌 X URL은 수집하지 않는다.
 
 ## 실시간 감시
 
 `news:discord:watch`는 Discord Gateway의 새 메시지 이벤트를 즉시 수집한다.
-시작·재접속 시 최근 100건을 보충 확인하고, 장시간 연결의 안전망으로 10분마다
+시작·재접속 시 각 채널의 최근 10건을 보충 확인하고, 장시간 연결의 안전망으로 10분마다
 같은 보충 확인을 반복한다. 모든 경로는 동일한 Discord 메시지 ID 중복 방지를
 사용한다.
 
