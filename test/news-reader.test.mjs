@@ -15,11 +15,11 @@ test("뉴스 리더는 내부 경로와 Discord ID 없이 공개 계약을 반�
     await writeFile(path.join(itemRoot, "item.json"), JSON.stringify({
       id,
       source: { type: "discord-announcement", channelId: "secret-channel", messageId: "secret-message", url: "https://discord.com/channels/1/2/3", publishedAt: "2026-07-31T00:00:00Z" },
-      original: { language: "en", content: "Hello", embeds: [], links: ["https://openai.com/news"] },
+      original: { language: "en", content: "Hello", embeds: [], links: ["https://openai.com/news"], contexts: [{ relation: "linked-post", account: "OpenAI", content: "Parent context", url: "https://x.com/OpenAI/status/12345" }] },
       workflow: {
         status: "pending_review",
         translation: { title: "한글 제목", body: "한글 본문" },
-        triage: { decision: "publish", confidence: 0.95, reason: "공식 발표" },
+        triage: { decision: "publish", confidence: 0.95, importance: "high", reason: "공식 발표", advice: "바로 검토하세요." },
         dcPublication: null,
       },
       collectedAt: "2026-07-31T00:01:00Z",
@@ -33,6 +33,8 @@ test("뉴스 리더는 내부 경로와 Discord ID 없이 공개 계약을 반�
     assert.equal(payload.items[0].media[0].url, `/api/news/${id}/media/01-news.png`);
     assert.equal(payload.items[0].workflow.translation.title, "한글 제목");
     assert.equal(payload.items[0].workflow.triage.decision, "publish");
+    assert.equal(payload.items[0].workflow.triage.advice, "바로 검토하세요.");
+    assert.equal(payload.items[0].original.contexts[0].content, "Parent context");
     assert.equal(payload.items[0].workflow.canApproveForDc, true);
     assert.equal(payload.items[0].workflow.dcApproval, null);
     assert.equal(serialized.includes(root), false);

@@ -26,6 +26,11 @@ function safePost(post) {
   return { id, authorId };
 }
 
+function safeStatusId(value) {
+  const id = String(value ?? "");
+  return /^\d{5,25}$/u.test(id) ? id : null;
+}
+
 export function xLinksFromStreamEvent(payload, { allowedHandles }) {
   const main = safePost(payload?.data);
   if (!main) return null;
@@ -44,12 +49,16 @@ export function xLinksFromStreamEvent(payload, { allowedHandles }) {
   const seen = new Set([main.id]);
   for (const reference of payload?.data?.referenced_tweets ?? []) {
     if (links.length >= 4 || reference?.type === "retweeted") continue;
-    const referenced = includedPosts.get(String(reference?.id ?? ""));
+    const referencedId = safeStatusId(reference?.id);
+    if (!referencedId || seen.has(referencedId)) continue;
+    const referenced = includedPosts.get(referencedId);
     const referencedUsername = referenced && users.get(referenced.authorId);
-    if (!referenced || !referencedUsername || seen.has(referenced.id)) continue;
-    if (!/^[A-Za-z0-9_]{1,15}$/u.test(referencedUsername)) continue;
-    seen.add(referenced.id);
-    links.push(`https://x.com/${referencedUsername}/status/${referenced.id}`);
+    seen.add(referencedId);
+    links.push(
+      referencedUsername && /^[A-Za-z0-9_]{1,15}$/u.test(referencedUsername)
+        ? `https://x.com/${referencedUsername}/status/${referencedId}`
+        : `https://x.com/i/status/${referencedId}`,
+    );
   }
   return Object.freeze({ handle: username, statusId: main.id, links: Object.freeze(links) });
 }

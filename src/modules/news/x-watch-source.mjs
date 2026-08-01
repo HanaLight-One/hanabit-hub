@@ -207,13 +207,18 @@ export async function fetchXPost(post, { fetchImpl = fetch } = {}) {
   if (author.hostname !== "twitter.com" && author.hostname !== "x.com") {
     throw new Error("X 작성자 주소를 확인할 수 없습니다.");
   }
-  if (author.pathname.split("/").filter(Boolean)[0]?.toLowerCase() !== post.handle.toLowerCase()) {
+  const resolvedHandle = author.pathname.split("/").filter(Boolean)[0];
+  if (!/^[A-Za-z0-9_]{1,15}$/u.test(resolvedHandle ?? "")) {
+    throw new Error("X 작성자 계정을 확인할 수 없습니다.");
+  }
+  if (post.handle.toLowerCase() !== "i" && resolvedHandle.toLowerCase() !== post.handle.toLowerCase()) {
     throw new Error("X 작성자가 등록된 링크와 다릅니다.");
   }
   if (!content) throw new Error("X 원문이 비어 있습니다.");
   return {
     content,
     authorName: String(payload.author_name ?? post.handle).slice(0, 80),
+    account: resolvedHandle,
     relatedPosts: await relatedPostsFromHtml(payload.html, { fetchImpl, primary: post }),
   };
 }
@@ -233,7 +238,7 @@ async function fetchContextPosts(message, primary, relatedPosts, options) {
       const resolved = await fetchXPost(candidate, options);
       contexts.push({
         relation: candidate.relation,
-        account: candidate.handle,
+        account: resolved.account,
         label: resolved.authorName,
         statusId: candidate.statusId,
         url: candidate.url,

@@ -11,6 +11,8 @@ import { handleDiscordTokenSetupRoute } from "./modules/news/discord-token-setup
 import { createNewsReader } from "./modules/news/news-reader.mjs";
 import { createNewsApprovalService } from "./modules/news/news-approval.mjs";
 import { handleNewsApprovalRoute } from "./modules/news/news-approval-route.mjs";
+import { createNewsProcessor } from "./modules/news/news-processor.mjs";
+import { handleNewsAnalysisRetryRoute } from "./modules/news/news-analysis-retry-route.mjs";
 import { createPushNotificationService } from "./modules/notifications/push-notifications.mjs";
 import { handlePushNotificationRoute } from "./modules/notifications/push-notification-route.mjs";
 import { handleNewsListRoute } from "./modules/news/news-list-route.mjs";
@@ -149,6 +151,12 @@ const discordTokenSetup = createDiscordTokenSetup({
   envPath: path.join(APP_ROOT, ".env"),
 });
 const newsReader = createNewsReader({ root: path.join(APP_ROOT, "state", "news") });
+const newsProcessor = path.isAbsolute(generationConfig?.freeTextRunnerPath ?? "")
+  ? createNewsProcessor({
+      stateRoot: path.join(APP_ROOT, "state", "news"),
+      runnerPath: generationConfig.freeTextRunnerPath,
+    })
+  : null;
 const newsApproval = createNewsApprovalService({ root: path.join(APP_ROOT, "state", "news") });
 const pushNotifications = createPushNotificationService({
   root: path.join(APP_ROOT, "state", "notifications"),
@@ -268,6 +276,7 @@ export function createServer({
   systemUsage = codexUsage,
   discordSetup = discordTokenSetup,
   news = newsReader,
+  newsAnalysisProcessor = newsProcessor,
   newsApprovalService = newsApproval,
   notificationService = pushNotifications,
   fortune = fortuneArchive,
@@ -356,6 +365,18 @@ export function createServer({
           response,
           pathname: url.pathname,
           approvalService: newsApprovalService,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
+        await handleNewsAnalysisRetryRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          processor: newsAnalysisProcessor,
           sendJson,
         })
       ) {

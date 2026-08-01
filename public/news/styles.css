@@ -25,6 +25,10 @@ h1 em { color: var(--accent); font-style: normal; }
 .summary strong { font-size: 30px; }
 .summary span { margin-top: 6px; color: var(--muted); font-size: 13px; }
 .notice { padding: 28px; border: 1px dashed var(--line); border-radius: 18px; color: var(--muted); text-align: center; }
+.filters { display: flex; gap: 8px; margin: 0 0 22px; padding-bottom: 6px; overflow-x: auto; }
+.filters button { flex: 0 0 auto; min-height: 40px; padding: 0 13px; border: 1px solid var(--line); border-radius: 999px; background: #0d1217; color: #c8d0d8; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.filters button.active { border-color: var(--accent); background: rgb(216 255 82 / 12%); color: var(--accent); }
+.filters button span { margin-left: 4px; color: var(--muted); }
 .news-list { display: grid; gap: 16px; }
 .news-card { padding: clamp(20px, 4vw, 32px); border: 1px solid var(--line); border-radius: 22px; background: var(--panel); }
 .card-top { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 22px; }
@@ -40,16 +44,28 @@ h1 em { color: var(--accent); font-style: normal; }
 .translation-box h2 { margin: 0; font-size: 20px; }
 .translation-box p { margin: 12px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
 .section-label { margin: 0 0 9px !important; color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .14em; }
+.body-label { margin-top: 20px !important; padding-top: 16px; border-top: 1px solid rgb(216 255 82 / 16%); }
 .muted-box { color: var(--muted); }
+.analysis-failure { display: grid; gap: 12px; margin-top: 16px; }
+.retry-button { justify-self: start; min-height: 42px; padding: 0 14px; border: 1px solid #ffdc81; border-radius: 11px; background: rgb(255 220 129 / 9%); color: #ffdc81; font: inherit; font-weight: 800; cursor: pointer; }
+.retry-button:disabled { cursor: wait; opacity: .55; }
 .triage-box { margin-top: 14px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: #0b1014; }
 .triage-box div { display: flex; justify-content: space-between; gap: 16px; }
 .triage-box div span, .triage-box small { color: var(--muted); font-size: 12px; }
 .triage-box p { margin: 10px 0; line-height: 1.6; }
+.triage-box dl { display: grid; gap: 14px; margin: 16px 0; }
+.triage-box dl div { display: grid; gap: 6px; }
+.triage-box dt { color: var(--accent); font-size: 12px; font-weight: 800; }
+.triage-box dd { margin: 0; line-height: 1.65; }
 .original-box { margin-top: 20px; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .original-box summary { cursor: pointer; color: #cbd2d8; font-weight: 700; }
 .original-box[open] summary { margin-bottom: 16px; color: var(--accent); }
 .original-content, .embed-box p, .embed-field span { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
 .original-content { font-size: 16px; }
+.context-box { margin-top: 14px; padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: #0b1014; }
+.context-box strong { color: #ffdc81; font-size: 13px; }
+.context-box p { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; }
+.context-box a { color: var(--accent); font-size: 13px; }
 .embed-box { margin-top: 18px; padding: 18px; border-left: 3px solid var(--accent); border-radius: 0 14px 14px 0; background: #0b1014; }
 .embed-box h3 { margin: 0 0 10px; }
 .embed-box p { margin: 0; color: #c7cdc8; }

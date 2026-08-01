@@ -17,6 +17,23 @@ const DECISION_LABELS = {
   skip: "보류",
 };
 
+const IMPORTANCE_LABELS = { low: "낮음", medium: "중간", high: "높음" };
+const FAILURE_LABELS = {
+  timeout: "응답 시간이 초과됐어요.",
+  invalid_response: "응답 형식이 깨져 번역을 저장하지 못했어요.",
+  provider_error: "무료 텍스트 API 요청이 완료되지 않았어요.",
+  unknown: "분석 도중 안전하게 복구하지 못한 오류가 있었어요.",
+};
+
+const FILTERS = [
+  { id: "action", label: "확인 필요", matches: (item) => ["pending_review", "translation_failed"].includes(item.workflow.status) },
+  { id: "publish", label: "게시 후보", matches: (item) => item.workflow.triage?.decision === "publish" },
+  { id: "review", label: "사람 검토", matches: (item) => item.workflow.triage?.decision === "review" },
+  { id: "failed", label: "번역 실패", matches: (item) => item.workflow.status === "translation_failed" },
+  { id: "ignored", label: "보류", matches: (item) => item.workflow.status === "ignored" },
+  { id: "all", label: "전체", matches: () => true },
+];
+
 function formatDate(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
@@ -47,8 +64,16 @@ function SourceLinks({ item }) {
 function Original({ item }) {
   return (
     <details className="original-box">
-      <summary>영문 원문과 링크 임베드 펼치기</summary>
+      <summary>본문 원문과 관련 문맥 펼치기</summary>
+      <p className="section-label">본문 원문</p>
       {item.original.content && <p className="original-content">{item.original.content}</p>}
+      {item.original.contexts.map((context, index) => (
+        <section className="context-box" key={`${context.url ?? context.account}-${index}`}>
+          <strong>관련 글 문맥 · {context.label || context.account || "작성자 미상"}</strong>
+          <p>{context.content}</p>
+          {context.url && <a href={context.url} target="_blank" rel="noopener noreferrer">관련 X 글 ↗</a>}
+        </section>
+      ))}
       {item.original.embeds.map((embed, index) => (
         <section className="embed-box" key={`${embed.url ?? "embed"}-${index}`}>
           {embed.title && <h3>{embed.title}</h3>}
@@ -64,6 +89,13 @@ function Original({ item }) {
       <SourceLinks item={item} />
     </details>
   );
+}
+
+function fallbackAdvice(triage) {
+  if (!triage) return "번역과 판정이 끝난 뒤 게시 조언을 확인할 수 있어요.";
+  if (triage.decision === "publish") return "구체적인 변화가 있는 게시 후보예요. 원문과 이미지를 확인한 뒤 승인하세요.";
+  if (triage.decision === "review") return "의미 있는 신호일 수 있지만 단정하기 어려워요. 부모 글과 작성자 맥락을 사람이 확인하는 편이 좋아요.";
+  return "현재 정보만으로는 뉴스 가치가 낮아 보류를 권해요. 이미지에 핵심 정보가 보일 때만 다시 검토하세요.";
 }
 
 function ApprovalPanel({ item, confirming, busy, error, onBegin, onCancel, onApprove }) {
@@ -104,7 +136,7 @@ function ApprovalPanel({ item, confirming, busy, error, onBegin, onCancel, onApp
   );
 }
 
-function NewsCard({ item, confirming, busy, error, onBegin, onCancel, onApprove }) {
+function NewsCard({ item, confirming, busy, error, onBegin, onCancel, onApprove, onRetry }) {
   const triage = item.workflow.triage;
   return (
     <article className="news-card">
@@ -124,22 +156,41 @@ function NewsCard({ item, confirming, busy, error, onBegin, onCancel, onApprove 
 
       {item.workflow.translation ? (
         <section className="translation-box">
-          <p className="section-label">한국어 번역</p>
+          <p className="section-label">제목</p>
           <h2>{item.workflow.translation.title || "제목 없음"}</h2>
+          <p className="section-label body-label">본문 번역</p>
           <p>{item.workflow.translation.body}</p>
         </section>
       ) : (
-        <section className="translation-box muted-box">아직 한국어 번역이 준비되지 않았어요.</section>
+        <section className="translation-box muted-box">
+          <strong>본문 번역</strong>
+          <p>아직 한국어 번역이 준비되지 않았어요.</p>
+          {item.workflow.analysisFailure && (
+            <div className="analysis-failure">
+              <span>{FAILURE_LABELS[item.workflow.analysisFailure.code] ?? FAILURE_LABELS.unknown}</span>
+              {error && <span className="action-error">{error}</span>}
+              <button type="button" className="retry-button" disabled={busy} onClick={onRetry}>
+                {busy ? "다시 분석 중…" : "무료 텍스트 API로 다시 분석"}
+              </button>
+            </div>
+          )}
+        </section>
       )}
 
       {triage && (
         <section className="triage-box">
           <div>
-            <span>무료 API 판정</span>
+            <span>판정</span>
             <strong>{DECISION_LABELS[triage.decision]}</strong>
           </div>
-          <p>{triage.reason}</p>
-          <small>신뢰도 {Math.round(triage.confidence * 100)}%</small>
+          <dl>
+            <div><dt>산정 근거</dt><dd>{triage.reason}</dd></div>
+            <div><dt>하나빛 조언</dt><dd>{triage.advice || fallbackAdvice(triage)}</dd></div>
+          </dl>
+          <small>
+            신뢰도 {Math.round(triage.confidence * 100)}%
+            {triage.importance && ` · 중요도 ${IMPORTANCE_LABELS[triage.importance]}`}
+          </small>
         </section>
       )}
 
@@ -171,6 +222,8 @@ function App() {
   const [confirmingId, setConfirmingId] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [actionError, setActionError] = useState("");
+  const [actionErrorId, setActionErrorId] = useState(null);
+  const [filter, setFilter] = useState("action");
 
   async function load() {
     const response = await fetch("/api/news", { cache: "no-store" });
@@ -192,9 +245,15 @@ function App() {
     };
   }, [payload]);
 
+  const visibleItems = useMemo(() => {
+    const selected = FILTERS.find((entry) => entry.id === filter) ?? FILTERS[0];
+    return (payload?.items ?? []).filter(selected.matches);
+  }, [payload, filter]);
+
   async function approve(item) {
     setBusyId(item.id);
     setActionError("");
+    setActionErrorId(null);
     try {
       const response = await fetch(`/api/news/${item.id}/dc-approval`, {
         method: "POST",
@@ -207,6 +266,28 @@ function App() {
       setConfirmingId(null);
     } catch (error) {
       setActionError(error.message);
+      setActionErrorId(item.id);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function retry(item) {
+    setBusyId(item.id);
+    setActionError("");
+    setActionErrorId(null);
+    try {
+      const response = await fetch(`/api/news/${item.id}/analysis-retry`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ confirmation: "retry-news-analysis" }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "다시 분석하지 못했어요.");
+      await load();
+    } catch (error) {
+      setActionError(error.message);
+      setActionErrorId(item.id);
     } finally {
       setBusyId(null);
     }
@@ -230,19 +311,38 @@ function App() {
           <div><strong>{summary.media.toLocaleString("ko-KR")}</strong><span>보존 이미지</span></div>
         </section>
 
+        <nav className="filters" aria-label="뉴스 필터">
+          {FILTERS.map((entry) => {
+            const count = (payload?.items ?? []).filter(entry.matches).length;
+            return (
+              <button
+                type="button"
+                className={filter === entry.id ? "active" : ""}
+                aria-pressed={filter === entry.id}
+                onClick={() => setFilter(entry.id)}
+                key={entry.id}
+              >
+                {entry.label} <span>{count}</span>
+              </button>
+            );
+          })}
+        </nav>
+
         {!payload && <p className="notice" role="status">{loadError || "대기함을 확인하고 있어요…"}</p>}
         {payload?.items.length === 0 && <p className="notice">아직 수집된 뉴스가 없어요. 새 소식을 기다리는 중이에요.</p>}
+        {payload?.items.length > 0 && visibleItems.length === 0 && <p className="notice">이 필터에 해당하는 뉴스가 없어요.</p>}
         <section className="news-list" aria-label="수집된 뉴스">
-          {payload?.items.map((item) => (
+          {visibleItems.map((item) => (
             <NewsCard
               item={item}
               key={item.id}
               confirming={confirmingId === item.id}
               busy={busyId === item.id}
-              error={confirmingId === item.id ? actionError : ""}
-              onBegin={() => { setActionError(""); setConfirmingId(item.id); }}
-              onCancel={() => { setActionError(""); setConfirmingId(null); }}
+              error={actionErrorId === item.id ? actionError : ""}
+              onBegin={() => { setActionError(""); setActionErrorId(null); setConfirmingId(item.id); }}
+              onCancel={() => { setActionError(""); setActionErrorId(null); setConfirmingId(null); }}
               onApprove={() => approve(item)}
+              onRetry={() => retry(item)}
             />
           ))}
         </section>

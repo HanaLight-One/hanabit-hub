@@ -21,7 +21,7 @@ async function fixture(source, analyze, callback) {
 
 const result = (decision) => ({
   translation: { title: "번역 제목", body: "번역 본문" },
-  triage: { decision, confidence: 0.9, reason: "판정 이유", signals: [] },
+  triage: { decision, confidence: 0.9, importance: "medium", reason: "판정 이유", advice: "사람 검토 권장", signals: [] },
 });
 
 test("X 판정 결과를 게시 검토 또는 보류 상태로 결정적으로 저장한다", async () => {
@@ -52,6 +52,23 @@ test("무료 API 실패는 원문을 보존하고 자동 재시도하지 않는�
     const saved = await store.read(id);
     assert.equal(calls, 1);
     assert.equal(saved.workflow.status, "translation_failed");
+    assert.equal(saved.workflow.analysisFailure.code, "unknown");
     assert.equal(JSON.stringify(saved).includes("secret external error"), false);
+  });
+});
+
+test("번역 실패 항목은 사람 요청으로만 한 번 다시 분석한다", async () => {
+  let calls = 0;
+  await fixture({ type: "x-post" }, async () => {
+    calls += 1;
+    if (calls === 1) throw new Error("무료 API 요청에 실패했습니다.");
+    return result("review");
+  }, async ({ processor, store, id }) => {
+    await processor.process(id);
+    assert.equal((await store.read(id)).workflow.analysisFailure.code, "provider_error");
+    const retried = await processor.retry(id);
+    assert.equal(retried.workflow.status, "pending_review");
+    assert.equal(retried.workflow.analysisFailure, null);
+    await assert.rejects(() => processor.retry(id), /번역 실패한 뉴스만/);
   });
 });

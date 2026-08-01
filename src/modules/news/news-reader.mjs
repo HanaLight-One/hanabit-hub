@@ -69,6 +69,15 @@ function publicItem(record) {
       links: Array.isArray(record?.original?.links)
         ? record.original.links.map(safeUrl).filter(Boolean)
         : [],
+      contexts: Array.isArray(record?.original?.contexts)
+        ? record.original.contexts.slice(0, 3).map((context) => ({
+            relation: safeText(context?.relation, 40),
+            account: safeText(context?.account, 40),
+            label: safeText(context?.label, 80),
+            content: safeText(context?.content, 8_000),
+            url: safeUrl(context?.url),
+          }))
+        : [],
     },
     workflow: {
       status: String(record?.workflow?.status ?? "unknown"),
@@ -84,7 +93,19 @@ function publicItem(record) {
         ? {
             decision: record.workflow.triage.decision,
             confidence: Math.max(0, Math.min(1, Number(record.workflow.triage.confidence) || 0)),
+            importance: ["low", "medium", "high"].includes(record.workflow.triage.importance)
+              ? record.workflow.triage.importance
+              : null,
             reason: safeText(record.workflow.triage.reason, 400),
+            advice: safeText(record.workflow.triage.advice, 500) || null,
+          }
+        : null,
+      analysisFailure: record?.workflow?.status === "translation_failed"
+        ? {
+            code: ["timeout", "invalid_response", "provider_error", "unknown"].includes(record?.workflow?.analysisFailure?.code)
+              ? record.workflow.analysisFailure.code
+              : "unknown",
+            failedAt: String(record?.workflow?.analysisFailure?.failedAt ?? ""),
           }
         : null,
       canApproveForDc:

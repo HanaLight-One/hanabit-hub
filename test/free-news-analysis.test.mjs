@@ -34,11 +34,12 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
         await mkdir(path.dirname(outputPath), { recursive: true });
         await writeFile(outputPath, JSON.stringify({
           translation: { title: "코덱스 한도 초기화", body: "사용량 한도가 초기화됐습니다." },
-          triage: { decision: "publish", confidence: 0.98, reason: "구체적인 서비스 변경", signals: ["usage-limit"] },
+          triage: { decision: "publish", confidence: 0.98, importance: "high", reason: "구체적인 서비스 변경", advice: "게시 가치가 높습니다.", signals: ["usage-limit"] },
         }), "utf8");
       },
     });
     assert.equal(result.triage.decision, "publish");
+    assert.equal(result.triage.importance, "high");
     await assert.rejects(() => readFile(path.join(runtimeRoot, "e".repeat(32), "prompt.txt"), "utf8"), /ENOENT/);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -65,7 +66,7 @@ test("무료 API 일시 실패는 한 번만 다시 시도하고 성공 결과�
         const outputPath = args[args.indexOf("-Output") + 1];
         await writeFile(outputPath, JSON.stringify({
           translation: { title: "초기화", body: "사용량이 초기화됐습니다." },
-          triage: { decision: "publish", confidence: 0.9, reason: "구체적인 변경", signals: [] },
+          triage: { decision: "publish", confidence: 0.9, importance: "medium", reason: "구체적인 변경", advice: "사실 관계를 확인한 뒤 게시하세요.", signals: [] },
         }), "utf8");
       },
     });

@@ -53,6 +53,21 @@ test("등록되지 않은 작성자의 스트림 이벤트는 무시한다", () 
   }, { allowedHandles: new Set(["OpenAI"]) }), null);
 });
 
+test("X 스트림이 부모 작성자를 생략해도 부모 상태 ID는 문맥 링크로 보존한다", () => {
+  const result = xLinksFromStreamEvent({
+    data: {
+      id: "2091234567890123456",
+      author_id: "10",
+      referenced_tweets: [{ type: "replied_to", id: "2091234567890123455" }],
+    },
+    includes: { users: [{ id: "10", username: "thsottiaux" }] },
+  }, { allowedHandles: new Set(["thsottiaux"]) });
+  assert.deepEqual(result.links, [
+    "https://x.com/thsottiaux/status/2091234567890123456",
+    "https://x.com/i/status/2091234567890123455",
+  ]);
+});
+
 test("X 스트림은 토큰을 URL에 넣지 않고 줄 단위 JSON만 전달한다", async () => {
   const events = [];
   let connected = 0;

@@ -100,6 +100,34 @@ test("oEmbed 작성자가 링크 계정과 다르면 저장하지 않는다", as
   }), /작성자/);
 });
 
+test("작성자 없는 i 상태 링크는 oEmbed가 확인한 실제 계정으로 문맥화한다", async () => {
+  const primaryId = "2091234567890123456";
+  const parentId = "2091234567890123455";
+  const result = await normalizeXWatchMessage({
+    channelId,
+    type: 0,
+    content: `https://x.com/thsottiaux/status/${primaryId}\nhttps://x.com/i/status/${parentId}`,
+  }, {
+    channelId,
+    allowedHandles,
+    async fetchImpl(url) {
+      const id = new URL(url.searchParams.get("url")).pathname.split("/").at(-1);
+      return new Response(JSON.stringify(id === primaryId ? {
+        author_name: "Tibo",
+        author_url: "https://twitter.com/thsottiaux",
+        html: "<blockquote><p>Codex</p></blockquote>",
+      } : {
+        author_name: "Ryan Els",
+        author_url: "https://twitter.com/RyanEls4",
+        html: "<blockquote><p>Developing your App is the easy part</p></blockquote>",
+      }), { status: 200 });
+    },
+  });
+  assert.deepEqual(result.record.original.contexts.map(({ account, content }) => ({ account, content })), [
+    { account: "RyanEls4", content: "Developing your App is the easy part" },
+  ]);
+});
+
 test("oEmbed 최종 응답이 공식 호스트를 벗어나면 거부한다", async () => {
   await assert.rejects(() => normalizeXWatchMessage({
     channelId,

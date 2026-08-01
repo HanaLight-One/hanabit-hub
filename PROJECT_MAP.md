@@ -67,7 +67,7 @@ HTTP 라우트는 검증과 응답만 맡고 실제 동작은 같은 기능 폴�
 | 데이터베이스 | `src/modules/database/` | SQLite 연결과 순차 스키마 마이그레이션 |
 | 이미지 | `src/modules/images/` | 아카이브, 테마, 제작 기록, 화풍, 생성 초안과 1장 실행 |
 | 운세 | `src/modules/fortune/` | 날짜별 운세와 안전한 게시 상태 읽기 |
-| 뉴스 | `src/modules/news/` | Discord/X 수집, 번역·판정, 대기함, 승인과 알림 |
+| 뉴스 | `src/modules/news/` | Discord/X 수집, 번역·판정·조언, 실패 재분석, 대기함, 승인과 알림 |
 | 모바일 알림 | `src/modules/notifications/` | Web Push 구독과 제한된 알림 전송 |
 | 시스템 | `src/modules/system/` | allowlist 기반 Codex 상태·긴급 재기동 |
 
@@ -99,7 +99,7 @@ Discord Announcement ─┐
 X Filtered Stream ─> #x-watch ┘                         │
                                                          ├─> #news-pending
                                                          ├─> 모바일 Push
-                                                         └─> /news 사람 승인
+                                                         └─> /news 필터·사람 검토·실패 재분석·승인
                                                                   │
                                                         실제 DC 게시기는 아직 미연결
 ```
@@ -107,6 +107,8 @@ X Filtered Stream ─> #x-watch ┘                         │
 실행 진입점은 `scripts/watch-discord-announcements.mjs`다. 실시간 이벤트와
 10분 보충 확인이 같은 중복 방지 저장소를 사용한다. X 인물 명부는
 `config/news-x-sources.json`이고 비밀 토큰은 코드나 지도에 기록하지 않는다.
+뉴스 재분석은 `POST /api/news/:id/analysis-retry`에서 명시적 확인값을 받은
+`translation_failed` 항목에만 허용하며 이미지 분석 API는 호출하지 않는다.
 
 ## 이미지와 운세 연결 경계
 
