@@ -41,6 +41,8 @@ const elements = {
   previewPurpose: document.querySelector("#preview-purpose"),
   previewCharacters: document.querySelector("#preview-characters"),
   previewStyle: document.querySelector("#preview-style"),
+  previewSceneDetails: document.querySelector("#preview-scene-details"),
+  previewSceneSummary: document.querySelector("#preview-scene-summary"),
   previewScene: document.querySelector("#preview-scene"),
   previewRoute: document.querySelector("#preview-route"),
   previewMessage: document.querySelector("#preview-message"),
@@ -346,6 +348,8 @@ elements.form.addEventListener("input", (event) => {
   elements.draftButton.disabled = true;
   elements.draftButton.textContent = "격리 초안 저장";
   elements.executeButton.hidden = true;
+  elements.executeButton.disabled = false;
+  elements.executeButton.textContent = "⚡ 프롬프트로 1장 실제 생성";
 });
 
 elements.form.addEventListener("submit", (event) => {
@@ -392,6 +396,10 @@ elements.form.addEventListener("submit", (event) => {
   elements.previewCharacters.textContent = characterSummary;
   elements.previewStyle.textContent = style;
   elements.previewScene.textContent = scene || "장면 요청이 비어 있어요.";
+  elements.previewSceneSummary.textContent = scene
+    ? `${scene.length.toLocaleString("ko-KR")}자 프롬프트 펼치기`
+    : "빈 프롬프트 펼치기";
+  elements.previewSceneDetails.open = false;
   elements.previewRoute.textContent =
     route === "prompt-only"
       ? "프롬프트 자유 생성 · 자산 매칭 없음"
@@ -415,15 +423,26 @@ elements.draftButton.addEventListener("click", async () => {
     elements.previewMessage.textContent =
       result.route === "prompt-only"
         ? "프롬프트 자유 생성 초안을 저장했어요. Python과 무료 API는 실행하지 않았습니다."
-        : "안내 생성 초안을 저장했어요. Python과 무료 API는 실행하지 않았습니다.";
+        : "안내 생성 초안을 저장했어요. 선택 자산 실행은 아직 연결 전이며, 프롬프트 자유 생성만 실제 실행할 수 있어요.";
     elements.draftButton.textContent = "격리 초안 저장 완료";
     savedDraftId = result.id;
-    elements.executeButton.hidden = result.route !== "prompt-only";
+    elements.executeButton.hidden = false;
+    elements.executeButton.disabled = result.route !== "prompt-only";
+    elements.executeButton.textContent = result.route === "prompt-only"
+      ? "⚡ 프롬프트로 1장 실제 생성"
+      : "선택 자산 실제 생성 · 연결 준비 중";
   } catch (error) {
     elements.previewMessage.textContent = error.message;
     elements.draftButton.disabled = false;
     elements.draftButton.textContent = "격리 초안 다시 저장";
   }
+});
+
+elements.previewSceneDetails.addEventListener("toggle", () => {
+  const length = elements.previewScene.textContent.length;
+  elements.previewSceneSummary.textContent = elements.previewSceneDetails.open
+    ? `${length.toLocaleString("ko-KR")}자 프롬프트 접기`
+    : `${length.toLocaleString("ko-KR")}자 프롬프트 펼치기`;
 });
 
 async function pollGeneration(id) {
