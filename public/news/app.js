@@ -8159,7 +8159,29 @@ function se({ triage: e, label: t, advice: n, className: r = "" }) {
 		]
 	});
 }
-function ce({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a, onApprove: o }) {
+function ce({ profile: e }) {
+	return e ? /* @__PURE__ */ (0, x.jsxs)("details", {
+		className: "source-profile",
+		children: [/* @__PURE__ */ (0, x.jsx)("summary", { children: "누구예요?" }), /* @__PURE__ */ (0, x.jsxs)("div", {
+			className: "source-profile-body",
+			children: [
+				/* @__PURE__ */ (0, x.jsx)("strong", { children: e.displayName }),
+				/* @__PURE__ */ (0, x.jsxs)("p", { children: [
+					e.affiliation,
+					" · ",
+					e.roles.join(" · ")
+				] }),
+				/* @__PURE__ */ (0, x.jsx)("p", { children: e.whyTracked }),
+				/* @__PURE__ */ (0, x.jsxs)("dl", { children: [
+					/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "주요 분야" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: e.topics.join(" · ") })] }),
+					/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "출처 구분" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: e.trustLabel })] }),
+					/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "소속 확인" }), /* @__PURE__ */ (0, x.jsxs)("dd", { children: [e.affiliationConfirmed ? "확인됨" : "사람 재확인 필요", e.verifiedAt && ` · ${e.verifiedAt}`] })] })
+				] })
+			]
+		})]
+	}) : null;
+}
+function le({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a, onApprove: o }) {
 	return e.workflow.publishedToDc ? /* @__PURE__ */ (0, x.jsx)("div", {
 		className: "approval approved",
 		children: "DC 게시 완료 영수증이 확인됐어요."
@@ -8205,7 +8227,7 @@ function ce({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a
 		children: "번역과 판정이 끝난 검토 후보만 승인할 수 있어요."
 	});
 }
-function le({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a, onApprove: o, onRetry: s }) {
+function ue({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a, onApprove: o, onRetry: s }) {
 	let c = e.workflow.triage, l = e.workflow.freeTriage, u = e.workflow.codexReview;
 	return /* @__PURE__ */ (0, x.jsxs)("article", {
 		className: "news-card",
@@ -8230,13 +8252,16 @@ function le({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a
 					]
 				}), /* @__PURE__ */ (0, x.jsx)("time", { children: w(e.source.publishedAt) })]
 			}),
-			(e.source.label || e.source.account) && /* @__PURE__ */ (0, x.jsxs)("p", {
-				className: "source-label",
-				children: [
-					e.source.label ?? e.source.account,
-					" · ",
-					e.source.type === "x-post" ? "X" : "Discord"
-				]
+			(e.source.label || e.source.account) && /* @__PURE__ */ (0, x.jsxs)("div", {
+				className: "source-heading",
+				children: [/* @__PURE__ */ (0, x.jsxs)("p", {
+					className: "source-label",
+					children: [
+						e.source.label ?? e.source.account,
+						" · ",
+						e.source.type === "x-post" ? "X" : "Discord"
+					]
+				}), /* @__PURE__ */ (0, x.jsx)(ce, { profile: e.source.profile })]
 			}),
 			e.workflow.translation ? /* @__PURE__ */ (0, x.jsxs)("section", {
 				className: "translation-box",
@@ -8308,7 +8333,7 @@ function le({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a
 				}, e.url))
 			})] }),
 			/* @__PURE__ */ (0, x.jsx)(ae, { item: e }),
-			/* @__PURE__ */ (0, x.jsx)(ce, {
+			/* @__PURE__ */ (0, x.jsx)(le, {
 				item: e,
 				confirming: t,
 				busy: n,
@@ -8320,7 +8345,7 @@ function le({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a
 		]
 	});
 }
-function ue() {
+function T() {
 	let [e, t] = (0, y.useState)(null), [n, r] = (0, y.useState)(""), [i, a] = (0, y.useState)(null), [o, s] = (0, y.useState)(null), [c, l] = (0, y.useState)(""), [u, d] = (0, y.useState)(null), [f, p] = (0, y.useState)("action");
 	async function m() {
 		let e = await fetch("/api/news", { cache: "no-store" });
@@ -8435,7 +8460,7 @@ function ue() {
 		/* @__PURE__ */ (0, x.jsx)("section", {
 			className: "news-list",
 			"aria-label": "수집된 뉴스",
-			children: g.map((e) => /* @__PURE__ */ (0, x.jsx)(le, {
+			children: g.map((e) => /* @__PURE__ */ (0, x.jsx)(ue, {
 				item: e,
 				confirming: i === e.id,
 				busy: o === e.id,
@@ -8452,5 +8477,5 @@ function ue() {
 		})
 	] })] });
 }
-(0, b.createRoot)(document.querySelector("#news-root")).render(/* @__PURE__ */ (0, x.jsx)(ue, {}));
+(0, b.createRoot)(document.querySelector("#news-root")).render(/* @__PURE__ */ (0, x.jsx)(T, {}));
 //#endregion

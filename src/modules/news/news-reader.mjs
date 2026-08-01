@@ -1,5 +1,6 @@
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
+import { findNewsSourceProfile } from "./news-source-profiles.mjs";
 
 const ID_PATTERN = /^[a-f0-9]{32}$/u;
 const MEDIA_NAME_PATTERN = /^[a-zA-Z0-9_-]+\.(gif|jpe?g|png|webp)$/u;
@@ -34,7 +35,7 @@ function publicTriage(value) {
   };
 }
 
-function publicItem(record) {
+function publicItem(record, sourceProfiles) {
   const id = validateId(String(record?.id ?? ""));
   const embeds = Array.isArray(record?.original?.embeds)
     ? record.original.embeds.map((embed) => ({
@@ -77,6 +78,7 @@ function publicItem(record) {
       label: safeText(record?.source?.label, 80) || null,
       url: safeUrl(record?.source?.url),
       publishedAt: String(record?.source?.publishedAt ?? ""),
+      profile: findNewsSourceProfile(record?.source, sourceProfiles),
     },
     original: {
       language: String(record?.original?.language ?? ""),
@@ -139,7 +141,7 @@ function publicItem(record) {
   };
 }
 
-export function createNewsReader({ root }) {
+export function createNewsReader({ root, sourceProfiles = new Map() }) {
   if (!path.isAbsolute(root)) throw new TypeError("뉴스 상태 루트는 절대경로여야 합니다.");
   const pendingRoot = path.join(root, "pending");
 
@@ -162,7 +164,7 @@ export function createNewsReader({ root }) {
     for (const entry of entries) {
       if (!entry.isDirectory() || !ID_PATTERN.test(entry.name)) continue;
       try {
-        const item = publicItem(await readRecord(entry.name));
+        const item = publicItem(await readRecord(entry.name), sourceProfiles);
         if (item.id !== entry.name) throw new Error("뉴스 ID가 일치하지 않습니다.");
         items.push(item);
       } catch {

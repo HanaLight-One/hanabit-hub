@@ -28,7 +28,20 @@ test("뉴스 리더는 내부 경로와 Discord ID 없이 공개 계약을 반�
       media: [{ kind: "attachment", file: "media/01-news.png", contentType: "image/png", size: 5 }],
     }), "utf8");
 
-    const reader = createNewsReader({ root });
+    const reader = createNewsReader({
+      root,
+      sourceProfiles: new Map([["openai", {
+        displayName: "OpenAI",
+        handle: "OpenAI",
+        affiliation: "OpenAI",
+        affiliationConfirmed: true,
+        roles: ["회사 공식 발표 채널"],
+        topics: ["모델"],
+        trustLabel: "공식 출처",
+        verifiedAt: "2026-08-02",
+        whyTracked: "공식 발표 출처예요.",
+      }]]),
+    });
     const payload = await reader.list();
     const serialized = JSON.stringify(payload);
     assert.equal(payload.total, 1);
@@ -38,6 +51,7 @@ test("뉴스 리더는 내부 경로와 Discord ID 없이 공개 계약을 반�
     assert.equal(payload.items[0].workflow.triage.advice, "바로 검토하세요.");
     assert.equal(payload.items[0].workflow.freeTriage.decision, "review");
     assert.equal(payload.items[0].workflow.codexReview.status, "complete");
+    assert.equal(payload.items[0].source.profile.trustLabel, "공식 출처");
     assert.equal(payload.items[0].original.contexts[0].content, "Parent context");
     assert.equal(payload.items[0].workflow.canApproveForDc, true);
     assert.equal(payload.items[0].workflow.dcApproval, null);

@@ -124,6 +124,31 @@ function TriageBox({ triage, label, advice, className = "" }) {
   );
 }
 
+function SourceProfile({ profile }) {
+  if (!profile) return null;
+  return (
+    <details className="source-profile">
+      <summary>누구예요?</summary>
+      <div className="source-profile-body">
+        <strong>{profile.displayName}</strong>
+        <p>{profile.affiliation} · {profile.roles.join(" · ")}</p>
+        <p>{profile.whyTracked}</p>
+        <dl>
+          <div><dt>주요 분야</dt><dd>{profile.topics.join(" · ")}</dd></div>
+          <div><dt>출처 구분</dt><dd>{profile.trustLabel}</dd></div>
+          <div>
+            <dt>소속 확인</dt>
+            <dd>
+              {profile.affiliationConfirmed ? "확인됨" : "사람 재확인 필요"}
+              {profile.verifiedAt && ` · ${profile.verifiedAt}`}
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </details>
+  );
+}
+
 function ApprovalPanel({ item, confirming, busy, error, onBegin, onCancel, onApprove }) {
   if (item.workflow.publishedToDc) {
     return <div className="approval approved">DC 게시 완료 영수증이 확인됐어요.</div>;
@@ -178,9 +203,12 @@ function NewsCard({ item, confirming, busy, error, onBegin, onCancel, onApprove,
       </div>
 
       {(item.source.label || item.source.account) && (
-        <p className="source-label">
-          {item.source.label ?? item.source.account} · {item.source.type === "x-post" ? "X" : "Discord"}
-        </p>
+        <div className="source-heading">
+          <p className="source-label">
+            {item.source.label ?? item.source.account} · {item.source.type === "x-post" ? "X" : "Discord"}
+          </p>
+          <SourceProfile profile={item.source.profile} />
+        </div>
       )}
 
       {item.workflow.translation ? (

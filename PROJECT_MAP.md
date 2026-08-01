@@ -67,7 +67,7 @@ HTTP 라우트는 검증과 응답만 맡고 실제 동작은 같은 기능 폴�
 | 데이터베이스 | `src/modules/database/` | SQLite 연결과 순차 스키마 마이그레이션 |
 | 이미지 | `src/modules/images/` | 아카이브, 테마, 제작 기록, 화풍, 생성 초안과 1장 실행 |
 | 운세 | `src/modules/fortune/` | 날짜별 운세와 안전한 게시 상태 읽기 |
-| 뉴스 | `src/modules/news/` | Discord/X 수집, 무료 번역·판정, 제한된 Codex 심층검토, 실패 재분석, 승인과 알림 |
+| 뉴스 | `src/modules/news/` | Discord/X 수집, 출처 인물 프로필, 무료 번역·판정, 제한된 Codex 심층검토, 실패 재분석, 승인과 알림 |
 | 모바일 알림 | `src/modules/notifications/` | Web Push 구독과 제한된 알림 전송 |
 | 시스템 | `src/modules/system/` | allowlist 기반 Codex 상태·긴급 재기동 |
 
@@ -113,6 +113,9 @@ X Filtered Stream ─> #x-watch ┘                         │
 `translation_failed` 항목에만 허용하며 이미지 분석 API는 호출하지 않는다.
 Codex 검토 실행기와 날짜별 사용 영수증은
 `src/modules/news/codex-news-review.mjs`, `state/news/codex-review/`에 있다.
+뉴스 카드의 `누구예요?` 설명은 같은 X 인물 명부를 읽는
+`src/modules/news/news-source-profiles.mjs`에서 만들며, 이후 게시 문구도 이 공개
+프로필을 재사용할 수 있다.
 
 ## 이미지와 운세 연결 경계
 

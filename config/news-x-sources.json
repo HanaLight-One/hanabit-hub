@@ -31,10 +31,10 @@
       "sourceKind": "person",
       "affiliation": "OpenAI",
       "affiliationStatus": "confirmed",
-      "roles": ["executive"],
+      "roles": ["chief-executive"],
       "topics": ["company", "models", "products"],
       "trustLevel": "high",
-      "verifiedAt": "2026-08-01",
+      "verifiedAt": "2026-08-02",
       "enabled": true
     },
     {
@@ -43,10 +43,10 @@
       "sourceKind": "person",
       "affiliation": "OpenAI",
       "affiliationStatus": "confirmed",
-      "roles": ["engineering-leadership"],
+      "roles": ["president-cofounder", "engineering-leadership"],
       "topics": ["engineering", "models", "research"],
       "trustLevel": "high",
-      "verifiedAt": "2026-08-01",
+      "verifiedAt": "2026-08-02",
       "enabled": true
     },
     {

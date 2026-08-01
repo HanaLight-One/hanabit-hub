@@ -9,6 +9,8 @@ import { handleCodexUsageRoute } from "./modules/system/codex-usage-route.mjs";
 import { createDiscordTokenSetup } from "./modules/news/discord-token-setup.mjs";
 import { handleDiscordTokenSetupRoute } from "./modules/news/discord-token-setup-route.mjs";
 import { createNewsReader } from "./modules/news/news-reader.mjs";
+import { loadXSourceRoster } from "./modules/news/x-watch-source.mjs";
+import { createNewsSourceProfileIndex } from "./modules/news/news-source-profiles.mjs";
 import { createNewsApprovalService } from "./modules/news/news-approval.mjs";
 import { handleNewsApprovalRoute } from "./modules/news/news-approval-route.mjs";
 import { createNewsProcessor } from "./modules/news/news-processor.mjs";
@@ -151,7 +153,13 @@ const codexUsage = createCodexUsageService();
 const discordTokenSetup = createDiscordTokenSetup({
   envPath: path.join(APP_ROOT, ".env"),
 });
-const newsReader = createNewsReader({ root: path.join(APP_ROOT, "state", "news") });
+const newsSourceProfiles = createNewsSourceProfileIndex(
+  await loadXSourceRoster(path.join(APP_ROOT, "config", "news-x-sources.json")),
+);
+const newsReader = createNewsReader({
+  root: path.join(APP_ROOT, "state", "news"),
+  sourceProfiles: newsSourceProfiles,
+});
 const newsCodexReviewConfig = config.integrations?.news?.codexReview;
 const newsCodexReviewer = newsCodexReviewConfig?.enabled
   ? createCodexNewsReviewer({
