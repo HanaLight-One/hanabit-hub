@@ -73,6 +73,14 @@ test("핑크브릿지를 포함한 최대 6명은 실제 실행 가능한 안내
 
 test("프롬프트 화풍과 고정 렌더링은 자산 없는 실제 실행 초안으로 보존한다", async () => {
   await fixture(async ({ root, store }) => {
+    const selectedStyle = await store.create({
+      prompt: "목록에 없는 인물이 노트에 낙서하는 장면",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "none", ids: [] },
+      style: { mode: "selected", id: "gothic" },
+    });
     const promptStyle = await store.create({
       prompt: "긴 사용자 화풍과 장면 지시",
       purpose: "free-play",
@@ -89,6 +97,9 @@ test("프롬프트 화풍과 고정 렌더링은 자산 없는 실제 실행 초
       characters: { mode: "custom", ids: ["pink-bridge"] },
       style: { mode: "rendering", id: "semi-realistic-anime" },
     });
+    assert.equal(selectedStyle.route, "prompt-only");
+    assert.equal(selectedStyle.executionMode, "prompt-only");
+    assert.equal(selectedStyle.styleMode, "selected");
     assert.equal(promptStyle.route, "prompt-only");
     assert.equal(promptStyle.executionMode, "prompt-only");
     assert.equal(rendering.route, "guided");

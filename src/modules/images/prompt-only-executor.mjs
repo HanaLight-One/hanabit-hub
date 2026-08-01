@@ -128,9 +128,11 @@ export function createPromptOnlyExecutor({
       count: 1,
       mode: executionMode === "guided-cast"
         ? "guided-cast"
-        : ["prompt", "rendering"].includes(draft.style?.mode)
-          ? "prompt-style"
-          : "natural",
+        : draft.style?.mode === "selected"
+          ? "selected-style"
+          : ["prompt", "rendering"].includes(draft.style?.mode)
+            ? "prompt-style"
+            : "natural",
       executionMode,
       purpose: draft.purpose,
       characters: draft.characters,

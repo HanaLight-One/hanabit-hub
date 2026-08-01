@@ -262,6 +262,16 @@ export async function buildImageStudioQueueContext(
     return context;
   }
 
+  if (job.mode === "selected-style") {
+    const index = JSON.parse(await readFile(assetIndexPath, "utf8"));
+    const hasStyle = applyGuidedStyle(context, job.style, index, job.id);
+    if (!hasStyle || !context.selected_style) {
+      throw new Error("선택한 화풍을 자산 색인에서 찾지 못했습니다.");
+    }
+    context.job.mode = "style";
+    return context;
+  }
+
   if (!["style", "chapel"].includes(job.mode)) return context;
 
   const index = JSON.parse(await readFile(assetIndexPath, "utf8"));

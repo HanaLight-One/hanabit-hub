@@ -76,6 +76,9 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(body, /이미지 앵커 사용/);
     assert.match(scriptBody, /useImageAnchors/);
     assert.match(scriptBody, /선택 자산 실제 생성 · 연결 준비 중/);
+    assert.match(scriptBody, /프롬프트 자유 생성 · 선택 화풍만 적용/);
+    assert.match(scriptBody, /선택 화풍으로 1장 실제 생성/);
+    assert.match(scriptBody, /\["selected", "prompt", "rendering"\]/);
     assert.match(scriptBody, /previewSceneDetails\.open = false/);
     assert.match(scriptBody, /window\.confirm/);
     assert.match(scriptBody, /\/api\/images\/generation-jobs/);

@@ -9,7 +9,7 @@ const MODES = new Set(["new", "same-combination", "same-characters", "same-style
 const SOURCE_MODES = new Set(["same-combination", "same-characters", "same-style"]);
 const CHARACTER_MODES = new Set(["auto", "none", "custom"]);
 const STYLE_MODES = new Set(["auto", "none", "selected", "prompt", "rendering"]);
-const NO_ASSET_STYLE_MODES = new Set(["none", "prompt", "rendering"]);
+const NO_CHARACTER_STYLE_MODES = new Set(["none", "selected", "prompt", "rendering"]);
 const PURPOSES = new Set(["theme-followup", "free-play"]);
 const MAX_CUSTOM_CHARACTERS = 6;
 
@@ -118,7 +118,7 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
     }
     const useImageAnchors = input.useImageAnchors === true;
     const route =
-      mode === "new" && sourceImageId === null && characters.mode === "none" && NO_ASSET_STYLE_MODES.has(style.mode)
+      mode === "new" && sourceImageId === null && characters.mode === "none" && NO_CHARACTER_STYLE_MODES.has(style.mode)
         ? "prompt-only"
         : "guided";
     const id = randomUUID().replaceAll("-", "");
@@ -155,6 +155,7 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
       promptLength: prompt.length,
       executionEnabled: false,
       executionMode,
+      styleMode: style.mode,
     });
   }
 
@@ -182,7 +183,7 @@ export function classifyDraftExecution(draft) {
   if (
     draft.route === "prompt-only" &&
     draft.characters?.mode === "none" &&
-    NO_ASSET_STYLE_MODES.has(draft.style?.mode)
+    NO_CHARACTER_STYLE_MODES.has(draft.style?.mode)
   ) return "prompt-only";
   if (
     draft.route === "guided" &&

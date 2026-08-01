@@ -166,6 +166,30 @@ test("고정 렌더링 선택은 정확한 preset으로 1장 실행한다", asyn
   });
 });
 
+test("등장인물 없이 저장 화풍을 고르면 프롬프트 인물과 선택 화풍으로 실행한다", async () => {
+  await fixture(async ({ drafts, executor, jobRoot }) => {
+    const draft = await drafts.create({
+      prompt: "목록에 없는 인물이 노트에 낙서하는 장면",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "none", ids: [] },
+      style: { mode: "selected", id: "calm" },
+    });
+    const started = await executor.start(draft.id);
+    const job = JSON.parse(await readFile(path.join(jobRoot, `${draft.id}.json`), "utf8"));
+    const context = JSON.parse(
+      (await readFile(path.join(jobRoot, `${draft.id}.worker-context.json`), "utf8")).replace(/^\uFEFF/u, ""),
+    );
+    assert.equal(started.executionMode, "prompt-only");
+    assert.equal(job.mode, "selected-style");
+    assert.equal(context.job.mode, "style");
+    assert.equal(context.selected_style.id, "calm");
+    assert.equal(context.cast_packages, undefined);
+    assert.match(context.job.prompt, /목록에 없는 인물/);
+  });
+});
+
 test("20분 넘게 갱신되지 않은 작업은 내부 정보 없이 확인 필요로 표시한다", async () => {
   const current = new Date("2026-08-01T03:00:00.000Z");
   await fixture(async ({ drafts, executor, jobRoot }) => {
