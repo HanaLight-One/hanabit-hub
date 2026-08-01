@@ -14,7 +14,11 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
     const result = await invokeFreeNewsAnalysis({
       id: "e".repeat(32),
       source: { type: "x-post", account: "thsottiaux" },
-      original: { content: "Usage limits reset", embeds: [] },
+      original: {
+        content: "One more day",
+        embeds: [],
+        contexts: [{ relation: "linked-post", account: "OpenAIDevs", content: "A new model is available today." }],
+      },
     }, {
       runnerPath,
       runtimeRoot,
@@ -22,7 +26,11 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
         assert.match(command, /powershell\.exe$/i);
         const promptPath = args[args.indexOf("-PromptFile") + 1];
         const outputPath = args[args.indexOf("-Output") + 1];
-        assert.match(await readFile(promptPath, "utf8"), /Usage limits reset/);
+        const prompt = await readFile(promptPath, "utf8");
+        assert.match(prompt, /One more day/);
+        assert.match(prompt, /CONTEXT 1 RELATION: linked-post/);
+        assert.match(prompt, /A new model is available today/);
+        assert.match(prompt, /Translate only SOURCE TEXT/);
         await mkdir(path.dirname(outputPath), { recursive: true });
         await writeFile(outputPath, JSON.stringify({
           translation: { title: "코덱스 한도 초기화", body: "사용량 한도가 초기화됐습니다." },

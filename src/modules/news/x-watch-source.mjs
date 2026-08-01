@@ -5,6 +5,9 @@ import { discordMediaCandidates } from "./discord-announcement.mjs";
 
 const STATUS_URL_PATTERN = /https?:\/\/(?:www\.)?(?:x\.com|twitter\.com)\/([A-Za-z0-9_]{1,15})\/status\/(\d{5,25})/giu;
 const OEMBED_HOSTS = new Set(["publish.x.com", "publish.twitter.com"]);
+const X_HOSTS = new Set(["x.com", "www.x.com", "twitter.com", "www.twitter.com"]);
+const X_SHORT_HOSTS = new Set(["t.co", "www.t.co"]);
+const MAX_CONTEXT_POSTS = 3;
 
 function decodeHtml(value) {
   return String(value ?? "")
@@ -31,6 +34,63 @@ function messageText(message) {
   ].filter(Boolean).join("\n");
 }
 
+function xPostsFromText(value) {
+  return [...String(value ?? "").matchAll(STATUS_URL_PATTERN)].map((match) => ({
+    handle: match[1],
+    statusId: match[2],
+    url: `https://x.com/${match[1]}/status/${match[2]}`,
+  }));
+}
+
+function xPostFromUrl(value) {
+  try {
+    const target = new URL(String(value ?? ""));
+    if (!X_HOSTS.has(target.hostname.toLowerCase())) return null;
+    return xPostsFromText(target.href)[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function hrefsFromHtml(value) {
+  return [...String(value ?? "").matchAll(/<a\b[^>]*\bhref=(["'])(.*?)\1/giu)]
+    .map((match) => decodeHtml(match[2]));
+}
+
+async function resolveRelatedPost(value, fetchImpl) {
+  const direct = xPostFromUrl(value);
+  if (direct) return direct;
+  let target;
+  try {
+    target = new URL(String(value ?? ""));
+  } catch {
+    return null;
+  }
+  if (!X_SHORT_HOSTS.has(target.hostname.toLowerCase())) return null;
+  const response = await fetchImpl(target, { redirect: "manual" });
+  if (![301, 302, 303, 307, 308].includes(response.status)) return null;
+  const location = response.headers?.get?.("location");
+  if (!location) return null;
+  return xPostFromUrl(new URL(location, target).href);
+}
+
+async function relatedPostsFromHtml(value, { fetchImpl, primary }) {
+  const posts = [];
+  const seen = new Set([primary.statusId]);
+  for (const href of hrefsFromHtml(value).slice(0, 12)) {
+    if (posts.length >= MAX_CONTEXT_POSTS) break;
+    try {
+      const post = await resolveRelatedPost(href, fetchImpl);
+      if (!post || seen.has(post.statusId)) continue;
+      seen.add(post.statusId);
+      posts.push(post);
+    } catch {
+      // 보조 문맥 실패가 기본 X 게시물 수집을 막지 않게 한다.
+    }
+  }
+  return posts;
+}
+
 export async function loadXSourceAllowlist(target) {
   if (!path.isAbsolute(target)) throw new TypeError("X 출처 설정은 절대경로여야 합니다.");
   const parsed = JSON.parse(await readFile(target, "utf8"));
@@ -43,15 +103,10 @@ export async function loadXSourceAllowlist(target) {
 
 export function findAllowedXPost(message, { channelId, allowedHandles }) {
   if (message?.channelId !== channelId || Number(message?.type ?? 0) !== 0) return null;
-  for (const match of messageText(message).matchAll(STATUS_URL_PATTERN)) {
-    const handle = match[1];
+  for (const post of xPostsFromText(messageText(message))) {
+    const handle = post.handle;
     if (!allowedHandles.has(handle.toLowerCase())) continue;
-    const statusId = match[2];
-    return {
-      handle,
-      statusId,
-      url: `https://x.com/${handle}/status/${statusId}`,
-    };
+    return post;
   }
   return null;
 }
@@ -86,13 +141,46 @@ export async function fetchXPost(post, { fetchImpl = fetch } = {}) {
     throw new Error("X 작성자가 등록된 링크와 다릅니다.");
   }
   if (!content) throw new Error("X 원문이 비어 있습니다.");
-  return { content, authorName: String(payload.author_name ?? post.handle).slice(0, 80) };
+  return {
+    content,
+    authorName: String(payload.author_name ?? post.handle).slice(0, 80),
+    relatedPosts: await relatedPostsFromHtml(payload.html, { fetchImpl, primary: post }),
+  };
+}
+
+async function fetchContextPosts(message, primary, relatedPosts, options) {
+  const candidates = [
+    ...xPostsFromText(messageText(message)).map((post) => ({ ...post, relation: "provided-link" })),
+    ...relatedPosts.map((post) => ({ ...post, relation: "linked-post" })),
+  ];
+  const contexts = [];
+  const seen = new Set([primary.statusId]);
+  for (const candidate of candidates) {
+    if (contexts.length >= MAX_CONTEXT_POSTS) break;
+    if (seen.has(candidate.statusId)) continue;
+    seen.add(candidate.statusId);
+    try {
+      const resolved = await fetchXPost(candidate, options);
+      contexts.push({
+        relation: candidate.relation,
+        account: candidate.handle,
+        label: resolved.authorName,
+        statusId: candidate.statusId,
+        url: candidate.url,
+        content: resolved.content.slice(0, 8_000),
+      });
+    } catch {
+      // 보조 문맥은 best effort이며 원문 수집 성공 여부와 분리한다.
+    }
+  }
+  return contexts;
 }
 
 export async function normalizeXWatchMessage(message, options) {
   const post = options.post ?? findAllowedXPost(message, options);
   if (!post) return null;
   const resolved = await fetchXPost(post, options);
+  const contexts = await fetchContextPosts(message, post, resolved.relatedPosts, options);
   const id = xPostId(post);
   const publishedAt = new Date(message.createdTimestamp ?? message.createdAt ?? Date.now());
   return {
@@ -109,7 +197,7 @@ export async function normalizeXWatchMessage(message, options) {
         url: post.url,
         publishedAt: publishedAt.toISOString(),
       },
-      original: { language: "en", content: resolved.content, embeds: [], links: [post.url] },
+      original: { language: "en", content: resolved.content, embeds: [], links: [post.url], contexts },
       workflow: { status: "pending_translation", translation: null, triage: null, dcPublication: null },
       collectedAt: new Date().toISOString(),
     },

@@ -38,8 +38,53 @@ test("공식 oEmbed 원문과 Discord 프록시 이미지를 X 뉴스 계약으�
   assert.equal(result.record.source.type, "x-post");
   assert.equal(result.record.source.account, "thsottiaux");
   assert.equal(result.record.original.content, "Usage limits reset & enjoy!");
+  assert.deepEqual(result.record.original.contexts, []);
   assert.equal(result.mediaCandidates.length, 1);
   assert.equal(JSON.stringify(result.record).includes("publish.twitter.com"), false);
+});
+
+test("인용 링크와 함께 제공한 X 링크를 보조 문맥으로 최대 3개 보존한다", async () => {
+  const primaryId = "2091234567890123456";
+  const quotedId = "2091234567890123457";
+  const providedId = "2091234567890123458";
+  const responses = new Map([
+    [primaryId, {
+      author_name: "Tibo",
+      author_url: "https://twitter.com/thsottiaux",
+      html: `<blockquote><p>One more day <a href="https://t.co/quote">https://t.co/quote</a></p><a href="https://twitter.com/thsottiaux/status/${primaryId}">date</a></blockquote>`,
+    }],
+    [quotedId, {
+      author_name: "OpenAI Developers",
+      author_url: "https://twitter.com/OpenAIDevs",
+      html: "<blockquote><p>New model available today.</p></blockquote>",
+    }],
+    [providedId, {
+      author_name: "Sam Altman",
+      author_url: "https://twitter.com/sama",
+      html: "<blockquote><p>Context supplied by the operator.</p></blockquote>",
+    }],
+  ]);
+  const result = await normalizeXWatchMessage({
+    channelId,
+    type: 0,
+    content: `https://x.com/thsottiaux/status/${primaryId}\nhttps://x.com/sama/status/${providedId}`,
+  }, {
+    channelId,
+    allowedHandles,
+    async fetchImpl(url, init) {
+      if (url.hostname === "t.co") {
+        assert.equal(init.redirect, "manual");
+        return new Response(null, { status: 302, headers: { location: `https://x.com/OpenAIDevs/status/${quotedId}` } });
+      }
+      const target = new URL(url.searchParams.get("url"));
+      const id = target.pathname.split("/").at(-1);
+      return new Response(JSON.stringify(responses.get(id)), { status: 200 });
+    },
+  });
+  assert.deepEqual(result.record.original.contexts.map(({ relation, account, content }) => ({ relation, account, content })), [
+    { relation: "provided-link", account: "sama", content: "Context supplied by the operator." },
+    { relation: "linked-post", account: "OpenAIDevs", content: "New model available today." },
+  ]);
 });
 
 test("oEmbed 작성자가 링크 계정과 다르면 저장하지 않는다", async () => {

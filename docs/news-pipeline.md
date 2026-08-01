@@ -13,6 +13,9 @@
 Discord Gateway 감시기가 `#openai-announcements`와 `#x-watch`를 함께 감시한다.
 OpenAI 공지의 글, Embed, 링크와 Discord CDN 이미지를 보존하고, `#x-watch`에서는
 등록된 X 계정의 `/status/<ID>` 링크만 공식 X oEmbed를 통해 원문으로 보충한다.
+X 본문이 다른 X 게시물을 인용·링크하거나 운영자가 같은 Discord 메시지에 보조 X 링크를
+함께 넣으면 최대 3개를 공식 oEmbed로 추가 조회해 번역·판정용 문맥으로만 전달한다.
+보조 문맥은 기본 원문 번역에 합치지 않으며, 조회 실패도 기본 게시물 수집을 막지 않는다.
 같은 Discord 메시지와 같은 X 게시물은 다시 관측해도 중복 생성하지 않는다.
 
 ```powershell
@@ -36,6 +39,10 @@ Announcement는 모델 판정과 무관하게 최소 `publish` 게시 검토 후
 X 계정 allowlist는 `config/news-x-sources.json`에서 관리한다. 현재 Tibo, OpenAI,
 OpenAI Developers, Sam Altman, Romain Huet, Greg Brockman 계정만 허용한다. 임의 호스트,
 임의 계정과 상태 게시물이 아닌 X URL은 수집하지 않는다.
+
+공식 oEmbed는 답글의 부모 게시물 ID를 제공하지 않는다. 따라서 부모 글이 필요한 답글은
+현재 `#x-watch` 메시지에 부모 X 링크를 함께 붙이면 보조 문맥으로 읽는다. 향후 공식 X API
+자격을 추가할 때 수집 경계는 유지한 채 부모·인용 관계 자동 조회를 교체할 수 있다.
 
 ## 실시간 감시
 
