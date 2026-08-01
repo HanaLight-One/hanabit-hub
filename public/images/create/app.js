@@ -6,6 +6,7 @@ const MODE_LABELS = Object.freeze({
 });
 const SAFE_SOURCE_ID = /^[a-f0-9]{64}$/;
 const PINK_BRIDGE_ID = "pink-bridge";
+const BUILTIN_RENDERING_COUNT = 4;
 const PURPOSE_LABELS = Object.freeze({
   "theme-followup": "오테 추가",
   "free-play": "자유 추가",
@@ -60,7 +61,11 @@ const requestedMode = params.get("mode");
 const sourceModes = document.querySelectorAll("[data-needs-source]");
 const styleLabels = new Map([
   ["random", "자동 선택"],
-  ["none", "화풍 없음"],
+  ["prompt", "프롬프트 화풍 사용"],
+  ["render:hyper-realistic", "Hyper-realistic"],
+  ["render:hyper-realistic-anime", "Hyper-realistic-anime"],
+  ["render:semi-realistic-anime", "Semi-realistic-anime"],
+  ["render:2.5d-semi-realistic-anime-reality-forward", "2.5D Semi-realistic-anime · reality-forward"],
 ]);
 const characterLabels = new Map();
 let connectedStyleCount = 0;
@@ -196,7 +201,14 @@ async function loadCreationOptions() {
   elements.styleGrid.replaceChildren();
   elements.characterGrid.replaceChildren();
   appendStyleOption({ id: "random", label: "🎲 자동 선택" }, { checked: true });
-  appendStyleOption({ id: "none", label: "화풍 없음" });
+  appendStyleOption({ id: "prompt", label: "✍ 프롬프트 화풍 사용" });
+  appendStyleOption({ id: "render:hyper-realistic", label: "Hyper-realistic" });
+  appendStyleOption({ id: "render:hyper-realistic-anime", label: "Hyper-realistic-anime" });
+  appendStyleOption({ id: "render:semi-realistic-anime", label: "Semi-realistic-anime" });
+  appendStyleOption({
+    id: "render:2.5d-semi-realistic-anime-reality-forward",
+    label: "2.5D Semi-realistic-anime · reality-forward",
+  });
   appendCharacterOption(
     { id: "auto", label: "🎲 자동 선택" },
     { mode: true, checked: true },
@@ -216,7 +228,7 @@ async function loadCreationOptions() {
     for (const character of characters) appendCharacterOption(character);
     connectedStyleCount = styles.length;
     connectedCharacterCount = characters.length;
-    elements.styleStatus.textContent = `${styles.length}개 화풍 · 자동 선택`;
+    elements.styleStatus.textContent = `${styles.length}개 저장 화풍 + 렌더링 ${BUILTIN_RENDERING_COUNT}종 · 자동 선택`;
     elements.characterStatus.textContent = `${characters.length}명 · 자동 선택`;
   } catch {
     elements.styleStatus.textContent = "화풍 목록을 불러오지 못했어요.";
@@ -332,7 +344,9 @@ elements.styleGrid.addEventListener("change", (event) => {
     return;
   }
   const selected = styleLabels.get(event.target.value) ?? "자동 선택";
-  const prefix = connectedStyleCount ? `${connectedStyleCount}개 화풍 · ` : "";
+  const prefix = connectedStyleCount
+    ? `${connectedStyleCount}개 저장 화풍 + 렌더링 ${BUILTIN_RENDERING_COUNT}종 · `
+    : "";
   elements.styleStatus.textContent = `${prefix}${selected.replace(/^🎲\s*/u, "")}`;
 });
 
@@ -373,14 +387,16 @@ elements.form.addEventListener("submit", (event) => {
   const styleValue = data.get("style");
   const purpose = data.get("purpose");
   const styleSelection =
-    styleValue === "none"
-      ? { mode: "none", id: null }
+    styleValue === "prompt"
+      ? { mode: "prompt", id: null }
       : styleValue === "random"
         ? { mode: "auto", id: null }
-        : { mode: "selected", id: styleValue };
+        : styleValue.startsWith("render:")
+          ? { mode: "rendering", id: styleValue.slice("render:".length) }
+          : { mode: "selected", id: styleValue };
   const sourceImageId = data.get("mode") === "new" ? null : source;
   const route =
-    data.get("mode") === "new" && characterSelection.mode === "none" && styleSelection.mode === "none"
+    data.get("mode") === "new" && characterSelection.mode === "none" && ["prompt", "rendering"].includes(styleSelection.mode)
       ? "prompt-only"
       : "guided";
 

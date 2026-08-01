@@ -126,10 +126,14 @@ export function createPromptOnlyExecutor({
       status: "processing",
       prompt: draft.prompt,
       count: 1,
-      mode: executionMode === "pink-bridge" ? "pink-bridge" : "natural",
+      mode: executionMode === "pink-bridge"
+        ? "pink-bridge"
+        : ["prompt", "rendering"].includes(draft.style?.mode)
+          ? "prompt-style"
+          : "natural",
       executionMode,
       purpose: draft.purpose,
-      style: null,
+      style: draft.style,
       outputs: [],
       progress: { completed: 0, total: 1 },
       requestedBy: "hanabit-hub-owner",

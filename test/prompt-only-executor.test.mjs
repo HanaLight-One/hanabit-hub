@@ -105,6 +105,45 @@ test("핑크브릿지 안내 생성은 전용 외형 앵커와 사용자 프롬�
   });
 });
 
+test("핑크브릿지 프롬프트 화풍은 natural 기본값 없이 locked style로 실행한다", async () => {
+  await fixture(async ({ drafts, executor, jobRoot }) => {
+    const draft = await drafts.create({
+      prompt: "고딕 수채화로 그린 오래된 천문대",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "custom", ids: ["pink-bridge"] },
+      style: { mode: "prompt", id: null },
+    });
+    await executor.start(draft.id);
+    const context = JSON.parse(
+      (await readFile(path.join(jobRoot, `${draft.id}.worker-context.json`), "utf8")).replace(/^\uFEFF/u, ""),
+    );
+    assert.equal(context.job.mode, "style");
+    assert.equal(context.selected_style.id, "prompt-defined");
+    assert.match(context.job.prompt, /고딕 수채화/);
+  });
+});
+
+test("고정 렌더링 선택은 정확한 preset으로 1장 실행한다", async () => {
+  await fixture(async ({ drafts, executor, jobRoot }) => {
+    const draft = await drafts.create({
+      prompt: "빛나는 도서관",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "none", ids: [] },
+      style: { mode: "rendering", id: "hyper-realistic-anime" },
+    });
+    await executor.start(draft.id);
+    const context = JSON.parse(
+      (await readFile(path.join(jobRoot, `${draft.id}.worker-context.json`), "utf8")).replace(/^\uFEFF/u, ""),
+    );
+    assert.equal(context.job.mode, "style");
+    assert.equal(context.selected_style.id, "hyper-realistic-anime");
+  });
+});
+
 test("20분 넘게 갱신되지 않은 작업은 내부 정보 없이 확인 필요로 표시한다", async () => {
   const current = new Date("2026-08-01T03:00:00.000Z");
   await fixture(async ({ drafts, executor, jobRoot }) => {

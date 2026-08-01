@@ -58,7 +58,9 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.equal(style.status, 200);
     assert.match(scriptBody, /fetch\(`\/api\/images\//);
     assert.match(scriptBody, /\/api\/images\/creation-options/);
-    assert.match(scriptBody, /화풍 없음/);
+    assert.match(scriptBody, /프롬프트 화풍 사용/);
+    assert.match(scriptBody, /Hyper-realistic-anime/);
+    assert.match(scriptBody, /2\.5D Semi-realistic-anime/);
     assert.match(scriptBody, /등장인물 없음/);
     assert.match(scriptBody, /PINK_BRIDGE_ID/);
     assert.match(scriptBody, /\/api\/images\/generation-drafts/);

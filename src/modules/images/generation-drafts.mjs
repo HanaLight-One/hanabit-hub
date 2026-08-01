@@ -1,13 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { RENDERING_PRESETS } from "./rendering-presets.mjs";
 
 const MAX_PROMPT_LENGTH = 12_000;
 const SOURCE_ID_PATTERN = /^[a-f0-9]{64}$/u;
 const MODES = new Set(["new", "same-combination", "same-characters", "same-style"]);
 const SOURCE_MODES = new Set(["same-combination", "same-characters", "same-style"]);
 const CHARACTER_MODES = new Set(["auto", "none", "custom"]);
-const STYLE_MODES = new Set(["auto", "none", "selected"]);
+const STYLE_MODES = new Set(["auto", "none", "selected", "prompt", "rendering"]);
+const NO_ASSET_STYLE_MODES = new Set(["none", "prompt", "rendering"]);
 const PURPOSES = new Set(["theme-followup", "free-play"]);
 
 function draftError(code, message) {
@@ -58,6 +60,10 @@ function normalizeStyle(value, allowedIds) {
     if (!id || !allowedIds.has(id)) {
       throw draftError("INVALID_SELECTION", "현재 화풍 목록에서 선택해주세요.");
     }
+  } else if (value.mode === "rendering") {
+    if (!id || !RENDERING_PRESETS[id]) {
+      throw draftError("INVALID_SELECTION", "현재 렌더링 목록에서 선택해주세요.");
+    }
   } else if (id !== null) {
     throw draftError("INVALID_SELECTION", "자동 또는 없음 선택에는 화풍 ID를 보낼 수 없습니다.");
   }
@@ -100,7 +106,7 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
       new Set(options.styles.map((item) => item.id)),
     );
     const route =
-      mode === "new" && sourceImageId === null && characters.mode === "none" && style.mode === "none"
+      mode === "new" && sourceImageId === null && characters.mode === "none" && NO_ASSET_STYLE_MODES.has(style.mode)
         ? "prompt-only"
         : "guided";
     const id = randomUUID().replaceAll("-", "");
@@ -163,14 +169,14 @@ export function classifyDraftExecution(draft) {
   if (
     draft.route === "prompt-only" &&
     draft.characters?.mode === "none" &&
-    draft.style?.mode === "none"
+    NO_ASSET_STYLE_MODES.has(draft.style?.mode)
   ) return "prompt-only";
   if (
     draft.route === "guided" &&
     draft.characters?.mode === "custom" &&
     draft.characters.ids?.length === 1 &&
     draft.characters.ids[0] === "pink-bridge" &&
-    draft.style?.mode === "none"
+    NO_ASSET_STYLE_MODES.has(draft.style?.mode)
   ) return "pink-bridge";
   return null;
 }

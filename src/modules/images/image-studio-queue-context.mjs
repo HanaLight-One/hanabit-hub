@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { operationalDate } from "./operational-date.mjs";
+import { resolveDraftStylePreset } from "./rendering-presets.mjs";
 
 function stableIndex(seed, length) {
   if (!length) return 0;
@@ -16,6 +17,15 @@ function characterPackage(character) {
     height_text: character.height_text,
     image_anchor_path: character.image_anchor_path,
   };
+}
+
+function applyDraftStyle(context, style) {
+  const selected = resolveDraftStylePreset(style);
+  if (!selected) return false;
+  context.job.mode = "style";
+  context.job.style_request = selected.id;
+  context.selected_style = selected;
+  return true;
 }
 
 function selectRelationshipPackages(job, index) {
@@ -150,7 +160,18 @@ export async function buildImageStudioQueueContext(
       appearance,
       "Keep the user's requested scene, action, mood, and composition while preserving this locked identity.",
     ].join("\n\n");
-    context.guided_selection = { character_ids: ["pink-bridge"], style_id: null };
+    const hasDraftStyle = applyDraftStyle(context, job.style);
+    context.guided_selection = {
+      character_ids: ["pink-bridge"],
+      style_id: hasDraftStyle ? context.selected_style.id : null,
+    };
+    return context;
+  }
+
+  if (job.mode === "prompt-style") {
+    if (!applyDraftStyle(context, job.style)) {
+      throw new Error("프롬프트 화풍 또는 렌더링 선택을 확인하지 못했습니다.");
+    }
     return context;
   }
 

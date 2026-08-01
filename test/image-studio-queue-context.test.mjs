@@ -86,6 +86,55 @@ test("핑크브릿지는 사용자 장면과 전용 외형 앵커를 natural wor
   assert.deepEqual(context.guided_selection.character_ids, ["pink-bridge"]);
 });
 
+test("핑크브릿지의 프롬프트 화풍과 고정 렌더링은 locked style로 전달한다", async () => {
+  const { assetIndexPath, outputRoot } = await fixture();
+  const promptDefined = await buildImageStudioQueueContext(
+    {
+      id: "pink-prompt-style",
+      prompt: "사용자가 지정한 긴 수채화 화풍",
+      count: 1,
+      mode: "pink-bridge",
+      purpose: "free-play",
+      style: { mode: "prompt", id: null },
+    },
+    { assetIndexPath, outputRoot },
+  );
+  const rendering = await buildImageStudioQueueContext(
+    {
+      id: "pink-rendering",
+      prompt: "밤의 온실",
+      count: 1,
+      mode: "pink-bridge",
+      purpose: "free-play",
+      style: { mode: "rendering", id: "2.5d-semi-realistic-anime-reality-forward" },
+    },
+    { assetIndexPath, outputRoot },
+  );
+  assert.equal(promptDefined.job.mode, "style");
+  assert.equal(promptDefined.selected_style.id, "prompt-defined");
+  assert.match(promptDefined.selected_style.content, /user's request defines/);
+  assert.equal(rendering.job.mode, "style");
+  assert.equal(rendering.selected_style.id, "2.5d-semi-realistic-anime-reality-forward");
+  assert.match(rendering.selected_style.content, /reality-forward/);
+});
+
+test("인물 없는 고정 렌더링도 locked style worker 문맥을 사용한다", async () => {
+  const { assetIndexPath, outputRoot } = await fixture();
+  const context = await buildImageStudioQueueContext(
+    {
+      id: "prompt-rendering",
+      prompt: "우주 정거장",
+      count: 1,
+      mode: "prompt-style",
+      purpose: "free-play",
+      style: { mode: "rendering", id: "hyper-realistic-anime" },
+    },
+    { assetIndexPath, outputRoot },
+  );
+  assert.equal(context.job.mode, "style");
+  assert.equal(context.selected_style.id, "hyper-realistic-anime");
+});
+
 test("추가 생성 목적을 출력 하위 폴더에 분리한다", async () => {
   const { assetIndexPath, outputRoot } = await fixture();
   const context = await buildImageStudioQueueContext(

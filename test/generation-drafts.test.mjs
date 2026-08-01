@@ -66,6 +66,33 @@ test("핑크브릿지 단독 새 장면은 안내 생성 중 실제 실행 가�
   });
 });
 
+test("프롬프트 화풍과 고정 렌더링은 자산 없는 실제 실행 초안으로 보존한다", async () => {
+  await fixture(async ({ root, store }) => {
+    const promptStyle = await store.create({
+      prompt: "긴 사용자 화풍과 장면 지시",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "none", ids: [] },
+      style: { mode: "prompt", id: null },
+    });
+    const rendering = await store.create({
+      prompt: "핑크브릿지가 비 오는 거리를 걷는다",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "custom", ids: ["pink-bridge"] },
+      style: { mode: "rendering", id: "semi-realistic-anime" },
+    });
+    assert.equal(promptStyle.route, "prompt-only");
+    assert.equal(promptStyle.executionMode, "prompt-only");
+    assert.equal(rendering.route, "guided");
+    assert.equal(rendering.executionMode, "pink-bridge");
+    const saved = JSON.parse(await readFile(path.join(root, `${rendering.id}.json`), "utf8"));
+    assert.deepEqual(saved.style, { mode: "rendering", id: "semi-realistic-anime" });
+  });
+});
+
 test("초안은 현재 옵션과 존재하는 원본만 허용한다", async () => {
   await fixture(async ({ store }) => {
     await assert.rejects(
@@ -89,6 +116,17 @@ test("초안은 현재 옵션과 존재하는 원본만 허용한다", async () 
         style: { mode: "selected", id: "없는 화풍" },
       }),
       /등장인물/,
+    );
+    await assert.rejects(
+      () => store.create({
+        prompt: "새 장면",
+        purpose: "free-play",
+        mode: "new",
+        sourceImageId: null,
+        characters: { mode: "none", ids: [] },
+        style: { mode: "rendering", id: "random-secret-style" },
+      }),
+      /렌더링 목록/,
     );
   });
 });
