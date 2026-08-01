@@ -8,6 +8,12 @@ const OEMBED_HOSTS = new Set(["publish.x.com", "publish.twitter.com"]);
 const X_HOSTS = new Set(["x.com", "www.x.com", "twitter.com", "www.twitter.com"]);
 const X_SHORT_HOSTS = new Set(["t.co", "www.t.co"]);
 const MAX_CONTEXT_POSTS = 3;
+const SOURCE_KINDS = new Set(["official", "person", "candidate"]);
+const AFFILIATION_STATUSES = new Set(["confirmed", "review_required", "former"]);
+const TRUST_LEVELS = new Set(["official", "high", "standard", "candidate"]);
+const HANDLE_PATTERN = /^[A-Za-z0-9_]{1,15}$/u;
+const TOPIC_PATTERN = /^[a-z0-9][a-z0-9-]{0,39}$/u;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 
 function decodeHtml(value) {
   return String(value ?? "")
@@ -91,14 +97,78 @@ async function relatedPostsFromHtml(value, { fetchImpl, primary }) {
   return posts;
 }
 
-export async function loadXSourceAllowlist(target) {
+function normalizeRosterSource(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new TypeError("X 출처 항목이 올바르지 않습니다.");
+  }
+  const handle = String(value.handle ?? "");
+  const displayName = String(value.displayName ?? "").trim();
+  const affiliation = String(value.affiliation ?? "").trim();
+  const roles = Array.isArray(value.roles) ? [...new Set(value.roles)] : [];
+  const topics = Array.isArray(value.topics) ? [...new Set(value.topics)] : [];
+  if (!HANDLE_PATTERN.test(handle) || !displayName || displayName.length > 80) {
+    throw new TypeError("X 출처 계정 정보가 올바르지 않습니다.");
+  }
+  if (!SOURCE_KINDS.has(value.sourceKind) || !AFFILIATION_STATUSES.has(value.affiliationStatus)) {
+    throw new TypeError("X 출처 소속 상태가 올바르지 않습니다.");
+  }
+  if (!affiliation || affiliation.length > 80 || !TRUST_LEVELS.has(value.trustLevel)) {
+    throw new TypeError("X 출처 신뢰 정보가 올바르지 않습니다.");
+  }
+  if (!roles.length || roles.length > 8 || roles.some((role) => !TOPIC_PATTERN.test(role))) {
+    throw new TypeError("X 출처 역할이 올바르지 않습니다.");
+  }
+  if (!topics.length || topics.length > 12 || topics.some((topic) => !TOPIC_PATTERN.test(topic))) {
+    throw new TypeError("X 출처 분야가 올바르지 않습니다.");
+  }
+  if (value.verifiedAt !== null && !DATE_PATTERN.test(String(value.verifiedAt ?? ""))) {
+    throw new TypeError("X 출처 마지막 확인일이 올바르지 않습니다.");
+  }
+  if (typeof value.enabled !== "boolean") {
+    throw new TypeError("X 출처 활성 상태가 올바르지 않습니다.");
+  }
+  if (value.sourceKind === "official" && value.trustLevel !== "official") {
+    throw new TypeError("X 공식 출처의 신뢰등급이 올바르지 않습니다.");
+  }
+  if (value.affiliationStatus === "former" && value.enabled) {
+    throw new TypeError("소속 종료 출처는 자동 감시할 수 없습니다.");
+  }
+  return Object.freeze({
+    handle,
+    displayName,
+    sourceKind: value.sourceKind,
+    affiliation,
+    affiliationStatus: value.affiliationStatus,
+    roles: Object.freeze(roles),
+    topics: Object.freeze(topics),
+    trustLevel: value.trustLevel,
+    verifiedAt: value.verifiedAt,
+    enabled: value.enabled,
+  });
+}
+
+export async function loadXSourceRoster(target) {
   if (!path.isAbsolute(target)) throw new TypeError("X 출처 설정은 절대경로여야 합니다.");
   const parsed = JSON.parse(await readFile(target, "utf8"));
-  const handles = Array.isArray(parsed.handles) ? parsed.handles : [];
-  if (!handles.length || handles.some((value) => !/^[A-Za-z0-9_]{1,15}$/u.test(value))) {
+  if (parsed.schemaVersion !== 1 || !Array.isArray(parsed.sources) || !parsed.sources.length) {
     throw new TypeError("X 출처 allowlist가 올바르지 않습니다.");
   }
-  return new Set(handles.map((value) => value.toLowerCase()));
+  const sources = parsed.sources.map(normalizeRosterSource);
+  const normalizedHandles = sources.map((source) => source.handle.toLowerCase());
+  if (new Set(normalizedHandles).size !== normalizedHandles.length) {
+    throw new TypeError("X 출처 계정이 중복되었습니다.");
+  }
+  return Object.freeze({
+    schemaVersion: 1,
+    sources: Object.freeze(sources),
+  });
+}
+
+export async function loadXSourceAllowlist(target) {
+  const roster = await loadXSourceRoster(target);
+  return new Set(roster.sources
+    .filter((source) => source.enabled && source.affiliationStatus !== "former")
+    .map((source) => source.handle.toLowerCase()));
 }
 
 export function findAllowedXPost(message, { channelId, allowedHandles }) {

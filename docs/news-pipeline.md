@@ -36,7 +36,10 @@ Announcement는 모델 판정과 무관하게 최소 `publish` 게시 검토 후
 보존 이미지를 한 번만 표시한다. `skip`은 허브에 보류 상태로 남긴다. 실제 DC 게시는
 아직 연결하지 않으며 별도 승인·게시 영수증·중복 방지가 완성될 때까지 자동 전송하지 않는다.
 
-X 계정 allowlist는 `config/news-x-sources.json`에서 관리한다. 현재 Tibo, OpenAI,
+X 계정 명부는 `config/news-x-sources.json`에서 관리한다. 각 출처는 계정명뿐 아니라
+출처 종류, 소속과 소속 상태, 역할, 담당 분야, 신뢰등급, 마지막 확인일, 자동 감시 여부를
+가진다. `enabled`이면서 소속 종료 상태가 아닌 계정만 스트림 allowlist에 포함한다.
+현재 Tibo, OpenAI,
 OpenAI Developers, Sam Altman, Romain Huet, Greg Brockman 계정만 허용한다. 임의 호스트,
 임의 계정과 상태 게시물이 아닌 X URL은 수집하지 않는다.
 

@@ -1,10 +1,77 @@
 {
-  "handles": [
-    "thsottiaux",
-    "OpenAI",
-    "OpenAIDevs",
-    "sama",
-    "romainhuet",
-    "gdb"
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "handle": "OpenAI",
+      "displayName": "OpenAI",
+      "sourceKind": "official",
+      "affiliation": "OpenAI",
+      "affiliationStatus": "confirmed",
+      "roles": ["official-publisher"],
+      "topics": ["company", "models", "products", "research"],
+      "trustLevel": "official",
+      "verifiedAt": "2026-08-01",
+      "enabled": true
+    },
+    {
+      "handle": "OpenAIDevs",
+      "displayName": "OpenAI Developers",
+      "sourceKind": "official",
+      "affiliation": "OpenAI",
+      "affiliationStatus": "confirmed",
+      "roles": ["developer-publisher"],
+      "topics": ["api", "codex", "developer-platform"],
+      "trustLevel": "official",
+      "verifiedAt": "2026-08-01",
+      "enabled": true
+    },
+    {
+      "handle": "sama",
+      "displayName": "Sam Altman",
+      "sourceKind": "person",
+      "affiliation": "OpenAI",
+      "affiliationStatus": "confirmed",
+      "roles": ["executive"],
+      "topics": ["company", "models", "products"],
+      "trustLevel": "high",
+      "verifiedAt": "2026-08-01",
+      "enabled": true
+    },
+    {
+      "handle": "gdb",
+      "displayName": "Greg Brockman",
+      "sourceKind": "person",
+      "affiliation": "OpenAI",
+      "affiliationStatus": "confirmed",
+      "roles": ["engineering-leadership"],
+      "topics": ["engineering", "models", "research"],
+      "trustLevel": "high",
+      "verifiedAt": "2026-08-01",
+      "enabled": true
+    },
+    {
+      "handle": "thsottiaux",
+      "displayName": "Tibo",
+      "sourceKind": "person",
+      "affiliation": "OpenAI",
+      "affiliationStatus": "confirmed",
+      "roles": ["codex-product"],
+      "topics": ["chatgpt", "codex", "usage"],
+      "trustLevel": "high",
+      "verifiedAt": "2026-08-01",
+      "enabled": true
+    },
+    {
+      "handle": "romainhuet",
+      "displayName": "Romain Huet",
+      "sourceKind": "person",
+      "affiliation": "OpenAI",
+      "affiliationStatus": "review_required",
+      "roles": ["developer-relations"],
+      "topics": ["api", "developer-platform", "products"],
+      "trustLevel": "standard",
+      "verifiedAt": null,
+      "enabled": true
+    }
   ]
 }
