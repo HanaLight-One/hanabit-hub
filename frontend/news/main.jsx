@@ -25,10 +25,15 @@ const FAILURE_LABELS = {
   unknown: "분석 도중 안전하게 복구하지 못한 오류가 있었어요.",
 };
 
+function needsImageReview(item) {
+  return item.workflow.status === "ignored" && item.media.length > 0;
+}
+
 const FILTERS = [
-  { id: "action", label: "확인 필요", matches: (item) => ["pending_review", "translation_failed"].includes(item.workflow.status) },
+  { id: "action", label: "확인 필요", matches: (item) => ["pending_review", "translation_failed"].includes(item.workflow.status) || needsImageReview(item) },
   { id: "publish", label: "게시 후보", matches: (item) => item.workflow.triage?.decision === "publish" },
   { id: "review", label: "사람 검토", matches: (item) => item.workflow.triage?.decision === "review" },
+  { id: "media", label: "이미지 확인", matches: needsImageReview },
   { id: "failed", label: "번역 실패", matches: (item) => item.workflow.status === "translation_failed" },
   { id: "ignored", label: "보류", matches: (item) => item.workflow.status === "ignored" },
   { id: "all", label: "전체", matches: () => true },
@@ -91,8 +96,10 @@ function Original({ item }) {
   );
 }
 
-function fallbackAdvice(triage) {
+function fallbackAdvice(item) {
+  const triage = item.workflow.triage;
   if (!triage) return "번역과 판정이 끝난 뒤 게시 조언을 확인할 수 있어요.";
+  if (needsImageReview(item)) return "모델은 이미지 픽셀을 보지 않았어요. 텍스트만으로 내린 보류를 확정하지 말고 이미지와 원문 관계를 사람이 확인하세요.";
   if (triage.decision === "publish") return "구체적인 변화가 있는 게시 후보예요. 원문과 이미지를 확인한 뒤 승인하세요.";
   if (triage.decision === "review") return "의미 있는 신호일 수 있지만 단정하기 어려워요. 부모 글과 작성자 맥락을 사람이 확인하는 편이 좋아요.";
   return "현재 정보만으로는 뉴스 가치가 낮아 보류를 권해요. 이미지에 핵심 정보가 보일 때만 다시 검토하세요.";
@@ -185,7 +192,7 @@ function NewsCard({ item, confirming, busy, error, onBegin, onCancel, onApprove,
           </div>
           <dl>
             <div><dt>산정 근거</dt><dd>{triage.reason}</dd></div>
-            <div><dt>하나빛 조언</dt><dd>{triage.advice || fallbackAdvice(triage)}</dd></div>
+            <div><dt>하나빛 조언</dt><dd>{needsImageReview(item) ? fallbackAdvice(item) : triage.advice || fallbackAdvice(item)}</dd></div>
           </dl>
           <small>
             신뢰도 {Math.round(triage.confidence * 100)}%
@@ -195,11 +202,14 @@ function NewsCard({ item, confirming, busy, error, onBegin, onCancel, onApprove,
       )}
 
       {item.media.length > 0 && (
-        <div className="media-grid">
-          {item.media.map((media, index) => (
-            <img src={media.url} alt={`공지 첨부 이미지 ${index + 1}`} loading="lazy" key={media.url} />
-          ))}
-        </div>
+        <>
+          {needsImageReview(item) && <p className="media-review-note">이미지는 자동 판정에 포함되지 않았어요 · 사람 확인 필요</p>}
+          <div className="media-grid">
+            {item.media.map((media, index) => (
+              <img src={media.url} alt={`공지 첨부 이미지 ${index + 1}`} loading="lazy" key={media.url} />
+            ))}
+          </div>
+        </>
       )}
 
       <Original item={item} />

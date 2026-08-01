@@ -8039,11 +8039,15 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	invalid_response: "응답 형식이 깨져 번역을 저장하지 못했어요.",
 	provider_error: "무료 텍스트 API 요청이 완료되지 않았어요.",
 	unknown: "분석 도중 안전하게 복구하지 못한 오류가 있었어요."
-}, ne = [
+};
+function ne(e) {
+	return e.workflow.status === "ignored" && e.media.length > 0;
+}
+var re = [
 	{
 		id: "action",
 		label: "확인 필요",
-		matches: (e) => ["pending_review", "translation_failed"].includes(e.workflow.status)
+		matches: (e) => ["pending_review", "translation_failed"].includes(e.workflow.status) || ne(e)
 	},
 	{
 		id: "publish",
@@ -8054,6 +8058,11 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		id: "review",
 		label: "사람 검토",
 		matches: (e) => e.workflow.triage?.decision === "review"
+	},
+	{
+		id: "media",
+		label: "이미지 확인",
+		matches: ne
 	},
 	{
 		id: "failed",
@@ -8071,14 +8080,14 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		matches: () => !0
 	}
 ];
-function re(e) {
+function w(e) {
 	let t = new Date(e);
 	return Number.isNaN(t.getTime()) ? "시각 미상" : new Intl.DateTimeFormat("ko-KR", {
 		dateStyle: "medium",
 		timeStyle: "short"
 	}).format(t);
 }
-function w({ item: e }) {
+function ie({ item: e }) {
 	let t = new Map(e.original.links.map((e) => [e, "원문 링크"]));
 	return e.source.url && t.set(e.source.url, e.source.type === "x-post" ? "X 원문" : "Discord 원문"), t.size ? /* @__PURE__ */ (0, x.jsx)("div", {
 		className: "link-row",
@@ -8090,7 +8099,7 @@ function w({ item: e }) {
 		}, e))
 	}) : null;
 }
-function ie({ item: e }) {
+function ae({ item: e }) {
 	return /* @__PURE__ */ (0, x.jsxs)("details", {
 		className: "original-box",
 		children: [
@@ -8127,20 +8136,21 @@ function ie({ item: e }) {
 					}, `${e.name}-${t}`))
 				]
 			}, `${e.url ?? "embed"}-${t}`)),
-			/* @__PURE__ */ (0, x.jsx)(w, { item: e })
+			/* @__PURE__ */ (0, x.jsx)(ie, { item: e })
 		]
 	});
 }
-function ae(e) {
-	return e ? e.decision === "publish" ? "구체적인 변화가 있는 게시 후보예요. 원문과 이미지를 확인한 뒤 승인하세요." : e.decision === "review" ? "의미 있는 신호일 수 있지만 단정하기 어려워요. 부모 글과 작성자 맥락을 사람이 확인하는 편이 좋아요." : "현재 정보만으로는 뉴스 가치가 낮아 보류를 권해요. 이미지에 핵심 정보가 보일 때만 다시 검토하세요." : "번역과 판정이 끝난 뒤 게시 조언을 확인할 수 있어요.";
+function oe(e) {
+	let t = e.workflow.triage;
+	return t ? ne(e) ? "모델은 이미지 픽셀을 보지 않았어요. 텍스트만으로 내린 보류를 확정하지 말고 이미지와 원문 관계를 사람이 확인하세요." : t.decision === "publish" ? "구체적인 변화가 있는 게시 후보예요. 원문과 이미지를 확인한 뒤 승인하세요." : t.decision === "review" ? "의미 있는 신호일 수 있지만 단정하기 어려워요. 부모 글과 작성자 맥락을 사람이 확인하는 편이 좋아요." : "현재 정보만으로는 뉴스 가치가 낮아 보류를 권해요. 이미지에 핵심 정보가 보일 때만 다시 검토하세요." : "번역과 판정이 끝난 뒤 게시 조언을 확인할 수 있어요.";
 }
-function oe({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a, onApprove: o }) {
+function se({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a, onApprove: o }) {
 	return e.workflow.publishedToDc ? /* @__PURE__ */ (0, x.jsx)("div", {
 		className: "approval approved",
 		children: "DC 게시 완료 영수증이 확인됐어요."
 	}) : e.workflow.dcApproval ? /* @__PURE__ */ (0, x.jsxs)("div", {
 		className: "approval approved",
-		children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: "DC 게시 승인 완료" }), /* @__PURE__ */ (0, x.jsxs)("span", { children: [re(e.workflow.dcApproval.approvedAt), " · 아직 실제 게시 전"] })]
+		children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: "DC 게시 승인 완료" }), /* @__PURE__ */ (0, x.jsxs)("span", { children: [w(e.workflow.dcApproval.approvedAt), " · 아직 실제 게시 전"] })]
 	}) : e.workflow.canApproveForDc ? t ? /* @__PURE__ */ (0, x.jsxs)("div", {
 		className: "approval confirm",
 		children: [
@@ -8180,7 +8190,7 @@ function oe({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a
 		children: "번역과 판정이 끝난 검토 후보만 승인할 수 있어요."
 	});
 }
-function se({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a, onApprove: o, onRetry: s }) {
+function ce({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a, onApprove: o, onRetry: s }) {
 	let c = e.workflow.triage;
 	return /* @__PURE__ */ (0, x.jsxs)("article", {
 		className: "news-card",
@@ -8196,7 +8206,7 @@ function se({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a
 						className: `decision decision-${c.decision}`,
 						children: S[c.decision]
 					})]
-				}), /* @__PURE__ */ (0, x.jsx)("time", { children: re(e.source.publishedAt) })]
+				}), /* @__PURE__ */ (0, x.jsx)("time", { children: w(e.source.publishedAt) })]
 			}),
 			(e.source.label || e.source.account) && /* @__PURE__ */ (0, x.jsxs)("p", {
 				className: "source-label",
@@ -8248,7 +8258,7 @@ function se({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a
 				className: "triage-box",
 				children: [
 					/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "판정" }), /* @__PURE__ */ (0, x.jsx)("strong", { children: S[c.decision] })] }),
-					/* @__PURE__ */ (0, x.jsxs)("dl", { children: [/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "산정 근거" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: c.reason })] }), /* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "하나빛 조언" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: c.advice || ae(c) })] })] }),
+					/* @__PURE__ */ (0, x.jsxs)("dl", { children: [/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "산정 근거" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: c.reason })] }), /* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "하나빛 조언" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: ne(e) ? oe(e) : c.advice || oe(e) })] })] }),
 					/* @__PURE__ */ (0, x.jsxs)("small", { children: [
 						"신뢰도 ",
 						Math.round(c.confidence * 100),
@@ -8257,16 +8267,19 @@ function se({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a
 					] })
 				]
 			}),
-			e.media.length > 0 && /* @__PURE__ */ (0, x.jsx)("div", {
+			e.media.length > 0 && /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [ne(e) && /* @__PURE__ */ (0, x.jsx)("p", {
+				className: "media-review-note",
+				children: "이미지는 자동 판정에 포함되지 않았어요 · 사람 확인 필요"
+			}), /* @__PURE__ */ (0, x.jsx)("div", {
 				className: "media-grid",
 				children: e.media.map((e, t) => /* @__PURE__ */ (0, x.jsx)("img", {
 					src: e.url,
 					alt: `공지 첨부 이미지 ${t + 1}`,
 					loading: "lazy"
 				}, e.url))
-			}),
-			/* @__PURE__ */ (0, x.jsx)(ie, { item: e }),
-			/* @__PURE__ */ (0, x.jsx)(oe, {
+			})] }),
+			/* @__PURE__ */ (0, x.jsx)(ae, { item: e }),
+			/* @__PURE__ */ (0, x.jsx)(se, {
 				item: e,
 				confirming: t,
 				busy: n,
@@ -8278,7 +8291,7 @@ function se({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a
 		]
 	});
 }
-function ce() {
+function le() {
 	let [e, t] = (0, y.useState)(null), [n, r] = (0, y.useState)(""), [i, a] = (0, y.useState)(null), [o, s] = (0, y.useState)(null), [c, l] = (0, y.useState)(""), [u, d] = (0, y.useState)(null), [f, p] = (0, y.useState)("action");
 	async function m() {
 		let e = await fetch("/api/news", { cache: "no-store" });
@@ -8297,7 +8310,7 @@ function ce() {
 			media: t.reduce((e, t) => e + t.media.length, 0)
 		};
 	}, [e]), g = (0, y.useMemo)(() => {
-		let t = ne.find((e) => e.id === f) ?? ne[0];
+		let t = re.find((e) => e.id === f) ?? re[0];
 		return (e?.items ?? []).filter(t.matches);
 	}, [e, f]);
 	async function _(e) {
@@ -8362,7 +8375,7 @@ function ce() {
 		/* @__PURE__ */ (0, x.jsx)("nav", {
 			className: "filters",
 			"aria-label": "뉴스 필터",
-			children: ne.map((t) => {
+			children: re.map((t) => {
 				let n = (e?.items ?? []).filter(t.matches).length;
 				return /* @__PURE__ */ (0, x.jsxs)("button", {
 					type: "button",
@@ -8393,7 +8406,7 @@ function ce() {
 		/* @__PURE__ */ (0, x.jsx)("section", {
 			className: "news-list",
 			"aria-label": "수집된 뉴스",
-			children: g.map((e) => /* @__PURE__ */ (0, x.jsx)(se, {
+			children: g.map((e) => /* @__PURE__ */ (0, x.jsx)(ce, {
 				item: e,
 				confirming: i === e.id,
 				busy: o === e.id,
@@ -8410,5 +8423,5 @@ function ce() {
 		})
 	] })] });
 }
-(0, b.createRoot)(document.querySelector("#news-root")).render(/* @__PURE__ */ (0, x.jsx)(ce, {}));
+(0, b.createRoot)(document.querySelector("#news-root")).render(/* @__PURE__ */ (0, x.jsx)(le, {}));
 //#endregion

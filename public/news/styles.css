@@ -73,6 +73,7 @@ h1 em { color: var(--accent); font-style: normal; }
 .embed-field span { color: var(--muted); }
 .media-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 20px; }
 .media-grid img { width: 100%; max-height: 520px; border-radius: 14px; object-fit: contain; background: #070a0d; }
+.media-review-note { margin: 18px 0 0; padding: 11px 13px; border: 1px solid rgb(255 220 129 / 35%); border-radius: 11px; background: rgb(255 220 129 / 8%); color: #ffdc81; font-size: 13px; font-weight: 800; }
 .link-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
 .link-row a { padding: 9px 12px; border: 1px solid var(--line); border-radius: 999px; color: var(--text); text-decoration: none; font-size: 13px; }
 .link-row a:hover, .link-row a:focus-visible { border-color: var(--accent); outline: none; }

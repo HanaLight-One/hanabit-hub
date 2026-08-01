@@ -19,6 +19,8 @@ test("React 뉴스 검수실 화면과 승인 스크립트를 제공한다", asy
     assert.equal(script.includes("retry-news-analysis"), true);
     assert.equal(script.includes("확인 필요"), true);
     assert.equal(script.includes("하나빛 조언"), true);
+    assert.equal(script.includes("이미지 확인"), true);
+    assert.equal(script.includes("이미지 픽셀을 보지 않았어요"), true);
     assert.equal(script.includes("approve-dc-publication"), true);
   } finally {
     await new Promise((resolve) => server.close(resolve));
