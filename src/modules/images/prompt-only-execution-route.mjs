@@ -1,7 +1,7 @@
 const EXECUTE_PATTERN = /^\/api\/images\/generation-drafts\/([a-f0-9]{32})\/execute$/u;
 const STATUS_PATTERN = /^\/api\/images\/generation-jobs\/([a-f0-9]{32})$/u;
 const LIST_PATH = "/api/images/generation-jobs";
-const CONFIRMATION = "generate-one-prompt-only-image";
+const CONFIRMATION = "generate-one-draft-image";
 
 function sameOrigin(request) {
   const origin = request.headers.origin;
@@ -29,7 +29,7 @@ async function readConfirmation(request) {
 
 function failure(response, sendJson, error) {
   if (["INVALID_ID", "DRAFT_NOT_FOUND", "JOB_NOT_FOUND"].includes(error.code)) sendJson(response, 404, { error: "Not found" });
-  else if (["NOT_PROMPT_ONLY", "ALREADY_STARTED"].includes(error.code)) sendJson(response, 409, { error: error.message });
+  else if (["NOT_EXECUTABLE", "ALREADY_STARTED"].includes(error.code)) sendJson(response, 409, { error: error.message });
   else if (["RUNTIME_UNAVAILABLE", "LAUNCH_FAILED"].includes(error.code)) sendJson(response, 503, { error: error.message });
   else throw error;
 }

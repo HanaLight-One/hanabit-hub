@@ -10,7 +10,7 @@ const catalog = {
   async list() {
     return {
       styles: [{ id: "gothic", label: "gothic" }],
-      characters: [{ id: "헤일라", label: "헤일라" }],
+      characters: [{ id: "pink-bridge", label: "핑크브릿지" }, { id: "헤일라", label: "헤일라" }],
     };
   },
 };
@@ -43,10 +43,26 @@ test("인물과 화풍 없음은 긴 프롬프트 자유 생성 초안으로만 
     assert.equal(result.route, "prompt-only");
     assert.equal(result.promptLength, 8_500);
     assert.equal(result.executionEnabled, false);
+    assert.equal(result.executionMode, "prompt-only");
     const saved = JSON.parse(await readFile(path.join(root, `${result.id}.json`), "utf8"));
     assert.equal(saved.prompt, prompt);
     assert.equal(saved.status, "draft");
     assert.equal(saved.executionEnabled, false);
+  });
+});
+
+test("핑크브릿지 단독 새 장면은 안내 생성 중 실제 실행 가능한 초안으로 분류한다", async () => {
+  await fixture(async ({ store }) => {
+    const result = await store.create({
+      prompt: "네온 온실에서 분홍빛 우산을 든 장면",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "custom", ids: ["pink-bridge"] },
+      style: { mode: "none", id: null },
+    });
+    assert.equal(result.route, "guided");
+    assert.equal(result.executionMode, "pink-bridge");
   });
 });
 

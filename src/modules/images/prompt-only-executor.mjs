@@ -5,6 +5,7 @@ import {
   buildImageStudioQueueContext,
   writeImageStudioQueueContext,
 } from "./image-studio-queue-context.mjs";
+import { classifyDraftExecution } from "./generation-drafts.mjs";
 
 const ID_PATTERN = /^[a-f0-9]{32}$/u;
 const STALE_AFTER_MS = 20 * 60 * 1000;
@@ -94,16 +95,9 @@ export function createPromptOnlyExecutor({
   async function start(id) {
     const safeId = validateId(id);
     const draft = await draftStore.get(safeId);
-    if (
-      draft.route !== "prompt-only" ||
-      draft.mode !== "new" ||
-      draft.sourceImageId !== null ||
-      draft.characters?.mode !== "none" ||
-      draft.style?.mode !== "none" ||
-      !PURPOSES.has(draft.purpose) ||
-      draft.executionEnabled !== false
-    ) {
-      throw executionError("NOT_PROMPT_ONLY", "프롬프트 자유 생성 초안만 실행할 수 있습니다.");
+    const executionMode = classifyDraftExecution(draft);
+    if (!executionMode || !PURPOSES.has(draft.purpose)) {
+      throw executionError("NOT_EXECUTABLE", "이 선택 조합은 아직 실제 생성에 연결되지 않았습니다.");
     }
 
     await Promise.all([
@@ -132,7 +126,8 @@ export function createPromptOnlyExecutor({
       status: "processing",
       prompt: draft.prompt,
       count: 1,
-      mode: "natural",
+      mode: executionMode === "pink-bridge" ? "pink-bridge" : "natural",
+      executionMode,
       purpose: draft.purpose,
       style: null,
       outputs: [],
@@ -154,7 +149,7 @@ export function createPromptOnlyExecutor({
         jobPath: target.job,
         contextPath: target.context,
       });
-      return Object.freeze({ id: safeId, status: "processing", route: "prompt-only", count: 1 });
+      return Object.freeze({ id: safeId, status: "processing", route: draft.route, executionMode, count: 1 });
     } catch (error) {
       if (receiptHandle) await receiptHandle.close();
       await writeJsonAtomic(target.job, {

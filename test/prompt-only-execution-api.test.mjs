@@ -11,7 +11,7 @@ async function withServer(executor, callback) {
   finally { await new Promise((resolve) => server.close(resolve)); }
 }
 
-test("1장 실행 API는 정확한 확인 후 prompt-only worker만 시작한다", async () => {
+test("1장 실행 API는 정확한 확인 후 허용된 1장 worker만 시작한다", async () => {
   let starts = 0;
   const executor = {
     async start(id) { starts += 1; return { id, status: "processing", route: "prompt-only", count: 1 }; },
@@ -30,7 +30,7 @@ test("1장 실행 API는 정확한 확인 후 prompt-only worker만 시작한다
     assert.equal(bad.status, 400);
     assert.equal(starts, 0);
     const response = await fetch(`${baseUrl}/api/images/generation-drafts/${ID}/execute`, {
-      method: "POST", headers, body: JSON.stringify({ confirmation: "generate-one-prompt-only-image" }),
+      method: "POST", headers, body: JSON.stringify({ confirmation: "generate-one-draft-image" }),
     });
     assert.equal(response.status, 202);
     assert.equal((await response.json()).count, 1);
@@ -46,7 +46,7 @@ test("1장 실행 API는 정확한 확인 후 prompt-only worker만 시작한다
 test("1장 실행 API는 교차 출처 요청을 거부한다", async () => {
   await withServer({ async start() { throw new Error("호출 금지"); } }, async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/images/generation-drafts/${ID}/execute`, {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ confirmation: "generate-one-prompt-only-image" }),
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ confirmation: "generate-one-draft-image" }),
     });
     assert.equal(response.status, 403);
   });

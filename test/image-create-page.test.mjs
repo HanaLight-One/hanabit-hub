@@ -64,7 +64,8 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(scriptBody, /\/api\/images\/generation-drafts/);
     assert.match(scriptBody, /method: "POST"/);
     assert.match(scriptBody, /prompt-only/);
-    assert.match(scriptBody, /generate-one-prompt-only-image/);
+    assert.match(scriptBody, /generate-one-draft-image/);
+    assert.match(scriptBody, /핑크브릿지로 1장 실제 생성/);
     assert.match(scriptBody, /선택 자산 실제 생성 · 연결 준비 중/);
     assert.match(scriptBody, /previewSceneDetails\.open = false/);
     assert.match(scriptBody, /window\.confirm/);

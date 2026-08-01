@@ -17,12 +17,14 @@ async function fixture(callback, { now } = {}) {
   const freeTextRunnerPath = path.join(root, "free.ps1");
   await mkdir(outputRoot, { recursive: true });
   await Promise.all([
-    writeFile(assetIndexPath, JSON.stringify({ styles: {}, characters: {} }), "utf8"),
+    writeFile(assetIndexPath, JSON.stringify({
+      styles: {}, characters: {}, pink_bridge: { appearance_prompt: "adult Pink-Bridge identity anchor" },
+    }), "utf8"),
     writeFile(pythonExecutablePath, "test", "utf8"),
     writeFile(responsesWorkerPath, "test", "utf8"),
     writeFile(freeTextRunnerPath, "test", "utf8"),
   ]);
-  const catalog = { async list() { return { styles: [], characters: [] }; } };
+  const catalog = { async list() { return { styles: [], characters: [{ id: "pink-bridge", label: "핑크브릿지" }] }; } };
   const drafts = createGenerationDraftStore({ root: draftRoot, catalog, archive: null });
   const launches = [];
   const executor = createPromptOnlyExecutor({
@@ -51,7 +53,7 @@ test("프롬프트 자유 생성은 모의 worker에 1장으로 한 번만 전�
       style: { mode: "none", id: null },
     });
     const started = await executor.start(draft.id);
-    assert.deepEqual(started, { id: draft.id, status: "processing", route: "prompt-only", count: 1 });
+    assert.deepEqual(started, { id: draft.id, status: "processing", route: "prompt-only", executionMode: "prompt-only", count: 1 });
     assert.equal(launches.length, 1);
     const job = JSON.parse(await readFile(path.join(jobRoot, `${draft.id}.json`), "utf8"));
     const context = JSON.parse(
@@ -75,6 +77,31 @@ test("프롬프트 자유 생성은 모의 worker에 1장으로 한 번만 전�
     assert.equal(listing.jobs[0].status, "failed");
     assert.equal(JSON.stringify(listing).includes("SECRET"), false);
     assert.equal(JSON.stringify(listing).includes("internal"), false);
+  });
+});
+
+test("핑크브릿지 안내 생성은 전용 외형 앵커와 사용자 프롬프트로 1장 실행한다", async () => {
+  await fixture(async ({ drafts, executor, launches, jobRoot }) => {
+    const draft = await drafts.create({
+      prompt: "분홍 노을 아래 유리 다리를 걷는다",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "custom", ids: ["pink-bridge"] },
+      style: { mode: "none", id: null },
+    });
+    const started = await executor.start(draft.id);
+    assert.equal(started.executionMode, "pink-bridge");
+    assert.equal(started.route, "guided");
+    assert.equal(launches.length, 1);
+    const job = JSON.parse(await readFile(path.join(jobRoot, `${draft.id}.json`), "utf8"));
+    const context = JSON.parse(
+      (await readFile(path.join(jobRoot, `${draft.id}.worker-context.json`), "utf8")).replace(/^\uFEFF/u, ""),
+    );
+    assert.equal(job.mode, "pink-bridge");
+    assert.equal(context.job.mode, "natural");
+    assert.match(context.job.prompt, /분홍 노을/);
+    assert.match(context.job.prompt, /adult Pink-Bridge identity anchor/);
   });
 });
 
@@ -106,7 +133,7 @@ test("20분 넘게 갱신되지 않은 작업은 내부 정보 없이 확인 필
   }, { now: () => current });
 });
 
-test("안내 생성 초안은 실제 worker 실행을 거부한다", async () => {
+test("자동 선택 안내 생성 초안은 실제 worker 실행을 거부한다", async () => {
   await fixture(async ({ drafts, executor, launches }) => {
     const draft = await drafts.create({
       prompt: "자동으로 선택하는 장면",
@@ -116,7 +143,7 @@ test("안내 생성 초안은 실제 worker 실행을 거부한다", async () =>
       characters: { mode: "auto", ids: [] },
       style: { mode: "auto", id: null },
     });
-    await assert.rejects(() => executor.start(draft.id), /프롬프트 자유 생성/);
+    await assert.rejects(() => executor.start(draft.id), /아직 실제 생성/);
     assert.equal(launches.length, 0);
   });
 });

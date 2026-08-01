@@ -67,6 +67,7 @@ let connectedStyleCount = 0;
 let connectedCharacterCount = 0;
 let previewPayload = null;
 let savedDraftId = null;
+let savedExecutionMode = null;
 let purposeTouched = false;
 
 function formatDateTime(value) {
@@ -345,6 +346,7 @@ elements.form.addEventListener("input", (event) => {
   }
   previewPayload = null;
   savedDraftId = null;
+  savedExecutionMode = null;
   elements.draftButton.disabled = true;
   elements.draftButton.textContent = "격리 초안 저장";
   elements.executeButton.hidden = true;
@@ -423,14 +425,19 @@ elements.draftButton.addEventListener("click", async () => {
     elements.previewMessage.textContent =
       result.route === "prompt-only"
         ? "프롬프트 자유 생성 초안을 저장했어요. Python과 무료 API는 실행하지 않았습니다."
-        : "안내 생성 초안을 저장했어요. 선택 자산 실행은 아직 연결 전이며, 프롬프트 자유 생성만 실제 실행할 수 있어요.";
+        : result.executionMode === "pink-bridge"
+          ? "핑크브릿지 안내 생성 초안을 저장했어요. 아래 버튼에서 실제 1장 생성을 확인할 수 있어요."
+          : "안내 생성 초안을 저장했어요. 이 선택 조합의 실제 실행은 아직 연결 전이에요.";
     elements.draftButton.textContent = "격리 초안 저장 완료";
     savedDraftId = result.id;
+    savedExecutionMode = result.executionMode;
     elements.executeButton.hidden = false;
-    elements.executeButton.disabled = result.route !== "prompt-only";
-    elements.executeButton.textContent = result.route === "prompt-only"
+    elements.executeButton.disabled = !result.executionMode;
+    elements.executeButton.textContent = result.executionMode === "prompt-only"
       ? "⚡ 프롬프트로 1장 실제 생성"
-      : "선택 자산 실제 생성 · 연결 준비 중";
+      : result.executionMode === "pink-bridge"
+        ? "⚡ 핑크브릿지로 1장 실제 생성"
+        : "선택 자산 실제 생성 · 연결 준비 중";
   } catch (error) {
     elements.previewMessage.textContent = error.message;
     elements.draftButton.disabled = false;
@@ -473,9 +480,11 @@ async function pollGeneration(id) {
 }
 
 elements.executeButton.addEventListener("click", async () => {
-  if (!savedDraftId) return;
+  if (!savedDraftId || !savedExecutionMode) return;
   const confirmed = window.confirm(
-    "이 프롬프트로 이미지 1장을 실제 생성할까요? 무료 API와 이미지 worker가 실행됩니다.",
+    savedExecutionMode === "pink-bridge"
+      ? "이 프롬프트와 핑크브릿지 외형 앵커로 이미지 1장을 실제 생성할까요? 무료 API와 이미지 worker가 실행됩니다."
+      : "이 프롬프트로 이미지 1장을 실제 생성할까요? 무료 API와 이미지 worker가 실행됩니다.",
   );
   if (!confirmed) return;
 
@@ -487,7 +496,7 @@ elements.executeButton.addEventListener("click", async () => {
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ confirmation: "generate-one-prompt-only-image" }),
+        body: JSON.stringify({ confirmation: "generate-one-draft-image" }),
       },
     );
     const result = await response.json();

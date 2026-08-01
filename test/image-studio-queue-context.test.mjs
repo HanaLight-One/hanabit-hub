@@ -38,6 +38,7 @@ async function fixture() {
           members: ["노아"],
         },
       ],
+      pink_bridge: { appearance_prompt: "adult Pink-Bridge identity anchor" },
     }),
     "utf8",
   );
@@ -65,6 +66,24 @@ test("02시 운영일 경계와 설정 기반 출력 루트를 사용한다", as
     path.join(outputRoot, "2026-07-29", "extra-requests", "natural-test"),
   );
   assert.equal(context.job.count, 2);
+});
+
+test("핑크브릿지는 사용자 장면과 전용 외형 앵커를 natural worker 문맥으로 고정한다", async () => {
+  const { assetIndexPath, outputRoot } = await fixture();
+  const context = await buildImageStudioQueueContext(
+    {
+      id: "pink-test",
+      prompt: "비 오는 옥상에서 투명 우산을 든다",
+      count: 1,
+      mode: "pink-bridge",
+      purpose: "free-play",
+    },
+    { assetIndexPath, outputRoot },
+  );
+  assert.equal(context.job.mode, "natural");
+  assert.match(context.job.prompt, /비 오는 옥상/);
+  assert.match(context.job.prompt, /adult Pink-Bridge identity anchor/);
+  assert.deepEqual(context.guided_selection.character_ids, ["pink-bridge"]);
 });
 
 test("추가 생성 목적을 출력 하위 폴더에 분리한다", async () => {

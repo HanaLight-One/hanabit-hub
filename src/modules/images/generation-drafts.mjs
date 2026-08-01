@@ -119,6 +119,7 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
       characters,
       style,
     };
+    const executionMode = classifyDraftExecution(record);
 
     await mkdir(root, { recursive: true });
     const target = path.join(root, `${id}.json`);
@@ -134,6 +135,7 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
       purpose,
       promptLength: prompt.length,
       executionEnabled: false,
+      executionMode,
     });
   }
 
@@ -150,6 +152,27 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
   }
 
   return Object.freeze({ create, get });
+}
+
+export function classifyDraftExecution(draft) {
+  if (
+    draft?.mode !== "new" ||
+    draft?.sourceImageId !== null ||
+    draft?.executionEnabled !== false
+  ) return null;
+  if (
+    draft.route === "prompt-only" &&
+    draft.characters?.mode === "none" &&
+    draft.style?.mode === "none"
+  ) return "prompt-only";
+  if (
+    draft.route === "guided" &&
+    draft.characters?.mode === "custom" &&
+    draft.characters.ids?.length === 1 &&
+    draft.characters.ids[0] === "pink-bridge" &&
+    draft.style?.mode === "none"
+  ) return "pink-bridge";
+  return null;
 }
 
 export { MAX_PROMPT_LENGTH };

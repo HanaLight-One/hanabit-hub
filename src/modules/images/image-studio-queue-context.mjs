@@ -136,6 +136,24 @@ export async function buildImageStudioQueueContext(
     },
   };
 
+  if (job.mode === "pink-bridge") {
+    const index = JSON.parse(await readFile(assetIndexPath, "utf8"));
+    const appearance = String(index.pink_bridge?.appearance_prompt ?? "").trim();
+    if (!appearance) throw new Error("핑크브릿지 외형 앵커를 자산 색인에서 찾지 못했습니다.");
+    const userPrompt = context.job.prompt;
+    context.job.mode = "natural";
+    context.job.prompt = [
+      "USER SCENE REQUEST (preserve this scene intent):",
+      userPrompt,
+      "LOCKED SUBJECT: exactly one clearly adult fictional Pink-Bridge Girl.",
+      "PINK BRIDGE APPEARANCE (identity and appearance lock):",
+      appearance,
+      "Keep the user's requested scene, action, mood, and composition while preserving this locked identity.",
+    ].join("\n\n");
+    context.guided_selection = { character_ids: ["pink-bridge"], style_id: null };
+    return context;
+  }
+
   if (!["style", "chapel"].includes(job.mode)) return context;
 
   const index = JSON.parse(await readFile(assetIndexPath, "utf8"));
