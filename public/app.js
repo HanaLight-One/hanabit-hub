@@ -1,8 +1,8 @@
 const statusElement = document.querySelector("#server-status");
+const serverStatusCopy = document.querySelector("#server-status-copy");
 const codexStatusElement = document.querySelector("#codex-control-status");
 const restartCodexButton = document.querySelector("#restart-codex");
 const codexUsageValue = document.querySelector("#codex-usage-value");
-const codexUsageReset = document.querySelector("#codex-usage-reset");
 
 try {
   const response = await fetch("/api/health");
@@ -11,9 +11,9 @@ try {
   if (!response.ok || !health.ok) throw new Error("Unhealthy response");
 
   statusElement.classList.add("online");
-  statusElement.lastChild.textContent = " 연결됨";
+  serverStatusCopy.textContent = "연결됨";
 } catch {
-  statusElement.lastChild.textContent = " 연결 확인 필요";
+  serverStatusCopy.textContent = "연결 확인 필요";
 }
 
 async function loadCodexControl() {
@@ -63,13 +63,6 @@ restartCodexButton.addEventListener("click", async () => {
 
 await loadCodexControl();
 
-function describeWindow(minutes) {
-  if (minutes === 10_080) return "주간 한도";
-  if (minutes && minutes % 1_440 === 0) return `${minutes / 1_440}일 한도`;
-  if (minutes && minutes % 60 === 0) return `${minutes / 60}시간 한도`;
-  return "Codex 한도";
-}
-
 async function loadCodexUsage() {
   try {
     const response = await fetch("/api/system/codex/usage");
@@ -80,11 +73,16 @@ async function loadCodexUsage() {
     const reset = window.resetsAt
       ? new Intl.DateTimeFormat("ko-KR", { dateStyle: "short", timeStyle: "short" }).format(new Date(window.resetsAt))
       : null;
-    codexUsageReset.textContent = `${describeWindow(window.durationMinutes)}${reset ? ` · ${reset} 초기화` : ""}`;
+    codexUsageValue.title = `Codex 주간 남은량${reset ? ` · ${reset} 초기화` : ""}`;
+    return true;
   } catch {
     codexUsageValue.textContent = "--%";
-    codexUsageReset.textContent = "Codex 로그인 상태에서 다시 확인해 주세요.";
+    codexUsageValue.title = "Codex 사용량 확인 필요";
+    return false;
   }
 }
 
-await loadCodexUsage();
+if (!(await loadCodexUsage())) {
+  window.setTimeout(loadCodexUsage, 5_000);
+}
+window.setInterval(loadCodexUsage, 60_000);

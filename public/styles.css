@@ -69,46 +69,6 @@ h1 em {
   background: rgb(17 23 29 / 84%);
 }
 
-.usage-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  margin-top: 14px;
-  padding: 24px 28px;
-  border: 1px solid #405223;
-  border-radius: 20px;
-  background: linear-gradient(135deg, rgb(216 255 82 / 8%), var(--panel));
-}
-
-.usage-card h2 {
-  margin: 0;
-}
-
-.usage-reset {
-  margin: 10px 0 0;
-  color: var(--muted);
-  line-height: 1.55;
-}
-
-.usage-meter {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex: 0 0 auto;
-  color: var(--accent);
-}
-
-.usage-meter strong {
-  font-size: clamp(34px, 6vw, 54px);
-  letter-spacing: -0.06em;
-}
-
-.usage-meter span {
-  color: var(--muted);
-  font-weight: 700;
-}
-
 .emergency-control {
   margin-top: 14px;
   border: 1px solid #573238;
@@ -223,18 +183,25 @@ h1 em {
   color: var(--muted);
 }
 
-.status span {
+.status-dot {
   width: 9px;
   height: 9px;
+  flex: 0 0 auto;
   border-radius: 50%;
   background: var(--muted);
+}
+
+.status-usage {
+  color: var(--accent);
+  font-size: 18px;
+  letter-spacing: -0.04em;
 }
 
 .status.online {
   color: var(--text);
 }
 
-.status.online span {
+.status.online .status-dot {
   background: var(--accent);
   box-shadow: 0 0 0 6px rgb(216 255 82 / 9%);
 }
@@ -292,11 +259,6 @@ h1 em {
   }
 
   .status-card {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .usage-card {
     align-items: flex-start;
     flex-direction: column;
   }
