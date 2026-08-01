@@ -1,5 +1,8 @@
 # Hanabit Hub
 
+처음 프로젝트를 살펴본다면 프론트엔드, 백엔드, DB와 운영 경계를 한 장에 정리한
+[PROJECT_MAP.md](./PROJECT_MAP.md)부터 읽으세요.
+
 하나빛의 로컬 관리자 허브입니다.
 
 현재 단계에서는 작고 안전한 Node.js 서버를 유지하면서 `/news`부터 React로
