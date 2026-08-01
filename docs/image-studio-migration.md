@@ -41,6 +41,11 @@ Image Studio의 코드는 Hanabit Hub 저장소에서 관리하되 운영 데이
 | 추가생성 출력 | `generation.outputRoot` | 날짜별 `extra-requests` |
 | Python | `generation.pythonExecutablePath` | Responses 작업 프로세스 |
 | Responses worker | `generation.responsesWorkerPath` | 무료 API 장면 구성과 이미지 생성 |
+
+추가 생성의 직접 선택 인물은 허브에서 최대 6명까지 검증한 뒤 `cast` worker 문맥으로
+전달한다. 핑크브릿지는 텍스트 외형 앵커, 일반 인물은 텍스트 외형 앵커와 참조 이미지를
+한 cast에 함께 담는다. 기존 외부 worker가 `cast` 모드를 지원하지 않는 환경에서는
+`patches/image-studio-worker-cast.patch`를 동일 버전의 worker에 먼저 적용해야 한다.
 | 무료 텍스트 runner | `generation.freeTextRunnerPath` | 장면 JSON 생성 |
 | Responses bridge | `generation.codexResponsesBridgePath` | ChatGPT Codex 이미지 도구 연결 |
 

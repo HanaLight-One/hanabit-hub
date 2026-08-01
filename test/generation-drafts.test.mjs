@@ -6,11 +6,12 @@ import test from "node:test";
 import { createGenerationDraftStore } from "../src/modules/images/generation-drafts.mjs";
 
 const SOURCE_ID = "a".repeat(64);
+const CHARACTER_IDS = ["pink-bridge", "헤일라", "리벨라", "세이라", "우리엘", "카시"];
 const catalog = {
   async list() {
     return {
       styles: [{ id: "gothic", label: "gothic" }],
-      characters: [{ id: "pink-bridge", label: "핑크브릿지" }, { id: "헤일라", label: "헤일라" }],
+      characters: CHARACTER_IDS.map((id) => ({ id, label: id === "pink-bridge" ? "핑크브릿지" : id })),
     };
   },
 };
@@ -51,18 +52,18 @@ test("인물과 화풍 없음은 긴 프롬프트 자유 생성 초안으로만 
   });
 });
 
-test("핑크브릿지 단독 새 장면은 안내 생성 중 실제 실행 가능한 초안으로 분류한다", async () => {
+test("핑크브릿지를 포함한 최대 6명은 실제 실행 가능한 안내 생성 초안으로 분류한다", async () => {
   await fixture(async ({ store }) => {
     const result = await store.create({
       prompt: "네온 온실에서 분홍빛 우산을 든 장면",
       purpose: "free-play",
       mode: "new",
       sourceImageId: null,
-      characters: { mode: "custom", ids: ["pink-bridge"] },
+      characters: { mode: "custom", ids: CHARACTER_IDS },
       style: { mode: "none", id: null },
     });
     assert.equal(result.route, "guided");
-    assert.equal(result.executionMode, "pink-bridge");
+    assert.equal(result.executionMode, "guided-cast");
   });
 });
 
@@ -87,7 +88,7 @@ test("프롬프트 화풍과 고정 렌더링은 자산 없는 실제 실행 초
     assert.equal(promptStyle.route, "prompt-only");
     assert.equal(promptStyle.executionMode, "prompt-only");
     assert.equal(rendering.route, "guided");
-    assert.equal(rendering.executionMode, "pink-bridge");
+    assert.equal(rendering.executionMode, "guided-cast");
     const saved = JSON.parse(await readFile(path.join(root, `${rendering.id}.json`), "utf8"));
     assert.deepEqual(saved.style, { mode: "rendering", id: "semi-realistic-anime" });
   });
@@ -127,6 +128,17 @@ test("초안은 현재 옵션과 존재하는 원본만 허용한다", async () 
         style: { mode: "rendering", id: "random-secret-style" },
       }),
       /렌더링 목록/,
+    );
+    await assert.rejects(
+      () => store.create({
+        prompt: "너무 많은 인물",
+        purpose: "free-play",
+        mode: "new",
+        sourceImageId: null,
+        characters: { mode: "custom", ids: [...CHARACTER_IDS, "일곱째"] },
+        style: { mode: "auto", id: null },
+      }),
+      /최대 6명/,
     );
   });
 });

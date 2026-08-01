@@ -11,6 +11,7 @@ const CHARACTER_MODES = new Set(["auto", "none", "custom"]);
 const STYLE_MODES = new Set(["auto", "none", "selected", "prompt", "rendering"]);
 const NO_ASSET_STYLE_MODES = new Set(["none", "prompt", "rendering"]);
 const PURPOSES = new Set(["theme-followup", "free-play"]);
+const MAX_CUSTOM_CHARACTERS = 6;
 
 function draftError(code, message) {
   return Object.assign(new Error(message), { code });
@@ -42,8 +43,15 @@ function normalizeCharacters(value, allowedIds) {
   }
   const ids = Array.isArray(value.ids) ? [...new Set(value.ids.map(String))] : [];
   if (value.mode === "custom") {
-    if (ids.length < 1 || ids.length > 3 || ids.some((id) => !allowedIds.has(id))) {
-      throw draftError("INVALID_SELECTION", "등장인물은 현재 목록에서 최대 3명까지 선택할 수 있습니다.");
+    if (
+      ids.length < 1 ||
+      ids.length > MAX_CUSTOM_CHARACTERS ||
+      ids.some((id) => !allowedIds.has(id))
+    ) {
+      throw draftError(
+        "INVALID_SELECTION",
+        `등장인물은 현재 목록에서 최대 ${MAX_CUSTOM_CHARACTERS}명까지 선택할 수 있습니다.`,
+      );
     }
   } else if (ids.length > 0) {
     throw draftError("INVALID_SELECTION", "자동 또는 없음 선택에는 등장인물 ID를 보낼 수 없습니다.");
@@ -174,11 +182,10 @@ export function classifyDraftExecution(draft) {
   if (
     draft.route === "guided" &&
     draft.characters?.mode === "custom" &&
-    draft.characters.ids?.length === 1 &&
-    draft.characters.ids[0] === "pink-bridge" &&
-    NO_ASSET_STYLE_MODES.has(draft.style?.mode)
-  ) return "pink-bridge";
+    draft.characters.ids?.length >= 1 &&
+    draft.characters.ids.length <= MAX_CUSTOM_CHARACTERS
+  ) return "guided-cast";
   return null;
 }
 
-export { MAX_PROMPT_LENGTH };
+export { MAX_CUSTOM_CHARACTERS, MAX_PROMPT_LENGTH };

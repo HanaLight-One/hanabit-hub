@@ -18,13 +18,25 @@ async function fixture(callback, { now } = {}) {
   await mkdir(outputRoot, { recursive: true });
   await Promise.all([
     writeFile(assetIndexPath, JSON.stringify({
-      styles: {}, characters: {}, pink_bridge: { appearance_prompt: "adult Pink-Bridge identity anchor" },
+      styles: { calm: { id: "calm", filename: "calm.txt", content: "calm ink style" } },
+      characters: {
+        헤일라: {
+          name: "헤일라",
+          anchor_text: "adult Haila identity anchor",
+          height_text: "tall",
+          image_anchor_path: path.join(root, "haila.png"),
+        },
+      },
+      pink_bridge: { appearance_prompt: "adult Pink-Bridge identity anchor" },
     }), "utf8"),
     writeFile(pythonExecutablePath, "test", "utf8"),
     writeFile(responsesWorkerPath, "test", "utf8"),
     writeFile(freeTextRunnerPath, "test", "utf8"),
   ]);
-  const catalog = { async list() { return { styles: [], characters: [{ id: "pink-bridge", label: "핑크브릿지" }] }; } };
+  const catalog = { async list() { return {
+    styles: [{ id: "calm", label: "calm" }],
+    characters: [{ id: "pink-bridge", label: "핑크브릿지" }, { id: "헤일라", label: "헤일라" }],
+  }; } };
   const drafts = createGenerationDraftStore({ root: draftRoot, catalog, archive: null });
   const launches = [];
   const executor = createPromptOnlyExecutor({
@@ -80,28 +92,30 @@ test("프롬프트 자유 생성은 모의 worker에 1장으로 한 번만 전�
   });
 });
 
-test("핑크브릿지 안내 생성은 전용 외형 앵커와 사용자 프롬프트로 1장 실행한다", async () => {
+test("핑크브릿지와 일반 인물을 함께 선택해 외형 앵커와 참조 경로를 1장 작업에 전달한다", async () => {
   await fixture(async ({ drafts, executor, launches, jobRoot }) => {
     const draft = await drafts.create({
       prompt: "분홍 노을 아래 유리 다리를 걷는다",
       purpose: "free-play",
       mode: "new",
       sourceImageId: null,
-      characters: { mode: "custom", ids: ["pink-bridge"] },
+      characters: { mode: "custom", ids: ["pink-bridge", "헤일라"] },
       style: { mode: "none", id: null },
     });
     const started = await executor.start(draft.id);
-    assert.equal(started.executionMode, "pink-bridge");
+    assert.equal(started.executionMode, "guided-cast");
     assert.equal(started.route, "guided");
     assert.equal(launches.length, 1);
     const job = JSON.parse(await readFile(path.join(jobRoot, `${draft.id}.json`), "utf8"));
     const context = JSON.parse(
       (await readFile(path.join(jobRoot, `${draft.id}.worker-context.json`), "utf8")).replace(/^\uFEFF/u, ""),
     );
-    assert.equal(job.mode, "pink-bridge");
-    assert.equal(context.job.mode, "natural");
+    assert.equal(job.mode, "guided-cast");
+    assert.equal(context.job.mode, "cast");
     assert.match(context.job.prompt, /분홍 노을/);
-    assert.match(context.job.prompt, /adult Pink-Bridge identity anchor/);
+    assert.deepEqual(context.guided_selection.character_ids, ["pink-bridge", "헤일라"]);
+    assert.match(context.cast_packages[0].characters[0].anchor_text, /Pink-Bridge/);
+    assert.match(context.cast_packages[0].characters[1].anchor_text, /Haila/);
   });
 });
 
@@ -119,7 +133,7 @@ test("핑크브릿지 프롬프트 화풍은 natural 기본값 없이 locked sty
     const context = JSON.parse(
       (await readFile(path.join(jobRoot, `${draft.id}.worker-context.json`), "utf8")).replace(/^\uFEFF/u, ""),
     );
-    assert.equal(context.job.mode, "style");
+    assert.equal(context.job.mode, "cast");
     assert.equal(context.selected_style.id, "prompt-defined");
     assert.match(context.job.prompt, /고딕 수채화/);
   });

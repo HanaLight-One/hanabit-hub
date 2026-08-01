@@ -6,6 +6,7 @@ const MODE_LABELS = Object.freeze({
 });
 const SAFE_SOURCE_ID = /^[a-f0-9]{64}$/;
 const PINK_BRIDGE_ID = "pink-bridge";
+const MAX_CUSTOM_CHARACTERS = 6;
 const BUILTIN_RENDERING_COUNT = 4;
 const PURPOSE_LABELS = Object.freeze({
   "theme-followup": "오테 추가",
@@ -180,19 +181,14 @@ function updateCharacterSelection() {
   const selected = [
     ...elements.characterGrid.querySelectorAll('input[name="character"]:checked'),
   ];
-  const reachedLimit = selected.length >= 3;
-  const pinkBridgeSelected = selected.some(
-    (input) => input.value === PINK_BRIDGE_ID,
-  );
+  const reachedLimit = selected.length >= MAX_CUSTOM_CHARACTERS;
   for (const input of elements.characterGrid.querySelectorAll(
     'input[name="character"]',
   )) {
-    input.disabled =
-      (pinkBridgeSelected && input.value !== PINK_BRIDGE_ID) ||
-      (reachedLimit && !input.checked);
+    input.disabled = reachedLimit && !input.checked;
   }
   const prefix = connectedCharacterCount
-    ? `${connectedCharacterCount}명 · `
+    ? `${connectedCharacterCount}명 · 최대 ${MAX_CUSTOM_CHARACTERS}명 · `
     : "";
   elements.characterStatus.textContent = `${prefix}${selectedCharacterSummary()}`;
 }
@@ -229,7 +225,7 @@ async function loadCreationOptions() {
     connectedStyleCount = styles.length;
     connectedCharacterCount = characters.length;
     elements.styleStatus.textContent = `${styles.length}개 저장 화풍 + 렌더링 ${BUILTIN_RENDERING_COUNT}종 · 자동 선택`;
-    elements.characterStatus.textContent = `${characters.length}명 · 자동 선택`;
+    elements.characterStatus.textContent = `${characters.length}명 · 최대 ${MAX_CUSTOM_CHARACTERS}명 · 자동 선택`;
   } catch {
     elements.styleStatus.textContent = "화풍 목록을 불러오지 못했어요.";
     elements.characterStatus.textContent = "인물 목록을 불러오지 못했어요.";
@@ -441,8 +437,8 @@ elements.draftButton.addEventListener("click", async () => {
     elements.previewMessage.textContent =
       result.route === "prompt-only"
         ? "프롬프트 자유 생성 초안을 저장했어요. Python과 무료 API는 실행하지 않았습니다."
-        : result.executionMode === "pink-bridge"
-          ? "핑크브릿지 안내 생성 초안을 저장했어요. 아래 버튼에서 실제 1장 생성을 확인할 수 있어요."
+        : result.executionMode === "guided-cast"
+          ? "선택한 인물 안내 생성 초안을 저장했어요. 아래 버튼에서 실제 1장 생성을 확인할 수 있어요."
           : "안내 생성 초안을 저장했어요. 이 선택 조합의 실제 실행은 아직 연결 전이에요.";
     elements.draftButton.textContent = "격리 초안 저장 완료";
     savedDraftId = result.id;
@@ -451,8 +447,8 @@ elements.draftButton.addEventListener("click", async () => {
     elements.executeButton.disabled = !result.executionMode;
     elements.executeButton.textContent = result.executionMode === "prompt-only"
       ? "⚡ 프롬프트로 1장 실제 생성"
-      : result.executionMode === "pink-bridge"
-        ? "⚡ 핑크브릿지로 1장 실제 생성"
+      : result.executionMode === "guided-cast"
+        ? "⚡ 선택 인물로 1장 실제 생성"
         : "선택 자산 실제 생성 · 연결 준비 중";
   } catch (error) {
     elements.previewMessage.textContent = error.message;
@@ -498,8 +494,8 @@ async function pollGeneration(id) {
 elements.executeButton.addEventListener("click", async () => {
   if (!savedDraftId || !savedExecutionMode) return;
   const confirmed = window.confirm(
-    savedExecutionMode === "pink-bridge"
-      ? "이 프롬프트와 핑크브릿지 외형 앵커로 이미지 1장을 실제 생성할까요? 무료 API와 이미지 worker가 실행됩니다."
+    savedExecutionMode === "guided-cast"
+      ? "이 프롬프트와 선택한 인물 외형 앵커로 이미지 1장을 실제 생성할까요? 무료 API와 이미지 worker가 실행됩니다."
       : "이 프롬프트로 이미지 1장을 실제 생성할까요? 무료 API와 이미지 worker가 실행됩니다.",
   );
   if (!confirmed) return;

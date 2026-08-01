@@ -29,6 +29,12 @@ async function fixture() {
           height_text: "tall",
           image_anchor_path: path.join(root, "noah.png"),
         },
+        리벨라: {
+          name: "리벨라",
+          anchor_text: "adult Rivella identity",
+          height_text: "average height",
+          image_anchor_path: path.join(root, "rivella.png"),
+        },
       },
       relationship_groups: [
         {
@@ -68,7 +74,7 @@ test("02시 운영일 경계와 설정 기반 출력 루트를 사용한다", as
   assert.equal(context.job.count, 2);
 });
 
-test("핑크브릿지는 사용자 장면과 전용 외형 앵커를 natural worker 문맥으로 고정한다", async () => {
+test("핑크브릿지는 전용 외형 앵커를 일반 cast worker 문맥으로 고정한다", async () => {
   const { assetIndexPath, outputRoot } = await fixture();
   const context = await buildImageStudioQueueContext(
     {
@@ -80,9 +86,9 @@ test("핑크브릿지는 사용자 장면과 전용 외형 앵커를 natural wor
     },
     { assetIndexPath, outputRoot },
   );
-  assert.equal(context.job.mode, "natural");
+  assert.equal(context.job.mode, "cast");
   assert.match(context.job.prompt, /비 오는 옥상/);
-  assert.match(context.job.prompt, /adult Pink-Bridge identity anchor/);
+  assert.match(context.cast_packages[0].characters[0].anchor_text, /adult Pink-Bridge identity anchor/);
   assert.deepEqual(context.guided_selection.character_ids, ["pink-bridge"]);
 });
 
@@ -110,12 +116,34 @@ test("핑크브릿지의 프롬프트 화풍과 고정 렌더링은 locked style
     },
     { assetIndexPath, outputRoot },
   );
-  assert.equal(promptDefined.job.mode, "style");
+  assert.equal(promptDefined.job.mode, "cast");
   assert.equal(promptDefined.selected_style.id, "prompt-defined");
   assert.match(promptDefined.selected_style.content, /user's request defines/);
-  assert.equal(rendering.job.mode, "style");
+  assert.equal(rendering.job.mode, "cast");
   assert.equal(rendering.selected_style.id, "2.5d-semi-realistic-anime-reality-forward");
   assert.match(rendering.selected_style.content, /reality-forward/);
+});
+
+test("핑크브릿지와 일반 인물을 함께 선택하면 한 cast와 참조 이미지로 보존한다", async () => {
+  const { assetIndexPath, outputRoot } = await fixture();
+  const context = await buildImageStudioQueueContext(
+    {
+      id: "mixed-cast",
+      prompt: "핑크브릿지와 노아와 리벨라가 야시장에 모인다",
+      count: 1,
+      mode: "guided-cast",
+      purpose: "free-play",
+      characters: { mode: "custom", ids: ["pink-bridge", "노아", "리벨라"] },
+      style: { mode: "selected", id: "calm" },
+    },
+    { assetIndexPath, outputRoot },
+  );
+  assert.equal(context.job.mode, "cast");
+  assert.deepEqual(context.guided_selection.character_ids, ["pink-bridge", "노아", "리벨라"]);
+  assert.equal(context.selected_style.id, "calm");
+  assert.equal(context.cast_packages[0].characters.length, 3);
+  assert.equal(context.cast_packages[0].characters[0].image_anchor_path, null);
+  assert.match(context.cast_packages[0].characters[1].image_anchor_path, /noah\.png$/u);
 });
 
 test("인물 없는 고정 렌더링도 locked style worker 문맥을 사용한다", async () => {

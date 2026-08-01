@@ -28,6 +28,78 @@ function applyDraftStyle(context, style) {
   return true;
 }
 
+function indexedStyles(index) {
+  return Array.isArray(index.styles)
+    ? index.styles
+    : Object.values(index.styles || {});
+}
+
+function applyGuidedStyle(context, style, index, seed) {
+  if (applyDraftStyle(context, style)) {
+    context.job.mode = "cast";
+    return true;
+  }
+  if (style?.mode === "none") return false;
+  const styles = indexedStyles(index);
+  const selected = style?.mode === "selected"
+    ? styles.find((item) => item.id === style.id)
+    : style?.mode === "auto"
+      ? styles[stableIndex(`${seed}:guided-style`, styles.length)]
+      : null;
+  if (!selected) {
+    if (style?.mode === "selected") {
+      throw new Error(`선택한 화풍을 자산 색인에서 찾지 못했습니다: ${style.id}`);
+    }
+    return false;
+  }
+  context.selected_style = {
+    id: selected.id,
+    filename: selected.filename,
+    content: selected.content,
+  };
+  return true;
+}
+
+function guidedCastPackage(characterIds, index) {
+  const characters = index.characters || {};
+  const selected = characterIds.map((id) => {
+    if (id === "pink-bridge") {
+      const appearance = String(index.pink_bridge?.appearance_prompt ?? "").trim();
+      if (!appearance) throw new Error("핑크브릿지 외형 앵커를 자산 색인에서 찾지 못했습니다.");
+      return {
+        name: "핑크브릿지",
+        anchor_text: appearance,
+        height_text: "",
+        image_anchor_path: null,
+      };
+    }
+    if (!characters[id]) throw new Error(`선택한 인물을 자산 색인에서 찾지 못했습니다: ${id}`);
+    return characterPackage(characters[id]);
+  });
+  const ordinaryNames = characterIds.filter((id) => id !== "pink-bridge");
+  const matchingGroup = (index.relationship_groups || []).find(
+    (group) =>
+      Array.isArray(group.members) &&
+      ordinaryNames.length > 0 &&
+      ordinaryNames.every((name) => group.members.includes(name)),
+  );
+  return {
+    id: "guided-cast",
+    relationship: matchingGroup
+      ? {
+          id: matchingGroup.id,
+          label: matchingGroup.label,
+          note: matchingGroup.note,
+        }
+      : {
+          id: "user-selected-cast",
+          label: "사용자가 직접 선택한 인물 조합",
+          note: "사용자 장면 요청에 맞는 자연스러운 관계와 상호작용을 만든다.",
+        },
+    characters: selected,
+  };
+}
+
 function selectRelationshipPackages(job, index) {
   const characters = index.characters || {};
   const groups = (index.relationship_groups || []).filter(
@@ -146,23 +218,26 @@ export async function buildImageStudioQueueContext(
     },
   };
 
-  if (job.mode === "pink-bridge") {
+  if (["guided-cast", "pink-bridge"].includes(job.mode)) {
     const index = JSON.parse(await readFile(assetIndexPath, "utf8"));
-    const appearance = String(index.pink_bridge?.appearance_prompt ?? "").trim();
-    if (!appearance) throw new Error("핑크브릿지 외형 앵커를 자산 색인에서 찾지 못했습니다.");
-    const userPrompt = context.job.prompt;
-    context.job.mode = "natural";
-    context.job.prompt = [
-      "USER SCENE REQUEST (preserve this scene intent):",
-      userPrompt,
-      "LOCKED SUBJECT: exactly one clearly adult fictional Pink-Bridge Girl.",
-      "PINK BRIDGE APPEARANCE (identity and appearance lock):",
-      appearance,
-      "Keep the user's requested scene, action, mood, and composition while preserving this locked identity.",
-    ].join("\n\n");
-    const hasDraftStyle = applyDraftStyle(context, job.style);
+    const characterIds = job.mode === "pink-bridge"
+      ? ["pink-bridge"]
+      : Array.isArray(job.characters?.ids)
+        ? job.characters.ids
+        : [];
+    if (characterIds.length < 1 || characterIds.length > 6) {
+      throw new Error("실제 생성에는 1명부터 최대 6명의 인물 선택이 필요합니다.");
+    }
+    const castPackage = guidedCastPackage(characterIds, index);
+    context.job.mode = "cast";
+    context.cast_packages = [castPackage];
+    context.slots = Array.from({ length: count }, (_, indexValue) => ({
+      number: indexValue + 1,
+      cast_package_id: castPackage.id,
+    }));
+    const hasDraftStyle = applyGuidedStyle(context, job.style, index, job.id);
     context.guided_selection = {
-      character_ids: ["pink-bridge"],
+      character_ids: characterIds,
       style_id: hasDraftStyle ? context.selected_style.id : null,
     };
     return context;
@@ -179,7 +254,7 @@ export async function buildImageStudioQueueContext(
 
   const index = JSON.parse(await readFile(assetIndexPath, "utf8"));
   if (job.mode === "style") {
-    const styles = Object.values(index.styles || {});
+    const styles = indexedStyles(index);
     const selected =
       job.style && job.style !== "random"
         ? styles.find((style) => style.filename === job.style)

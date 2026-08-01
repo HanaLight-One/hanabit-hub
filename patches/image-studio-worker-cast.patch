@@ -1,0 +1,87 @@
+--- a/queue_responses_job.py
++++ b/queue_responses_job.py
+@@ -141,7 +141,7 @@ def creative_payload(context: dict[str, Any]) -> dict[str, Any]:
+             "filename": style.get("filename"),
+             "summary": compact_text(style.get("content"), 600),
+         }
+-    elif mode == "chapel":
++    elif mode in ("chapel", "cast"):
+         packages = []
+         for package in context.get("cast_packages") or []:
+             relationship = package.get("relationship") or {}
+@@ -167,13 +167,23 @@ def creative_payload(context: dict[str, Any]) -> dict[str, Any]:
+             }
+             for slot in context.get("slots") or []
+         ]
+         payload["rules"].extend(
+             [
+                 "Respect the locked cast package for every slot.",
+-                "The chapel is maintained magical near-modern fantasy, not a crude medieval village.",
+                 "Identity reference images must not dictate pose, framing, background, or composition.",
+             ]
+         )
++        if mode == "chapel":
++            payload["rules"].append(
++                "The chapel is maintained magical near-modern fantasy, not a crude medieval village."
++            )
++        style = context.get("selected_style") or {}
++        if mode == "cast" and style:
++            payload["locked_style"] = {
++                "id": style.get("id"),
++                "filename": style.get("filename"),
++                "summary": compact_text(style.get("content"), 600),
++            }
+     else:
+         raise QueueJobError(f"Unsupported generation mode: {mode}")
+     return payload
+@@ -190,7 +200,7 @@ def build_text_api_prompt(payload: dict[str, Any]) -> str:
+         '"camera":"short Korean phrase","mood":"short Korean phrase",'
+         '"avoid":["short item"]}]}. '
+         "Return exactly one scene for every numbered slot. Make every scene "
+-        "visually distinct and concrete. For non-chapel modes, cast_package_id "
++        "visually distinct and concrete. For non-cast modes, cast_package_id "
+         "must be null. Do not add prose outside JSON.\nPAYLOAD="
+         + compact
+     )
+@@ -226,7 +236,7 @@ def validate_creative_plan(
+             raise QueueJobError("Free text API returned invalid scene numbering.")
+         seen_numbers.add(number)
+         package_id = scene.get("cast_package_id")
+-        if mode == "chapel":
++        if mode in ("chapel", "cast"):
+             if package_id != expected_packages.get(number):
+                 raise QueueJobError(
+                     f"Free text API changed locked cast for slot {number}."
+@@ -397,7 +407,7 @@ def assemble_final_prompt(
+                 "STYLE PRESET:\n" + str(style["content"]),
+             ]
+         )
+-    elif mode == "chapel":
++    elif mode in ("chapel", "cast"):
+         package = package_by_id(context, scene["cast_package_id"])
+         if not package:
+             raise QueueJobError(
+@@ -435,10 +445,19 @@ def assemble_final_prompt(
+             "camera angle, background, composition, clothing details, and "
+             "interaction appropriate to this scene."
+         )
+-        parts.append(
+-            "SETTING: maintained magical near-modern chapel life with refined "
+-            "facilities and lived-in detail; avoid crude medieval staging."
+-        )
++        if mode == "chapel":
++            parts.append(
++                "SETTING: maintained magical near-modern chapel life with refined "
++                "facilities and lived-in detail; avoid crude medieval staging."
++            )
++        elif context.get("selected_style"):
++            style = context["selected_style"]
++            parts.extend(
++                [
++                    f"LOCKED STYLE ID: {style['id']}",
++                    "STYLE PRESET:\n" + str(style["content"]),
++                ]
++            )
+     avoid = [
+         *scene.get("avoid", []),
+         "real people or celebrities",
