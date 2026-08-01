@@ -62,4 +62,3 @@ test("화풍 다운로드는 기록된 TXT만 첨부로 제공한다", async () 
     });
   } finally { await rm(root, { recursive: true, force: true }); }
 });
-

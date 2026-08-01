@@ -49,7 +49,6 @@ test("화풍 목록은 안전한 TXT와 색인 상태만 반환한다", async ()
     assert.equal(JSON.stringify(result).includes(stylesRoot), false);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
-
 test("새 화풍 업로드는 덮어쓰지 않고 기존 Python 빌더로 즉시 색인한다", async () => {
   const { root, stylesRoot, manager } = await fixture();
   try {
@@ -68,4 +67,3 @@ test("잘못된 이름과 경로 이탈 화풍은 거부한다", async () => {
     await assert.rejects(() => manager.find("../고딕"), /형식/);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
-

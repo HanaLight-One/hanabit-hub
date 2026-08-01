@@ -70,4 +70,3 @@ button:disabled { opacity: .55; cursor: wait; }
 @media (max-width: 520px) {
   .style-list { grid-template-columns: 1fr; }
 }
-

@@ -144,4 +144,3 @@ export function createStyleAssetManager({
 
   return Object.freeze({ list, upload, reindex, find });
 }
-

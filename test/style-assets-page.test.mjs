@@ -21,4 +21,3 @@ test("화풍 관리 화면은 업로드·다운로드·재색인 진입점을 �
     assert.equal(style.status, 200);
   } finally { await new Promise((resolve) => server.close(resolve)); }
 });
-

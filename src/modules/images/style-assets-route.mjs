@@ -118,4 +118,3 @@ export async function handleStyleAssetsRoute({ request, response, url, manager, 
   }
   return true;
 }
-

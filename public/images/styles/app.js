@@ -98,4 +98,3 @@ loadStyles().catch((error) => {
   elements.indexResult.textContent = error.message;
   elements.list.textContent = "화풍 목록을 표시하지 못했어요.";
 });
-
