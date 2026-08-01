@@ -55,8 +55,10 @@ test("등록되지 않은 작성자의 스트림 이벤트는 무시한다", () 
 
 test("X 스트림은 토큰을 URL에 넣지 않고 줄 단위 JSON만 전달한다", async () => {
   const events = [];
+  let connected = 0;
   await readXFilteredStream({
     bearerToken: "secret-value",
+    async onConnected() { connected += 1; },
     async onEvent(event) { events.push(event); },
     async fetchImpl(url, init) {
       assert.equal(url.hostname, "api.x.com");
@@ -71,7 +73,19 @@ test("X 스트림은 토큰을 URL에 넣지 않고 줄 단위 JSON만 전달한
       }), { status: 200 });
     },
   });
+  assert.equal(connected, 1);
   assert.deepEqual(events, [{ data: { id: "1" } }]);
+});
+
+test("X API 오류에는 안전한 상태 코드만 기록한다", async () => {
+  await assert.rejects(
+    readXFilteredStream({
+      bearerToken: "secret-value",
+      async onEvent() {},
+      async fetchImpl() { return new Response("", { status: 429 }); },
+    }),
+    (error) => error.statusCode === 429 && error.terminal === false,
+  );
 });
 
 test("인증 실패는 재연결하지 않고 닫는다", async () => {

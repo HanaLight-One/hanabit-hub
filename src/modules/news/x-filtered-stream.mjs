@@ -4,6 +4,7 @@ export const HANABIT_X_RULE_TAG = "hanabit-news-v1";
 
 function apiError(status) {
   const error = new Error(`X API 요청에 실패했습니다. (${status})`);
+  error.statusCode = status;
   error.terminal = status === 401 || status === 403;
   return error;
 }
@@ -53,7 +54,13 @@ export function xLinksFromStreamEvent(payload, { allowedHandles }) {
   return Object.freeze({ handle: username, statusId: main.id, links: Object.freeze(links) });
 }
 
-export async function readXFilteredStream({ bearerToken, signal, onEvent, fetchImpl = fetch }) {
+export async function readXFilteredStream({
+  bearerToken,
+  signal,
+  onEvent,
+  onConnected = async () => {},
+  fetchImpl = fetch,
+}) {
   const endpoint = new URL(STREAM_ENDPOINT);
   endpoint.searchParams.set("tweet.fields", "author_id,created_at,referenced_tweets");
   endpoint.searchParams.set("expansions", "author_id,referenced_tweets.id,referenced_tweets.id.author_id");
@@ -65,6 +72,7 @@ export async function readXFilteredStream({ bearerToken, signal, onEvent, fetchI
   });
   if (!response.ok) throw apiError(response.status);
   if (!response.body) throw new Error("X 스트림 응답 본문이 없습니다.");
+  await onConnected();
 
   const decoder = new TextDecoder();
   let buffer = "";
@@ -118,6 +126,7 @@ export async function runXFilteredStream({
   bearerToken,
   signal,
   onEvent,
+  onConnected = async () => {},
   onError = async () => {},
   connect = readXFilteredStream,
   wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
@@ -125,7 +134,7 @@ export async function runXFilteredStream({
   let delay = 5_000;
   while (!signal.aborted) {
     try {
-      await connect({ bearerToken, signal, onEvent });
+      await connect({ bearerToken, signal, onEvent, onConnected });
       delay = 5_000;
     } catch (error) {
       if (signal.aborted) return;

@@ -12,6 +12,7 @@ import { loadXSourceAllowlist } from "../src/modules/news/x-watch-source.mjs";
 import { runXFilteredStream } from "../src/modules/news/x-filtered-stream.mjs";
 import { createXStreamDiscordBridge } from "../src/modules/news/x-stream-discord-bridge.mjs";
 import { loadXStreamConfig } from "../src/modules/news/x-stream-config.mjs";
+import { createXStreamStatusNotifier } from "../src/modules/news/x-stream-status-notifier.mjs";
 
 const PROJECT_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const stateRoot = path.join(PROJECT_ROOT, "state", "news");
@@ -138,9 +139,15 @@ try {
     }
     return { label, channel: sourceChannel, collector: sourceCollector };
   }));
-  const pendingChannel = await guild.channels.fetch(config.pendingChannelId);
+  const [pendingChannel, logChannel] = await Promise.all([
+    guild.channels.fetch(config.pendingChannelId),
+    guild.channels.fetch(config.logChannelId),
+  ]);
   if (!pendingChannel?.isTextBased() || !pendingChannel.messages) {
     throw new Error("news-pending 텍스트 채널을 찾지 못했습니다.");
+  }
+  if (!logChannel?.isTextBased()) {
+    throw new Error("news-log 텍스트 채널을 찾지 못했습니다.");
   }
   sources = channelEntries;
   notifier = createDiscordNewsNotifier({ stateRoot, pendingChannel });
@@ -152,6 +159,17 @@ try {
       allowedHandles: allowedXHandles,
       collector: xCollector,
     });
+    const xStatusNotifier = createXStreamStatusNotifier({
+      channel: logChannel,
+      sourceCount: allowedXHandles.size,
+    });
+    const announceXStatus = async (status) => {
+      try {
+        await xStatusNotifier.announce(status);
+      } catch (error) {
+        await reportError("X 상태 알림 실패", error);
+      }
+    };
     xStreamController = new AbortController();
     runXFilteredStream({
       bearerToken: xStreamConfig.bearerToken,
@@ -162,7 +180,16 @@ try {
           await safeLog(`X 스트림 새 게시물 전달: 문맥 ${result.contextCount}`);
         }
       },
+      async onConnected() {
+        await announceXStatus("connected");
+      },
       async onError(error) {
+        const status = error?.statusCode === 429
+          ? "limited"
+          : error?.terminal
+            ? "stopped"
+            : "reconnecting";
+        await announceXStatus(status);
         await reportError("X 스트림 연결 실패", error);
       },
     }).catch((error) => reportError("X 스트림 종료 실패", error));
