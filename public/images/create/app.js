@@ -307,18 +307,6 @@ elements.characterGrid.addEventListener("change", (event) => {
       input.checked = false;
     }
   } else if (event.target.name === "character") {
-    if (event.target.checked && event.target.value === PINK_BRIDGE_ID) {
-      for (const input of elements.characterGrid.querySelectorAll(
-        'input[name="character"]',
-      )) {
-        if (input !== event.target) input.checked = false;
-      }
-    } else if (event.target.checked) {
-      const pinkBridge = elements.characterGrid.querySelector(
-        `input[name="character"][value="${PINK_BRIDGE_ID}"]`,
-      );
-      if (pinkBridge) pinkBridge.checked = false;
-    }
     for (const input of elements.characterGrid.querySelectorAll(
       'input[name="character-mode"]',
     )) {
