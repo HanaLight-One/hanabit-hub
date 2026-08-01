@@ -1,0 +1,46 @@
+.hub-codex-meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  color: #d8ff52;
+  font: 800 13px/1 system-ui, sans-serif;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
+.hub-codex-meter-value { font: inherit; }
+
+.hub-codex-meter-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #939da7;
+}
+
+.hub-codex-meter.online .hub-codex-meter-dot {
+  background: #d8ff52;
+  box-shadow: 0 0 0 5px rgb(216 255 82 / 8%);
+}
+
+.hub-codex-meter.uses-host-dot .hub-codex-meter-dot { display: none; }
+.hub-codex-meter-in-header { margin-left: auto; }
+
+.hub-codex-meter-floating {
+  position: fixed;
+  z-index: 1000;
+  top: 16px;
+  right: 16px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid #26303a;
+  border-radius: 999px;
+  background: rgb(9 12 16 / 88%);
+  backdrop-filter: blur(12px);
+}
+
+@media (max-width: 700px) {
+  .topbar > .hub-codex-meter-in-header { margin-left: auto; }
+  .topbar > .hub-codex-meter-in-header + .connection { margin-left: 0; }
+}
+

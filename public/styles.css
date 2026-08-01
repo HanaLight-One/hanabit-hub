@@ -191,12 +191,6 @@ h1 em {
   background: var(--muted);
 }
 
-.status-usage {
-  color: var(--accent);
-  font-size: 18px;
-  letter-spacing: -0.04em;
-}
-
 .status.online {
   color: var(--text);
 }

@@ -149,3 +149,5 @@ X Filtered Stream ─> #x-watch ┘                         │
 - Codex 공식 사용량 -> 홈 남은량 카드: `src/modules/system/codex-usage.mjs`
 - API: `GET /api/system/codex/usage`
 - 안전 경계와 상세 계약: `docs/codex-usage-and-daily-manifests.md`
+- 전 화면 공용 Codex 잔량 표시: `public/codex-usage-indicator.js`,
+  `public/codex-usage-indicator.css` (각 화면 상단 헤더 또는 홈 우측 상단에 장착)

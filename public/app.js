@@ -2,7 +2,6 @@ const statusElement = document.querySelector("#server-status");
 const serverStatusCopy = document.querySelector("#server-status-copy");
 const codexStatusElement = document.querySelector("#codex-control-status");
 const restartCodexButton = document.querySelector("#restart-codex");
-const codexUsageValue = document.querySelector("#codex-usage-value");
 
 try {
   const response = await fetch("/api/health");
@@ -62,27 +61,3 @@ restartCodexButton.addEventListener("click", async () => {
 });
 
 await loadCodexControl();
-
-async function loadCodexUsage() {
-  try {
-    const response = await fetch("/api/system/codex/usage");
-    const usage = await response.json();
-    const window = usage.primary ?? usage.secondary;
-    if (!response.ok || !usage.available || !window) throw new Error("Unavailable");
-    codexUsageValue.textContent = `${Math.round(window.remainingPercent)}%`;
-    const reset = window.resetsAt
-      ? new Intl.DateTimeFormat("ko-KR", { dateStyle: "short", timeStyle: "short" }).format(new Date(window.resetsAt))
-      : null;
-    codexUsageValue.title = `Codex 주간 남은량${reset ? ` · ${reset} 초기화` : ""}`;
-    return true;
-  } catch {
-    codexUsageValue.textContent = "--%";
-    codexUsageValue.title = "Codex 사용량 확인 필요";
-    return false;
-  }
-}
-
-if (!(await loadCodexUsage())) {
-  window.setTimeout(loadCodexUsage, 5_000);
-}
-window.setInterval(loadCodexUsage, 60_000);

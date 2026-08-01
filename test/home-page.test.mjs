@@ -27,8 +27,9 @@ test("홈의 긴급 재기동 제어는 기본적으로 접혀 있다", async ()
     assert.equal(body.includes("<summary>"), true);
     assert.equal(body.includes("Codex가 멈췄을 때만 펼쳐주세요"), true);
     assert.equal(body.includes('id="restart-codex"'), true);
-    assert.equal(body.includes('id="codex-usage-value"'), true);
-    assert.equal(body.includes('class="status-usage"'), true);
+    assert.equal(body.includes('/codex-usage-indicator.js'), true);
+    assert.equal(body.includes('/codex-usage-indicator.css'), true);
+    assert.equal(body.includes('id="codex-usage-value"'), false);
     assert.equal(body.includes("CODEX WEEKLY LIMIT"), false);
   });
 });
