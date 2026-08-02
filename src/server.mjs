@@ -56,6 +56,8 @@ import { createThemeService } from "./modules/images/theme-service.mjs";
 import { createTopicThemeSource } from "./modules/images/topic-theme-source.mjs";
 import { openHubDatabase } from "./modules/database/hub-database.mjs";
 import { createImageMetadataCatalog } from "./modules/images/image-metadata-catalog.mjs";
+import { createDcComposer } from "./modules/dc/dc-composer.mjs";
+import { handleDcComposerRoute } from "./modules/dc/dc-composer-route.mjs";
 
 const PUBLIC_ROOT = path.join(APP_ROOT, "public");
 const IS_MAIN = Boolean(
@@ -229,6 +231,7 @@ const fortuneArchive = fortuneConfig?.enabled
 let runtimeDatabase = null;
 let runtimeRecordStore = productionRecordStore;
 let runtimeImageTrash = null;
+let runtimeDcComposer = null;
 if (IS_MAIN && imageArchive && generationConfig?.outputRoot) {
   runtimeDatabase = openHubDatabase({
     filePath: path.join(APP_ROOT, "state", "hanabit-hub.sqlite"),
@@ -256,6 +259,20 @@ if (IS_MAIN && imageArchive && imageStudioConfig?.stateRoot) {
     enabled: config.allowedActions.includes("manage-image-trash"),
   });
 }
+if (IS_MAIN && runtimeDatabase && imageArchive) {
+  const dcComposerConfig = config.integrations?.dcComposer;
+  runtimeDcComposer = createDcComposer({
+    database: runtimeDatabase,
+    archive: imageArchive,
+    root: path.join(APP_ROOT, "state", "dc-compose"),
+    enabled:
+      dcComposerConfig?.enabled === true &&
+      config.allowedActions.includes("publish-dc-compose"),
+    publisherRoot: newsDcPublisherConfig?.publisherRoot,
+    publisherScriptPath: path.join(APP_ROOT, "scripts", "publish-dc-compose.cjs"),
+    galleryId: dcComposerConfig?.galleryId,
+  });
+}
 
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -280,6 +297,8 @@ const PAGE_ROUTES = Object.freeze({
   "/news/": "news/index.html",
   "/notifications": "notifications/index.html",
   "/notifications/": "notifications/index.html",
+  "/dc": "dc/index.html",
+  "/dc/": "dc/index.html",
   "/fortune": "fortune/index.html",
   "/fortune/": "fortune/index.html",
 });
@@ -321,7 +340,7 @@ async function serveStatic(response, pathname) {
     response.writeHead(200, {
       "content-type": CONTENT_TYPES[path.extname(target)] ?? "application/octet-stream",
       "cache-control": "no-cache",
-      ...(pathname.startsWith("/setup/discord") || pathname.startsWith("/images/styles") || pathname.startsWith("/images/trash") || pathname.startsWith("/news") || pathname.startsWith("/notifications")
+      ...(pathname.startsWith("/setup/discord") || pathname.startsWith("/images/styles") || pathname.startsWith("/images/trash") || pathname.startsWith("/news") || pathname.startsWith("/notifications") || pathname.startsWith("/dc")
         ? {
             "content-security-policy":
               "default-src 'self'; img-src 'self' data:; style-src 'self'; " +
@@ -361,6 +380,7 @@ export function createServer({
   generationExecutor = promptOnlyExecutor,
   styleAssetManager = styleAssets,
   imageTrash = runtimeImageTrash,
+  dcComposer = runtimeDcComposer,
 } = {}) {
   return http.createServer(async (request, response) => {
     try {
@@ -612,6 +632,18 @@ export function createServer({
       }
 
       if (
+        await handleDcComposerRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          composer: dcComposer,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
         await handleImageTrashRoute({
           request,
           response,
@@ -711,7 +743,7 @@ export function createServer({
 }
 
 if (IS_MAIN) {
-  const server = createServer({ recordStore: runtimeRecordStore, imageTrash: runtimeImageTrash });
+  const server = createServer({ recordStore: runtimeRecordStore, imageTrash: runtimeImageTrash, dcComposer: runtimeDcComposer });
   server.once("close", () => runtimeDatabase?.close());
   server.listen(config.port, config.host, () => {
     console.log(`Hanabit Hub listening on http://${config.host}:${config.port}`);

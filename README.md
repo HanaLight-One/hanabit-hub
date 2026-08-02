@@ -35,6 +35,7 @@ npm.cmd run dev
 - `npm.cmd run check`: JavaScript 문법과 기본 테스트 확인
 - `npm.cmd run news:build`: React 뉴스 검수실 번들 생성
 - `npm.cmd run notifications:build`: React 모바일 알림 설정 화면 번들 생성
+- `npm.cmd run dc:build`: React DC 편집실 번들 생성
 - `npm.cmd run db:init`: Git 제외 상태 폴더에 SQLite 뉴스 원장 스키마 준비
 - `scripts/start-hidden.ps1`: 현재 checkout의 설정 포트로 서버를 숨김 실행
 - `scripts/register-live-autostart.ps1`: 승인된 8791 운영본을 로그인 자동 시작으로 등록

@@ -52,10 +52,11 @@
 | 오늘의 운세 | `/fortune` | `public/fortune/` | 정적 JavaScript |
 | 뉴스 검수실 | `/news` | `frontend/news/main.jsx` | React, 빌드 결과는 `public/news/app.js` |
 | 모바일 알림 | `/notifications` | `frontend/notifications/main.jsx` | React, 빌드 결과는 `public/notifications/app.js` |
+| DC 편집실 | `/dc` | `frontend/dc/main.jsx` | React, 빌드 결과는 `public/dc/app.js` |
 | Discord 최초 설정 | `/setup/discord` | `public/setup/discord/` | 정적 JavaScript |
 
 React는 전면 재작성하지 않고 새 상호작용 화면부터 단계적으로 적용한다.
-`npm.cmd run news:build`와 `npm.cmd run notifications:build`가 추적되는 브라우저
+`npm.cmd run news:build`, `npm.cmd run notifications:build`, `npm.cmd run dc:build`가 추적되는 브라우저
 번들을 갱신하며, `npm.cmd run check`가 두 빌드를 모두 포함한다.
 
 ## 백엔드 지도
@@ -69,6 +70,7 @@ HTTP 라우트는 검증과 응답만 맡고 실제 동작은 같은 기능 폴�
 | 이미지 | `src/modules/images/` | 아카이브, 테마, 제작 기록, 화풍, 생성 초안과 1장 실행 |
 | 운세 | `src/modules/fortune/` | 날짜별 운세와 안전한 게시 상태 읽기 |
 | 뉴스 | `src/modules/news/` | Discord/X 수집, 번역·판정, Codex 심층검토, DC 원고 미리보기·수동 단건 게시와 영수증 |
+| DC 편집실 | `src/modules/dc/` | 전용 업로드, SQLite 초안, 첨부 순서, 일반 글 미리보기·단건 게시 영수증 |
 | 모바일 알림 | `src/modules/notifications/` | Web Push 구독과 제한된 알림 전송 |
 | 시스템 | `src/modules/system/` | allowlist 기반 Codex 상태·긴급 재기동 |
 
@@ -85,6 +87,7 @@ HTTP 라우트는 검증과 응답만 맡고 실제 동작은 같은 기능 폴�
 | 이미지 생성 초안·작업 | `state/image-generation-*` | Hub가 만든 초안과 1장 작업 상태 | 제외 |
 | 이미지·테마·제작 기록 | 외부 설정 루트 | 기존 저장소를 이동 없이 연결 | 외부 |
 | 이미지 휴지통 | 외부 `stateRoot/trash/hub-v1/` | 추가 생성 파일의 복원 영수증과 격리 파일 | 외부 |
+| DC 편집실 | `state/dc-compose/` | 업로드 이미지와 게시 직전 격리 사본·영수증 | 제외 |
 | 운세 결과·게시 상태 | 외부 설정 루트 | 읽기 전용 연결 | 외부 |
 
 SQLite 스키마는 `src/modules/database/hub-database.mjs`, 뉴스 원장 연산은
@@ -166,6 +169,26 @@ Responses API 공용 텍스트 실행기의 복구 가능한 정본은 `tools/op
 - 운세 계산·템플릿·예약 게시 코드는 이 저장소의 책임이 아니다.
 - 실제 게시, 예약 작업, Tunnel·DNS 변경은 사용자 승인 전 실행하지 않는다.
 
+## DC 편집실 흐름
+
+```text
+허브 이미지 ID ─┐
+                ├─> SQLite 초안·첨부 순서 ─> 미리보기·금지문자 검사
+전용 업로드 폴더 ┘                                  │
+                                                    v
+                          명시적 실제 게시 확인 ─> 격리 작업 폴더로 사본 생성
+                                                    │
+                                                    v
+                                  고정 DC 게시자 ─> 게시 또는 모호함 영수증
+```
+
+`src/modules/dc/`는 원고·업로드·초안·게시 상태를 관리한다. 기존 이미지 원본과
+업로드 원본은 게시 과정에서 이동하지 않으며, 선택 순서대로 `state/dc-compose/
+publication-jobs/` 아래에 격리 사본을 만든 뒤 `scripts/publish-dc-compose.cjs`만
+실행한다. 게시자는 `chatgpt` 갤러리, 허용된 말머리, 최대 10장, 이미지 해시,
+그림 이모지·결합문자 부재와 워터마크 필드 제외를 다시 검증한다. 성공 영수증 또는
+모호함 영수증이 생기면 같은 초안을 자동 재제출하지 않는다.
+
 ## 어디를 먼저 고칠까
 
 | 원하는 변경 | 첫 진입점 |
@@ -173,6 +196,7 @@ Responses API 공용 텍스트 실행기의 복구 가능한 정본은 `tools/op
 | 페이지·정적 파일 라우팅 | `src/server.mjs`, `public/` |
 | React 뉴스 UI | `frontend/news/main.jsx` |
 | React 알림 UI | `frontend/notifications/main.jsx` |
+| React DC 편집실 | `frontend/dc/main.jsx`, `src/modules/dc/` |
 | 이미지 기능 | `src/modules/images/` |
 | 뉴스 수집·판정 | `src/modules/news/`, `scripts/watch-discord-announcements.mjs` |
 | DB 스키마·원장 | `src/modules/database/`, `src/modules/news/news-ledger.mjs` |

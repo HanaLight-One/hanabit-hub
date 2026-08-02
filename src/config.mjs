@@ -21,6 +21,7 @@ const DEFAULT_CONFIG = Object.freeze({
         galleryId: "chatgpt",
       },
     },
+    dcComposer: { enabled: false, galleryId: "chatgpt" },
   },
   operations: {
     timezone: "Asia/Seoul",
@@ -62,6 +63,7 @@ function validateConfig(config) {
     "restart-codex",
     "publish-news-to-dc",
     "manage-image-trash",
+    "publish-dc-compose",
   ]);
   const invalidAction = config.allowedActions.find(
     (action) => typeof action !== "string" || !knownActions.has(action),
@@ -113,6 +115,14 @@ function validateConfig(config) {
   const dcPublisher = config.integrations?.news?.dcPublisher;
   if (dcPublisher?.autoPublish !== undefined && typeof dcPublisher.autoPublish !== "boolean") {
     throw new Error("뉴스 DC 자동 게시는 true 또는 false여야 합니다.");
+  }
+
+  const dcComposer = config.integrations?.dcComposer;
+  if (dcComposer?.enabled !== undefined && typeof dcComposer.enabled !== "boolean") {
+    throw new Error("DC 편집실 enabled는 true 또는 false여야 합니다.");
+  }
+  if (dcComposer && dcComposer.galleryId !== "chatgpt") {
+    throw new Error("DC 편집실 게시 대상은 chatgpt 갤러리만 허용합니다.");
   }
   if (dcPublisher?.enabled) {
     if (!path.isAbsolute(dcPublisher.publisherRoot ?? "")) {

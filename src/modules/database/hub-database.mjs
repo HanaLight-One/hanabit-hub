@@ -132,6 +132,47 @@ const MIGRATIONS = Object.freeze([
         ON image_generation_metadata(job_id);
     `,
   },
+  {
+    version: 4,
+    name: "dc composer drafts and uploads",
+    sql: `
+      CREATE TABLE IF NOT EXISTS dc_uploads (
+        id TEXT PRIMARY KEY,
+        original_name TEXT NOT NULL,
+        storage_name TEXT NOT NULL UNIQUE,
+        content_type TEXT NOT NULL CHECK (content_type IN ('image/gif', 'image/jpeg', 'image/png', 'image/webp')),
+        size_bytes INTEGER NOT NULL CHECK (size_bytes > 0 AND size_bytes <= 20971520),
+        sha256 TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      ) STRICT;
+
+      CREATE TABLE IF NOT EXISTS dc_drafts (
+        id TEXT PRIMARY KEY,
+        gallery_id TEXT NOT NULL CHECK (gallery_id = 'chatgpt'),
+        head_text TEXT NOT NULL,
+        title TEXT NOT NULL,
+        body_text TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('draft', 'submitting', 'posted', 'ambiguous', 'failed')),
+        content_hash TEXT,
+        post_id TEXT,
+        post_url TEXT,
+        submitted_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      ) STRICT;
+
+      CREATE TABLE IF NOT EXISTS dc_draft_images (
+        draft_id TEXT NOT NULL REFERENCES dc_drafts(id) ON DELETE CASCADE,
+        position INTEGER NOT NULL CHECK (position >= 0 AND position < 10),
+        source_type TEXT NOT NULL CHECK (source_type IN ('archive', 'upload')),
+        source_id TEXT NOT NULL,
+        PRIMARY KEY (draft_id, position),
+        UNIQUE (draft_id, source_type, source_id)
+      ) STRICT;
+
+      CREATE INDEX IF NOT EXISTS dc_drafts_updated_at_idx ON dc_drafts(updated_at DESC);
+    `,
+  },
 ]);
 
 function migrate(database, now) {

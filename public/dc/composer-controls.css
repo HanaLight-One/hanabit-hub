@@ -1,0 +1,44 @@
+.image-grid article {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--raised);
+}
+
+.image-grid article.selected { border: 2px solid var(--accent); }
+
+.image-grid .image-select {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.image-grid .upload-delete {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid rgb(255 125 145 / 55%);
+  border-radius: 50%;
+  background: rgb(9 12 16 / 82%);
+  color: #ff9aaa;
+  text-align: center;
+}
+
+.new-draft-button {
+  width: 100%;
+  margin-top: 12px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  font-weight: 900;
+  cursor: pointer;
+}

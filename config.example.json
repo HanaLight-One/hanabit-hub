@@ -47,11 +47,15 @@
         "publisherRoot": "",
         "galleryId": "chatgpt"
       }
+    },
+    "dcComposer": {
+      "enabled": false,
+      "galleryId": "chatgpt"
     }
   },
   "operations": {
     "timezone": "Asia/Seoul",
     "dayStartsAtHour": 2
   },
-  "allowedActions": ["restart-codex", "manage-image-trash"]
+  "allowedActions": ["restart-codex", "manage-image-trash", "publish-dc-compose"]
 }
