@@ -93,9 +93,15 @@ function limited(value, maximum, label) {
 
 function cleanTranslatedText(value) {
   return String(value ?? "")
-    .replace(/https?:\/\/\S+/giu, " ")
-    .replace(/\b(?:pic\.)?twitter\.com\/\S+/giu, " ")
-    .replace(/\s+/gu, " ")
+    .replace(/\r\n?/gu, "\n")
+    .split("\n")
+    .map((line) => line
+      .replace(/https?:\/\/\S+/giu, " ")
+      .replace(/\b(?:pic\.)?twitter\.com\/\S+/giu, " ")
+      .replace(/[ \t]+/gu, " ")
+      .trim())
+    .join("\n")
+    .replace(/\n{3,}/gu, "\n\n")
     .trim();
 }
 
@@ -260,6 +266,7 @@ function buildPrompt(record) {
     "Translate empower or empowering as enabling the person to do something themselves. Do not flatten it into a generic Korean label meaning only help or assistance.",
     "The translation object must contain only SOURCE TEXT. Do not merge any CONTEXT statement into translation.title or translation.body.",
     "translation.body must contain the complete Korean translation of the meaningful SOURCE TEXT. Do not move the translation only into title, and omit URLs from translated text.",
+    "Preserve meaningful paragraph breaks and list-item line breaks from SOURCE and CONTEXT in every translated body. Do not flatten a multi-line post into one paragraph.",
     "The contextTranslations array must contain a separate Korean translation for every CONTEXT. Preserve its 1-based CONTEXT index and never attribute it to SOURCE ACCOUNT.",
     "Do not omit CONTEXT translations. Keeping them separate from the translation object does not mean discarding them.",
     "Each contextTranslations body must translate the meaningful CONTEXT text and omit URLs and media addresses.",
@@ -305,6 +312,7 @@ function buildContextTranslationPrompt(record) {
   return [
     "Translate each quoted CONTEXT separately into natural Korean.",
     "Do not add facts. Omit URLs and media addresses from the translations.",
+    "Preserve meaningful paragraph breaks and list-item line breaks. Do not flatten a multi-line post into one paragraph.",
     "Return JSON only with exactly one item per CONTEXT and preserve each 1-based index:",
     '{"contextTranslations":[{"index":1,"body":"..."}]}',
     ...contexts,

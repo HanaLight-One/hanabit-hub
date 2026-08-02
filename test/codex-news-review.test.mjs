@@ -62,9 +62,15 @@ test("Codex exec는 읽기 전용 일회성 스키마 출력만 사용한다", a
         assert.match(options.input, /SOURCE plus directly linked, quoted, replied-to, or parent CONTEXT as one evidence package/u);
         assert.match(options.input, /MUST choose use_case when SOURCE or its direct CONTEXT explicitly describes a real person using AI/u);
         assert.match(options.input, /Never change an explicit use_case to inference/u);
+        assert.match(options.input, /Preserve meaningful paragraph breaks and list-item line breaks/u);
         await writeFile(outputPath, JSON.stringify({
           translationAudit: { status: "passed", title: "Codex", body: "Codex", reason: "원문과 일치한다." },
-          contextTranslationAudits: [{ index: 1, status: "passed", body: "앱 개발은 쉬운 부분입니다.", reason: "관련 글과 일치한다." }],
+          contextTranslationAudits: [{
+            index: 1,
+            status: "corrected",
+            body: "앱 개발은 쉬운 부분입니다.\n\n- 제작\n\n- 배포",
+            reason: "관련 글과 일치한다.",
+          }],
           decision: "review",
           confidence: 0.86,
           importance: "medium",
@@ -79,6 +85,7 @@ test("Codex exec는 읽기 전용 일회성 스키마 출력만 사용한다", a
     assert.equal(result.evidenceTag, "inference");
     assert.equal(result.translationAudit.status, "passed");
     assert.equal(result.contextTranslationAudits[0].index, 1);
+    assert.equal(result.contextTranslationAudits[0].body, "앱 개발은 쉬운 부분입니다.\n\n- 제작\n\n- 배포");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

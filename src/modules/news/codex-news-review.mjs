@@ -55,9 +55,15 @@ function limited(value, maximum, label) {
 
 function translatedText(value, maximum, label) {
   const cleaned = String(value ?? "")
-    .replace(/https?:\/\/\S+/giu, " ")
-    .replace(/\b(?:pic\.)?twitter\.com\/\S+/giu, " ")
-    .replace(/\s+/gu, " ")
+    .replace(/\r\n?/gu, "\n")
+    .split("\n")
+    .map((line) => line
+      .replace(/https?:\/\/\S+/giu, " ")
+      .replace(/\b(?:pic\.)?twitter\.com\/\S+/giu, " ")
+      .replace(/[ \t]+/gu, " ")
+      .trim())
+    .join("\n")
+    .replace(/\n{3,}/gu, "\n\n")
     .trim();
   return limited(cleaned, maximum, label);
 }
@@ -130,6 +136,7 @@ function buildPrompt(record, freeResult) {
     "A short reply may be meaningful when parent context reveals product direction, adoption, capability, policy, or a credible industry signal.",
     "Classify evidenceTag as official, confirmed, use_case, inference, rumor, or opinion.",
     "Treat SOURCE plus directly linked, quoted, replied-to, or parent CONTEXT as one evidence package when classifying evidenceTag.",
+    "Preserve meaningful paragraph breaks and list-item line breaks from SOURCE and CONTEXT in corrected translation bodies. Do not flatten a multi-line post into one paragraph.",
     "You MUST choose use_case when SOURCE or its direct CONTEXT explicitly describes a real person using AI to make, build, create, or perform something, even when SOURCE is only a short endorsement, link caption, or takeaway.",
     "Keep broader product-direction implications in reason. Never change an explicit use_case to inference merely because the example also implies a future product direction.",
     "A credible insider suggesting an unreleased capability or future direction is usually inference, not rumor.",

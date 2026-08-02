@@ -15,7 +15,7 @@ function record() {
     },
     workflow: {
       translation: { title: "반복 작업을 맡겨보세요 🤣", body: "ChatGPT로 반복 작업을 실행할 수 있습니다." },
-      contextTranslations: [{ index: 1, body: "관련 문서의 별도 번역입니다." }],
+      contextTranslations: [{ index: 1, body: "관련 글 첫 문단\n\n- 첫 항목\n\n- 둘째 항목" }],
       triage: {
         decision: "publish",
         confidence: 0.9,
@@ -51,6 +51,8 @@ test("DC 뉴스 원고는 태그·번역·AI 해설·출처를 결정적으로 �
   assert.doesNotMatch(draft.bodyText, /주요 분야:|출처 구분:|소속 확인:/u);
   assert.match(draft.bodyText, /본문 번역\nChatGPT로 반복 작업/u);
   assert.match(draft.bodyText, /관련 글 번역 · OpenAI/u);
+  assert.match(draft.bodyText, /관련 글 첫 문단\n\n- 첫 항목\n\n- 둘째 항목/u);
+  assert.match(draft.bodyHtml, /관련 글 첫 문단<\/p><p><br><\/p><p[^>]*>- 첫 항목<\/p>/u);
   assert.match(draft.bodyText, /왜 중요한가/u);
   assert.match(draft.bodyText, /다른 환경에서도 동일하게 재현되는지는 원문만으로 확인되지 않았습니다/u);
   assert.doesNotMatch(draft.bodyText, /쓰세요|프레이밍하세요/u);

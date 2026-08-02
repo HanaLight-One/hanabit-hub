@@ -229,7 +229,11 @@ test("통합 응답이 관련 글 번역을 빠뜨리면 작은 별도 요청으
       source: { type: "x-post", account: "gdb" },
       original: {
         content: "Ask ChatGPT Work to do any recurring task.",
-        contexts: [{ relation: "linked-post", account: "brttbmn", content: "ChatGPT Work is the new cron job." }],
+        contexts: [{
+          relation: "linked-post",
+          account: "brttbmn",
+          content: "My dad used GPT for the first time:\n\n- built a webpage\n\n- read the thinking states",
+        }],
       },
     }, {
       runnerPath,
@@ -243,11 +247,19 @@ test("통합 응답이 관련 글 번역을 빠뜨리면 작은 별도 요청으
           assert.deepEqual(schema.required, ["contextTranslations"]);
           assert.equal(schema.properties.contextTranslations.minItems, 1);
           assert.equal(schema.properties.contextTranslations.maxItems, 1);
+          assert.match(
+            await readFile(args[args.indexOf("-PromptFile") + 1], "utf8"),
+            /Preserve meaningful paragraph breaks and list-item line breaks/u,
+          );
         } else {
           assert.deepEqual(schema.required, ["translation", "contextTranslations", "triage"]);
         }
         const value = outputPath.includes("context-output-")
-          ? { contextTranslations: { "1": "ChatGPT Work는 새로운 크론 작업입니다." } }
+          ? {
+              contextTranslations: {
+                "1": "아빠가 처음으로 GPT를 사용했습니다:\n\n- 웹페이지를 만들었습니다\n\n- 사고 과정을 읽었습니다",
+              },
+            }
           : {
               translation: { title: "반복 작업", body: "ChatGPT Work에 반복 작업을 맡겨보세요." },
               contextTranslations: [],
@@ -256,7 +268,10 @@ test("통합 응답이 관련 글 번역을 빠뜨리면 작은 별도 요청으
         await writeFile(outputPath, JSON.stringify(value), "utf8");
       },
     });
-    assert.equal(result.contextTranslations[0].body, "ChatGPT Work는 새로운 크론 작업입니다.");
+    assert.equal(
+      result.contextTranslations[0].body,
+      "아빠가 처음으로 GPT를 사용했습니다:\n\n- 웹페이지를 만들었습니다\n\n- 사고 과정을 읽었습니다",
+    );
   } finally {
     await rm(root, { recursive: true, force: true });
   }
