@@ -247,6 +247,79 @@ async function loadCreationOptions() {
   }
 }
 
+function inputWithValue(name, value) {
+  return [...elements.form.querySelectorAll(`input[name="${name}"]`)]
+    .find((input) => input.value === value) ?? null;
+}
+
+function idsFromLabels(labels, labelMap) {
+  const byLabel = new Map([...labelMap].map(([id, label]) => [label, id]));
+  return (Array.isArray(labels) ? labels : [])
+    .map((label) => byLabel.get(label) ?? label)
+    .filter(Boolean);
+}
+
+function sourceStyleIds(record) {
+  const rawIds = typeof record.styleId === "string" ? record.styleId.split(" + ") : [];
+  if (rawIds.length && rawIds.every((id) => styleLabels.has(id))) return rawIds;
+  const labels = typeof record.style === "string" ? record.style.split(" + ") : [];
+  return idsFromLabels(labels, styleLabels).filter((id) => styleLabels.has(id));
+}
+
+function applySourceCharacters(record) {
+  for (const input of elements.characterGrid.querySelectorAll('input[name="character"]')) {
+    input.checked = false;
+  }
+  for (const input of elements.characterGrid.querySelectorAll('input[name="character-mode"]')) {
+    input.checked = false;
+  }
+  const requestedIds = Array.isArray(record.characterIds) && record.characterIds.length
+    ? record.characterIds
+    : idsFromLabels(record.characters, characterLabels);
+  const applied = requestedIds
+    .map((id) => inputWithValue("character", String(id)))
+    .filter(Boolean)
+    .slice(0, MAX_CUSTOM_CHARACTERS);
+  for (const input of applied) input.checked = true;
+  if (!applied.length) {
+    const fallbackMode = record.characterMode === "none" ? "none" : "auto";
+    const fallback = inputWithValue("character-mode", fallbackMode);
+    if (fallback) fallback.checked = true;
+  }
+  updateCharacterSelection();
+  return applied.length;
+}
+
+function applySourceStyle(record) {
+  for (const input of elements.styleGrid.querySelectorAll('input[name="style"]')) input.checked = false;
+  for (const input of elements.styleGrid.querySelectorAll('input[name="style-mode"]')) input.checked = false;
+  const styleIds = record.styleMode === "selected" || (!record.styleMode && record.style)
+    ? sourceStyleIds(record).slice(0, MAX_SELECTED_STYLES)
+    : [];
+  const applied = styleIds.map((id) => inputWithValue("style", id)).filter(Boolean);
+  for (const input of applied) input.checked = true;
+  if (!applied.length) {
+    const modeValue = record.styleMode === "prompt"
+      ? "prompt"
+      : record.styleMode === "rendering" && record.styleId
+        ? `render:${record.styleId}`
+        : "random";
+    const fallback = inputWithValue("style-mode", modeValue) ?? inputWithValue("style-mode", "random");
+    if (fallback) fallback.checked = true;
+  }
+  updateStyleSelection();
+  return applied.length;
+}
+
+function applySourceProductionSelection(record, mode) {
+  const keepsCharacters = ["same-combination", "same-characters"].includes(mode);
+  const keepsStyle = ["same-combination", "same-style"].includes(mode);
+  return {
+    characters: keepsCharacters ? applySourceCharacters(record) : 0,
+    styles: keepsStyle ? applySourceStyle(record) : 0,
+  };
+}
+
 async function loadSourceContext(preferredMode = requestedMode) {
   if (!source) {
     elements.sourceStatus.textContent = "새 요청";
@@ -293,6 +366,10 @@ async function loadSourceContext(preferredMode = requestedMode) {
     elements.sourceMessage.textContent = "제작 기록을 안전하게 불러왔어요.";
     setSourceModesEnabled(true);
     selectRequestedMode(preferredMode);
+    const applied = applySourceProductionSelection(record, preferredMode);
+    if (applied.characters || applied.styles) {
+      elements.sourceMessage.textContent = `제작 기록과 선택을 불러왔어요. 인물 ${applied.characters}명 · 화풍 ${applied.styles}개`;
+    }
   } catch {
     elements.sourceStatus.textContent = "연결 실패";
     elements.previewSource.textContent = "불러오지 못함";
@@ -302,8 +379,11 @@ async function loadSourceContext(preferredMode = requestedMode) {
 }
 
 setSourceModesEnabled(false);
-loadCreationOptions();
-loadSourceContext();
+async function initializeCreationPage() {
+  await loadCreationOptions();
+  await loadSourceContext();
+}
+initializeCreationPage();
 
 function resetDraftAfterSourceChange() {
   previewPayload = null;
@@ -666,7 +746,7 @@ elements.form.addEventListener("submit", (event) => {
   const sourceImageId = source;
   const useImageAnchors = data.has("use-image-anchors");
   const route =
-    data.get("mode") === "new" && characterSelection.mode === "none" && ["auto", "selected", "prompt", "rendering"].includes(styleSelection.mode)
+    characterSelection.mode === "none" && ["auto", "selected", "prompt", "rendering"].includes(styleSelection.mode)
       ? "prompt-only"
       : "guided";
 

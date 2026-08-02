@@ -130,7 +130,7 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
     }
     const useImageAnchors = input.useImageAnchors === true;
     const route =
-      mode === "new" && characters.mode === "none" && NO_CHARACTER_STYLE_MODES.has(style.mode)
+      characters.mode === "none" && NO_CHARACTER_STYLE_MODES.has(style.mode)
         ? "prompt-only"
         : "guided";
     const id = randomUUID().replaceAll("-", "");
@@ -188,7 +188,7 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
 
 export function classifyDraftExecution(draft) {
   if (
-    draft?.mode !== "new" ||
+    !MODES.has(draft?.mode) ||
     draft?.executionEnabled !== false
   ) return null;
   if (

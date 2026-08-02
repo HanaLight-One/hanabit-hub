@@ -234,6 +234,9 @@ publication-jobs/` 아래에 격리 사본을 만든 뒤 `scripts/publish-dc-com
   `src/modules/images/prompt-only-executor.mjs`, `public/images/create/app.js`
 - 추가 생성 자동 선택은 초안 ID로 결정적으로 인물 관계 그룹과 저장 화풍을 고르고,
   worker 시작 전에 실제 인물·화풍 ID를 작업 JSON과 이미지 제작 기록에 확정한다.
+- 이미지 카드의 같은 조합·인물 유지·화풍 유지 링크는 옵션 목록을 먼저 만든 뒤 제작 기록의
+  인물·화풍 ID를 폼에 복원한다. 사용자는 복원된 인물에 새 인물을 더하거나 뺀 다음,
+  원본 이미지를 주 참조로 포함한 1장 작업을 실행할 수 있다.
 - 직접 업로드 소스 -> `POST /api/images/source-uploads`가 최대 20MB PNG·JPG·WebP를
   Hub 상태 폴더에 저장하고, 새 장면 초안의 `sourceImageId`와 worker의
   `user_reference_image`로만 전달한다. 제작 기록이 없는 업로드는 이어 만들기가 아니라

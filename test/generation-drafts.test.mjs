@@ -246,3 +246,27 @@ test("새 장면도 직접 고른 소스 이미지를 보존하고 실행할 수
     assert.equal(saved.sourceImageId, SOURCE_ID);
   });
 });
+
+test("소스 이미지의 같은 조합과 외부 대상 교체도 실제 1장 실행으로 분류한다", async () => {
+  await fixture(async ({ store }) => {
+    const sameCombination = await store.create({
+      prompt: "가운데 인물을 우리엘로 교체한다",
+      purpose: "free-play",
+      mode: "same-combination",
+      sourceImageId: SOURCE_ID,
+      characters: { mode: "custom", ids: ["헤일라", "리벨라", "세이라", "우리엘"] },
+      style: { mode: "selected", id: "gothic" },
+    });
+    const externalSubject = await store.create({
+      prompt: "소스의 중앙 인물을 목록 밖의 탐험가로 교체한다",
+      purpose: "free-play",
+      mode: "same-style",
+      sourceImageId: SOURCE_ID,
+      characters: { mode: "none", ids: [] },
+      style: { mode: "selected", id: "gothic" },
+    });
+    assert.equal(sameCombination.executionMode, "guided-cast");
+    assert.equal(externalSubject.route, "prompt-only");
+    assert.equal(externalSubject.executionMode, "prompt-only");
+  });
+});

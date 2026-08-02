@@ -410,3 +410,29 @@ test("직접 선택한 소스 이미지를 worker 참조 컨텍스트에 연결�
     assert.equal(workerContext.generation_rules.user_reference_follows_prompt, true);
   });
 });
+
+test("같은 조합은 소스 이미지와 복원된 인물·화풍을 함께 worker에 전달한다", async () => {
+  await fixture(async ({ drafts, executor, jobRoot }) => {
+    const draft = await drafts.create({
+      prompt: "중앙 인물을 헤일라로 교체한다",
+      purpose: "free-play",
+      mode: "same-combination",
+      sourceImageId: SOURCE_ID,
+      characters: { mode: "custom", ids: ["pink-bridge", "헤일라"] },
+      style: { mode: "selected", id: "calm" },
+      useImageAnchors: true,
+    });
+    const started = await executor.start(draft.id);
+    const job = JSON.parse(await readFile(path.join(jobRoot, `${draft.id}.json`), "utf8"));
+    const context = JSON.parse(
+      (await readFile(path.join(jobRoot, `${draft.id}.worker-context.json`), "utf8")).replace(/^\uFEFF/u, ""),
+    );
+    assert.equal(started.executionMode, "guided-cast");
+    assert.equal(job.sourceImageId, SOURCE_ID);
+    assert.deepEqual(job.characters.ids, ["pink-bridge", "헤일라"]);
+    assert.equal(job.style.id, "calm");
+    assert.equal(context.user_reference_image.endsWith("owner-source.png"), true);
+    assert.deepEqual(context.guided_selection.character_ids, ["pink-bridge", "헤일라"]);
+    assert.equal(context.guided_selection.style_id, "calm");
+  });
+});
