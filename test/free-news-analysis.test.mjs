@@ -161,7 +161,7 @@ test("통합 응답이 관련 글 번역을 빠뜨리면 작은 별도 요청으
       async runProcess(command, args) {
         const outputPath = args[args.indexOf("-Output") + 1];
         const value = outputPath.includes("context-output-")
-          ? { contextTranslations: [{ index: 1, body: "ChatGPT Work는 새로운 크론 작업입니다." }] }
+          ? [{ index: 1, body: "ChatGPT Work는 새로운 크론 작업입니다." }]
           : {
               translation: { title: "반복 작업", body: "ChatGPT Work에 반복 작업을 맡겨보세요." },
               contextTranslations: [],

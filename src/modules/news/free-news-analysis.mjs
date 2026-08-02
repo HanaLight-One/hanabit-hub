@@ -51,6 +51,13 @@ function validateContextTranslations(value, contextCount) {
   }).sort((left, right) => left.index - right.index));
 }
 
+function contextTranslationEntries(value) {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.contextTranslations)) return value.contextTranslations;
+  if (Array.isArray(value?.translations)) return value.translations;
+  return null;
+}
+
 function validateResult(value, contextCount) {
   const decision = String(value?.triage?.decision ?? "");
   if (!DECISIONS.has(decision)) throw new Error("뉴스 판정 형식이 올바르지 않습니다.");
@@ -208,7 +215,7 @@ export async function invokeFreeNewsAnalysis(
         const parsed = parseJson(await readFile(outputPath, "utf8"));
         if (contextCount > 0) {
           try {
-            validateContextTranslations(parsed?.contextTranslations, contextCount);
+            validateContextTranslations(contextTranslationEntries(parsed), contextCount);
           } catch {
             let contextError;
             for (let contextAttempt = 1; contextAttempt <= 3; contextAttempt += 1) {
@@ -226,7 +233,7 @@ export async function invokeFreeNewsAnalysis(
                   throw new Error("관련 글 번역 결과 크기가 올바르지 않습니다.");
                 }
                 const contextParsed = parseJson(await readFile(contextOutputPath, "utf8"));
-                parsed.contextTranslations = validateContextTranslations(contextParsed?.contextTranslations, contextCount);
+                parsed.contextTranslations = validateContextTranslations(contextTranslationEntries(contextParsed), contextCount);
                 contextError = null;
                 break;
               } catch (error) {
