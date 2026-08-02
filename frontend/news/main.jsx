@@ -21,6 +21,7 @@ const IMPORTANCE_LABELS = { low: "낮음", medium: "중간", high: "높음" };
 const EVIDENCE_LABELS = {
   official: "공식",
   confirmed: "확정",
+  use_case: "사례",
   inference: "유추",
   rumor: "루머",
   opinion: "의견",
@@ -44,6 +45,7 @@ function needsImageReview(item) {
 const FILTERS = [
   { id: "action", label: "확인 필요", matches: (item) => ["pending_review", "translation_failed"].includes(item.workflow.status) || needsImageReview(item) },
   { id: "publish", label: "게시 후보", matches: (item) => item.workflow.triage?.decision === "publish" },
+  { id: "use_case", label: "활용 사례", matches: (item) => item.workflow.triage?.evidenceTag === "use_case" },
   { id: "review", label: "사람 검토", matches: (item) => item.workflow.triage?.decision === "review" },
   { id: "media", label: "이미지 확인", matches: needsImageReview },
   { id: "failed", label: "번역 실패", matches: (item) => item.workflow.status === "translation_failed" },

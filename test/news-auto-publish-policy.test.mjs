@@ -29,6 +29,9 @@ test("공식과 핵심 인물의 고신뢰 유추는 자동 게시 가능 판정
   const inferred = evaluateNewsAutoPublish(record("inference"), profile);
   assert.equal(inferred.decision, "eligible");
   assert.equal(inferred.code, "trusted_inference");
+  const useCase = evaluateNewsAutoPublish(record("use_case"), profile);
+  assert.equal(useCase.decision, "eligible");
+  assert.equal(useCase.code, "trusted_use_case");
 });
 
 test("루머·의견·낮은 신뢰 유추는 사람 확인으로 남긴다", () => {

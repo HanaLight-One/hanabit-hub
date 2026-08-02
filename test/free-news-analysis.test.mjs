@@ -108,7 +108,7 @@ test("empowering의 자립 의미와 링크 소개 구조가 빠진 번역은 �
             decision: "publish",
             confidence: 0.9,
             importance: "medium",
-            evidenceTag: "confirmed",
+            evidenceTag: "use_case",
             reason: "구체적인 활용 사례",
             advice: "사례로 소개",
             signals: ["use-case"],
@@ -117,6 +117,7 @@ test("empowering의 자립 의미와 링크 소개 구조가 빠진 번역은 �
       },
     });
     assert.equal(attempts, 3);
+    assert.equal(result.triage.evidenceTag, "use_case");
     assert.equal(result.translation.title, "아빠가 직접 무언가를 만들 수 있도록 지원하는 ChatGPT");
     assert.equal(result.translation.body, "아빠가 직접 무언가를 만들 수 있도록 지원하는 ChatGPT:");
   } finally {

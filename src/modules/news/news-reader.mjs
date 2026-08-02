@@ -32,7 +32,7 @@ function publicTriage(value) {
     decision: value.decision,
     confidence: Math.max(0, Math.min(1, Number(value.confidence) || 0)),
     importance: ["low", "medium", "high"].includes(value.importance) ? value.importance : null,
-    evidenceTag: ["official", "confirmed", "inference", "rumor", "opinion"].includes(value.evidenceTag)
+    evidenceTag: ["official", "confirmed", "use_case", "inference", "rumor", "opinion"].includes(value.evidenceTag)
       ? value.evidenceTag
       : null,
     reason: safeText(value.reason, 500),

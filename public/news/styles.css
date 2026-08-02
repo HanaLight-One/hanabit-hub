@@ -42,6 +42,7 @@ h1 em { color: var(--accent); font-style: normal; }
 .codex-badge { background: rgb(118 171 255 / 14%); color: #9bc0ff; }
 .evidence { background: #1b232b; color: #d6dde3; }
 .evidence-official, .evidence-confirmed { background: rgb(216 255 82 / 12%); color: var(--accent); }
+.evidence-use_case { background: rgb(92 220 190 / 14%); color: #8de8d1; }
 .evidence-inference { background: rgb(118 171 255 / 14%); color: #9bc0ff; }
 .evidence-rumor { background: rgb(255 142 156 / 13%); color: #ff9eaa; }
 .evidence-opinion { background: rgb(192 160 255 / 13%); color: #cbb2ff; }

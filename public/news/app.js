@@ -8037,6 +8037,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 }, te = {
 	official: "공식",
 	confirmed: "확정",
+	use_case: "사례",
 	inference: "유추",
 	rumor: "루머",
 	opinion: "의견"
@@ -8063,6 +8064,11 @@ var ie = [
 		id: "publish",
 		label: "게시 후보",
 		matches: (e) => e.workflow.triage?.decision === "publish"
+	},
+	{
+		id: "use_case",
+		label: "활용 사례",
+		matches: (e) => e.workflow.triage?.evidenceTag === "use_case"
 	},
 	{
 		id: "review",

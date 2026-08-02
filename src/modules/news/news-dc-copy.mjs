@@ -5,6 +5,7 @@ import { createNewsAnalysisNotice } from "./news-analysis-notice.mjs";
 const EVIDENCE_LABELS = Object.freeze({
   official: "공식",
   confirmed: "확정",
+  use_case: "사례",
   inference: "유추",
   rumor: "루머",
   opinion: "의견",
@@ -12,6 +13,7 @@ const EVIDENCE_LABELS = Object.freeze({
 const UNCONFIRMED_TEXTS = Object.freeze({
   official: "세부 제공 범위와 적용 시점은 원문만으로 모두 확인되지 않았습니다.",
   confirmed: "세부 제공 범위와 적용 시점은 원문만으로 모두 확인되지 않았습니다.",
+  use_case: "이 사례가 다른 환경에서도 동일하게 재현되는지는 원문만으로 확인되지 않았습니다.",
   inference: "구체적인 기능명·제공 범위·출시 상태는 원문만으로 확인되지 않았습니다.",
   rumor: "공식 발표 여부와 구체적인 내용은 원문만으로 확인되지 않았습니다.",
   opinion: "개인의 의견이며 제품 출시나 공식 계획으로 확인된 내용은 아닙니다.",

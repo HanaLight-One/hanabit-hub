@@ -1,6 +1,6 @@
 const GOOD_IMPORTANCE = new Set(["medium", "high"]);
 const TRUSTED_SOURCES = new Set(["official", "high"]);
-export const NEWS_ANALYSIS_POLICY_VERSION = 7;
+export const NEWS_ANALYSIS_POLICY_VERSION = 8;
 
 function result(decision, code, reason) {
   return Object.freeze({ decision, code, reason });
@@ -39,6 +39,14 @@ export function evaluateNewsAutoPublish(record, sourceProfile = null) {
     confidence >= 0.8
   ) {
     return result("eligible", "confirmed", "신뢰 출처의 확인된 정보라 자동 게시 조건을 충족해요.");
+  }
+  if (
+    triage.evidenceTag === "use_case" &&
+    trusted &&
+    GOOD_IMPORTANCE.has(triage.importance) &&
+    confidence >= 0.8
+  ) {
+    return result("eligible", "trusted_use_case", "신뢰 출처가 소개한 구체적인 활용 사례라 [사례] 표현으로 자동 게시할 수 있어요.");
   }
   if (
     triage.evidenceTag === "inference" &&

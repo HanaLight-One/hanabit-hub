@@ -66,21 +66,24 @@ Windows 인수 해석 차이를 피하기 위해 사용하지 않는다.
 Announcement는 모델 판정과 무관하게 최소 `publish` 게시 검토 후보로 올린다.
 
 판정은 게시 가치와 정보 확실성을 별도 축으로 저장한다. `decision`은
-`publish | review | skip`, `evidenceTag`는 다음 다섯 값만 허용한다.
+`publish | review | skip`, `evidenceTag`는 다음 여섯 값만 허용한다.
 
 - `official`: 회사 공식 계정이나 공식 Announcement의 직접 발표
 - `confirmed`: 구체적 사실 또는 제공 여부가 직접 확인된 정보
+- `use_case`: 실제 사용 모습·데모·작업 흐름·사용자 경험이 직접 제시된 사례
 - `inference`: 신뢰할 수 있는 당사자의 말과 문맥으로 합리적으로 유추한 초기 신호
 - `rumor`: 확인되지 않은 제삼자 주장이나 유출
 - `opinion`: 평가·전망·일상 의견이 중심인 글
 
-`inference`는 `review`와 동의어가 아니다. 핵심 인물이 구체적인 기능을 직접 사용했다고
+`use_case`는 게시물 자체에서 실제로 수행한 일을 보여줄 때 사용하며, 그 사례가 시사하는
+제품 방향은 판정 근거에 분리한다. 실제 사례라는 이유만으로 미래 방향을 뜻하는
+`inference`를 붙이지 않는다. `inference`는 `review`와 동의어가 아니다. 핵심 인물이 구체적인 기능을 직접 사용했다고
 말한 경우처럼 독자가 미리 알 가치가 있으면, 공개 범위를 단정하지 않는 표현과
 `[유추]` 태그를 전제로 `publish` 후보가 될 수 있다. 향후 자동 게시기는 이 태그와
 출처 등급을 로컬 정책으로 다시 검사해야 하며 모델 결과만으로 게시하지 않는다.
 
 허브의 자동 게시 게이트는 현재 판정 전용이다. `official`, 또는 확인된 핵심 출처의
-고신뢰 `confirmed`와 `inference`만 `eligible`로 표시한다. `rumor`, `opinion`, 낮은
+고신뢰 `confirmed`, `use_case`, `inference`만 `eligible`로 표시한다. `rumor`, `opinion`, 낮은
 중요도·신뢰도, 기존 승인·게시 항목은 사람 확인 또는 차단으로 남긴다. 게이트는 실제
 게시자나 승인 API를 호출하지 않는다.
 

@@ -4,7 +4,7 @@ import path from "node:path";
 
 const DECISIONS = new Set(["skip", "review", "publish"]);
 const IMPORTANCE_LEVELS = new Set(["low", "medium", "high"]);
-const EVIDENCE_TAGS = new Set(["official", "confirmed", "inference", "rumor", "opinion"]);
+const EVIDENCE_TAGS = new Set(["official", "confirmed", "use_case", "inference", "rumor", "opinion"]);
 const POWERSHELL = path.join(
   String(process.env.SystemRoot ?? ""),
   "System32",
@@ -143,7 +143,7 @@ function retryCorrection(error) {
     return "The previous response omitted or malformed contextTranslations. Return exactly one indexed translation for every supplied CONTEXT.";
   }
   if (message.includes("정보 성격")) {
-    return "The previous evidenceTag was invalid. Use only official, confirmed, inference, rumor, or opinion.";
+    return "The previous evidenceTag was invalid. Use only official, confirmed, use_case, inference, rumor, or opinion.";
   }
   return "The previous response failed local format validation. Return every required field with the exact JSON shape and allowed enum values, while keeping all translations non-empty.";
 }
@@ -257,13 +257,14 @@ function buildPrompt(record) {
     "Distinguish explicit facts from implications. Never claim to have seen or understood an image; no image pixels are included in this request.",
     "Judge newsworthiness separately from certainty. Classify decision as exactly one of: skip, review, publish.",
     "skip: no useful AI signal. review: source identity or meaning is materially uncertain. publish: useful enough to share, including a clearly framed early signal or reasonable inference.",
-    "Classify evidenceTag as exactly one of: official, confirmed, inference, rumor, opinion.",
-    "official: direct organization announcement. confirmed: a concrete fact or availability is directly established. inference: credible first-party words or context reasonably suggest an unreleased feature or direction. rumor: unverified second-hand claim or leak. opinion: mainly evaluation, prediction, or casual commentary.",
+    "Classify evidenceTag as exactly one of: official, confirmed, use_case, inference, rumor, opinion.",
+    "official: direct organization announcement. confirmed: a concrete fact or availability is directly established. use_case: a real usage example, demonstration, workflow, or user experience is directly described. inference: credible first-party words or context reasonably suggest an unreleased feature or future direction. rumor: unverified second-hand claim or leak. opinion: mainly evaluation, prediction, or casual commentary.",
+    "Choose use_case when the post itself primarily shows what someone actually did with AI. Keep broader product-direction implications in reason; do not label the post inference only because the example may imply a future direction.",
     "A credible insider explicitly saying they used a named capability is usually inference, not rumor. It may be publish even without a public product page when the signal is concrete and useful; use cautious wording and never imply public availability.",
     "Do not demand perfect confirmation in advice when an inference is itself newsworthy. Give a ready-to-post cautious framing instead.",
     "Set importance to low, medium, or high. In advice, tell a Korean editor how to frame the item according to its evidenceTag.",
     "Return JSON only with this exact shape:",
-    '{"translation":{"title":"...","body":"..."},"contextTranslations":[{"index":1,"body":"..."}],"triage":{"decision":"skip|review|publish","confidence":0.0,"importance":"low|medium|high","evidenceTag":"official|confirmed|inference|rumor|opinion","reason":"...","advice":"...","signals":["..."]}}',
+    '{"translation":{"title":"...","body":"..."},"contextTranslations":[{"index":1,"body":"..."}],"triage":{"decision":"skip|review|publish","confidence":0.0,"importance":"low|medium|high","evidenceTag":"official|confirmed|use_case|inference|rumor|opinion","reason":"...","advice":"...","signals":["..."]}}',
     "Return contextTranslations as an empty array when there is no CONTEXT.",
     `SOURCE TYPE: ${record.source?.type}`,
     `SOURCE ACCOUNT: ${record.source?.account ?? "OpenAI official Discord"}`,

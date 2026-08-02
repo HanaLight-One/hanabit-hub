@@ -5,7 +5,7 @@ import path from "node:path";
 
 const DECISIONS = new Set(["skip", "review", "publish"]);
 const IMPORTANCE_LEVELS = new Set(["low", "medium", "high"]);
-const EVIDENCE_TAGS = new Set(["official", "confirmed", "inference", "rumor", "opinion"]);
+const EVIDENCE_TAGS = new Set(["official", "confirmed", "use_case", "inference", "rumor", "opinion"]);
 const OUTPUT_SCHEMA = Object.freeze({
   type: "object",
   properties: {
@@ -37,7 +37,7 @@ const OUTPUT_SCHEMA = Object.freeze({
     decision: { type: "string", enum: ["skip", "review", "publish"] },
     confidence: { type: "number", minimum: 0, maximum: 1 },
     importance: { type: "string", enum: ["low", "medium", "high"] },
-    evidenceTag: { type: "string", enum: ["official", "confirmed", "inference", "rumor", "opinion"] },
+    evidenceTag: { type: "string", enum: ["official", "confirmed", "use_case", "inference", "rumor", "opinion"] },
     reason: { type: "string", minLength: 1, maxLength: 500 },
     advice: { type: "string", minLength: 1, maxLength: 600 },
   },
@@ -124,7 +124,9 @@ function buildPrompt(record, freeResult) {
     "No image pixels are attached. MEDIA COUNT only means a human can inspect images later; never claim you saw them.",
     "Judge newsworthiness separately from certainty for a Korean AI community.",
     "A short reply may be meaningful when parent context reveals product direction, adoption, capability, policy, or a credible industry signal.",
-    "Classify evidenceTag as official, confirmed, inference, rumor, or opinion. A credible insider explicitly saying they used a named capability is usually inference, not rumor.",
+    "Classify evidenceTag as official, confirmed, use_case, inference, rumor, or opinion.",
+    "use_case means the post itself directly describes a real usage example, demonstration, workflow, or user experience. Keep broader implications in reason instead of mislabeling the actual example as inference.",
+    "A credible insider suggesting an unreleased capability or future direction is usually inference, not rumor.",
     "A concrete inference can be publish even without an official product page. Preserve uncertainty in the headline and advice instead of discarding the signal.",
     "Audit the FREE TRANSLATION against SOURCE TEXT before judging newsworthiness.",
     "The translationAudit title and body must translate or faithfully summarize SOURCE TEXT only. Never add a fact, phrase, subject, capability, or claim that exists only in CONTEXT.",
