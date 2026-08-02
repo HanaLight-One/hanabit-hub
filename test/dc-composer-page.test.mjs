@@ -14,5 +14,8 @@ test("DC 편집실 React 화면과 업로드·미리보기·실제 게시 진입
     assert.equal(app.includes("save-dc-draft"), true);
     assert.equal(app.includes("publish-dc-compose-now"), true);
     assert.equal(app.includes("이미지 업로드"), true);
+    assert.equal(app.includes("자동 저장됨"), true);
+    assert.equal(app.includes("localStorage"), false);
+    assert.equal(app.includes("sessionStorage"), false);
   } finally { await new Promise((resolve) => server.close(resolve)); }
 });

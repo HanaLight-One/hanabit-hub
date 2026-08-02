@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 
 const EMPTY = { id: null, headText: "잡담", title: "", bodyText: "", images: [] };
@@ -12,6 +12,30 @@ async function jsonFetch(url, options = {}) {
 
 function sourceKey(image) { return `${image.sourceType}:${image.sourceId}`; }
 
+function draftSignature(draft) {
+  return JSON.stringify({
+    headText: draft.headText,
+    title: draft.title,
+    bodyText: draft.bodyText,
+    images: draft.images.map(({ sourceType, sourceId }) => ({ sourceType, sourceId })),
+  });
+}
+
+async function saveDraft(draft) {
+  return jsonFetch("/api/dc/drafts", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      confirmation: "save-dc-draft",
+      id: draft.id,
+      headText: draft.headText,
+      title: draft.title,
+      bodyText: draft.bodyText,
+      images: draft.images.map(({ sourceType, sourceId }) => ({ sourceType, sourceId })),
+    }),
+  });
+}
+
 function App() {
   const [ready, setReady] = useState(false);
   const [enabled, setEnabled] = useState(false);
@@ -23,6 +47,9 @@ function App() {
   const [preview, setPreview] = useState(null);
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("편집실을 준비하는 중이에요.");
+  const [saveState, setSaveState] = useState("");
+  const [hydrated, setHydrated] = useState(false);
+  const lastSaved = useRef("");
   const selectedKeys = useMemo(() => new Set(draft.images.map(sourceKey)), [draft.images]);
 
   async function load() {
@@ -36,12 +63,40 @@ function App() {
       setHeadTexts(composer.headTexts ?? []);
       setUploads(composer.uploads ?? []);
       setArchive((images.images ?? []).map((image) => ({ sourceType: "archive", sourceId: image.id, name: image.name, contentUrl: image.thumbnailUrl, meta: `${image.date ?? "날짜 없음"} · ${image.category}` })));
-      if (composer.draft) setDraft({ ...composer.draft, images: composer.draft.images ?? [] });
+      if (composer.draft) {
+        const restored = { ...composer.draft, images: composer.draft.images ?? [] };
+        setDraft(restored);
+        lastSaved.current = draftSignature(restored);
+        setSaveState("저장된 초안을 복구했어요.");
+      }
       setMessage(composer.enabled ? "이미지를 고르고 원고를 작성해 주세요." : "DC 편집실 쓰기 권한이 꺼져 있어요.");
     } catch (error) { setMessage(error.message); }
-    finally { setReady(true); }
+    finally { setReady(true); setHydrated(true); }
   }
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    if (!hydrated || !enabled || busy || draft.publication) return undefined;
+    const signature = draftSignature(draft);
+    if (signature === lastSaved.current) return undefined;
+    if (!draft.title.trim() && !draft.bodyText.trim() && draft.images.length === 0) {
+      setSaveState("");
+      return undefined;
+    }
+    setSaveState("자동 저장 대기 중…");
+    const timeout = setTimeout(async () => {
+      setSaveState("자동 저장 중…");
+      try {
+        const saved = await saveDraft(draft);
+        lastSaved.current = draftSignature(saved);
+        setDraft((current) => current.id ? current : { ...current, id: saved.id });
+        setSaveState("자동 저장됨");
+      } catch {
+        setSaveState("자동 저장 실패 · 미리보기 버튼으로 다시 저장해 주세요.");
+      }
+    }, 900);
+    return () => clearTimeout(timeout);
+  }, [busy, draft, enabled, hydrated]);
 
   function toggle(image) {
     if (!enabled || busy) return;
@@ -107,6 +162,8 @@ function App() {
 
   function startNewDraft() {
     setDraft(EMPTY);
+    lastSaved.current = "";
+    setSaveState("");
     setPreview(null);
     setMessage("새 원고를 시작했어요.");
   }
@@ -114,18 +171,8 @@ function App() {
   async function saveAndPreview() {
     setBusy("save");
     try {
-      const saved = await jsonFetch("/api/dc/drafts", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          confirmation: "save-dc-draft",
-          id: draft.id,
-          headText: draft.headText,
-          title: draft.title,
-          bodyText: draft.bodyText,
-          images: draft.images.map(({ sourceType, sourceId }) => ({ sourceType, sourceId })),
-        }),
-      });
+      const saved = await saveDraft(draft);
+      lastSaved.current = draftSignature(saved);
       setDraft(saved);
       const checked = await jsonFetch(`/api/dc/drafts/${saved.id}/preview`, { cache: "no-store" });
       setPreview(checked);
@@ -166,6 +213,7 @@ function App() {
           <label>말머리<select value={draft.headText} disabled={!enabled || busy} onChange={(event) => { setDraft({ ...draft, headText: event.target.value }); setPreview(null); }}>{headTexts.map((item) => <option key={item}>{item}</option>)}</select></label>
           <label>제목 <span>{[...draft.title].length}/80</span><input value={draft.title} maxLength={80} disabled={!enabled || busy} onChange={(event) => { setDraft({ ...draft, title: event.target.value }); setPreview(null); }} placeholder="제목을 입력해 주세요" /></label>
           <label>본문 <span>{draft.bodyText.length.toLocaleString()}/20,000</span><textarea value={draft.bodyText} maxLength={20000} disabled={!enabled || busy} onChange={(event) => { setDraft({ ...draft, bodyText: event.target.value }); setPreview(null); }} placeholder="본문을 입력해 주세요" /></label>
+          <p className={`autosave-state ${saveState.includes("실패") ? "failed" : ""}`} aria-live="polite">{saveState || "내용을 입력하면 서버 초안에 자동 저장해요."}</p>
         </section>
         <section className="library panel">
           <div className="section-head"><div><p className="section-label">02 · PICK</p><h2>이미지 보관함</h2></div><label className="upload-button">{busy === "upload" ? "업로드 중…" : "이미지 업로드"}<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple disabled={!enabled || busy} onChange={uploadFiles}/></label></div>

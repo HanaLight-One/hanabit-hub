@@ -8033,31 +8033,88 @@ async function S(e, t = {}) {
 function C(e) {
 	return `${e.sourceType}:${e.sourceId}`;
 }
-function te() {
-	let [e, t] = (0, y.useState)(!1), [n, r] = (0, y.useState)(!1), [i, a] = (0, y.useState)(!1), [o, s] = (0, y.useState)([]), [c, l] = (0, y.useState)([]), [u, d] = (0, y.useState)([]), [f, p] = (0, y.useState)(ee), [m, h] = (0, y.useState)(null), [g, _] = (0, y.useState)(""), [v, b] = (0, y.useState)("편집실을 준비하는 중이에요."), te = (0, y.useMemo)(() => new Set(f.images.map(C)), [f.images]);
-	async function re() {
+function te(e) {
+	return JSON.stringify({
+		headText: e.headText,
+		title: e.title,
+		bodyText: e.bodyText,
+		images: e.images.map(({ sourceType: e, sourceId: t }) => ({
+			sourceType: e,
+			sourceId: t
+		}))
+	});
+}
+async function ne(e) {
+	return S("/api/dc/drafts", {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify({
+			confirmation: "save-dc-draft",
+			id: e.id,
+			headText: e.headText,
+			title: e.title,
+			bodyText: e.bodyText,
+			images: e.images.map(({ sourceType: e, sourceId: t }) => ({
+				sourceType: e,
+				sourceId: t
+			}))
+		})
+	});
+}
+function re() {
+	let [e, t] = (0, y.useState)(!1), [n, r] = (0, y.useState)(!1), [i, a] = (0, y.useState)(!1), [o, s] = (0, y.useState)([]), [c, l] = (0, y.useState)([]), [u, d] = (0, y.useState)([]), [f, p] = (0, y.useState)(ee), [m, h] = (0, y.useState)(null), [g, _] = (0, y.useState)(""), [v, b] = (0, y.useState)("편집실을 준비하는 중이에요."), [re, ie] = (0, y.useState)(""), [ae, oe] = (0, y.useState)(!1), se = (0, y.useRef)(""), ce = (0, y.useMemo)(() => new Set(f.images.map(C)), [f.images]);
+	async function le() {
 		try {
 			let [e, t] = await Promise.all([S("/api/dc/composer", { cache: "no-store" }), S("/api/images", { cache: "no-store" })]);
-			r(e.enabled), a(e.publisherReady), s(e.headTexts ?? []), d(e.uploads ?? []), l((t.images ?? []).map((e) => ({
+			if (r(e.enabled), a(e.publisherReady), s(e.headTexts ?? []), d(e.uploads ?? []), l((t.images ?? []).map((e) => ({
 				sourceType: "archive",
 				sourceId: e.id,
 				name: e.name,
 				contentUrl: e.thumbnailUrl,
 				meta: `${e.date ?? "날짜 없음"} · ${e.category}`
-			}))), e.draft && p({
-				...e.draft,
-				images: e.draft.images ?? []
-			}), b(e.enabled ? "이미지를 고르고 원고를 작성해 주세요." : "DC 편집실 쓰기 권한이 꺼져 있어요.");
+			}))), e.draft) {
+				let t = {
+					...e.draft,
+					images: e.draft.images ?? []
+				};
+				p(t), se.current = te(t), ie("저장된 초안을 복구했어요.");
+			}
+			b(e.enabled ? "이미지를 고르고 원고를 작성해 주세요." : "DC 편집실 쓰기 권한이 꺼져 있어요.");
 		} catch (e) {
 			b(e.message);
 		} finally {
-			t(!0);
+			t(!0), oe(!0);
 		}
 	}
 	(0, y.useEffect)(() => {
-		re();
-	}, []);
-	function w(e) {
+		le();
+	}, []), (0, y.useEffect)(() => {
+		if (!ae || !n || g || f.publication || te(f) === se.current) return;
+		if (!f.title.trim() && !f.bodyText.trim() && f.images.length === 0) {
+			ie("");
+			return;
+		}
+		ie("자동 저장 대기 중…");
+		let e = setTimeout(async () => {
+			ie("자동 저장 중…");
+			try {
+				let e = await ne(f);
+				se.current = te(e), p((t) => t.id ? t : {
+					...t,
+					id: e.id
+				}), ie("자동 저장됨");
+			} catch {
+				ie("자동 저장 실패 · 미리보기 버튼으로 다시 저장해 주세요.");
+			}
+		}, 900);
+		return () => clearTimeout(e);
+	}, [
+		g,
+		f,
+		n,
+		ae
+	]);
+	function ue(e) {
 		if (!n || g) return;
 		let t = C(e);
 		h(null), p((n) => n.images.some((e) => C(e) === t) ? {
@@ -8068,7 +8125,7 @@ function te() {
 			images: [...n.images, e]
 		});
 	}
-	function ie(e, t) {
+	function T(e, t) {
 		p((n) => {
 			let r = e + t;
 			if (r < 0 || r >= n.images.length) return n;
@@ -8079,7 +8136,7 @@ function te() {
 			};
 		}), h(null);
 	}
-	async function ae(e) {
+	async function E(e) {
 		let t = [...e.target.files].slice(0, 10);
 		if (t.length) {
 			_("upload");
@@ -8104,9 +8161,9 @@ function te() {
 			}
 		}
 	}
-	async function oe(e) {
+	async function de(e) {
 		if (e) {
-			if (te.has(`upload:${e.id}`)) {
+			if (ce.has(`upload:${e.id}`)) {
 				b("선택 중인 업로드 이미지는 첨부에서 먼저 빼주세요.");
 				return;
 			}
@@ -8126,28 +8183,14 @@ function te() {
 			}
 		}
 	}
-	function se() {
-		p(ee), h(null), b("새 원고를 시작했어요.");
+	function fe() {
+		p(ee), se.current = "", ie(""), h(null), b("새 원고를 시작했어요.");
 	}
-	async function ce() {
+	async function pe() {
 		_("save");
 		try {
-			let e = await S("/api/dc/drafts", {
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify({
-					confirmation: "save-dc-draft",
-					id: f.id,
-					headText: f.headText,
-					title: f.title,
-					bodyText: f.bodyText,
-					images: f.images.map(({ sourceType: e, sourceId: t }) => ({
-						sourceType: e,
-						sourceId: t
-					}))
-				})
-			});
-			p(e);
+			let e = await ne(f);
+			se.current = te(e), p(e);
 			let t = await S(`/api/dc/drafts/${e.id}/preview`, { cache: "no-store" });
 			h(t), a(t.publisherReady), b(t.preflight.ready ? "게시 직전 모습을 확인해 주세요." : "게시 전 고칠 항목이 있어요.");
 		} catch (e) {
@@ -8156,7 +8199,7 @@ function te() {
 			_("");
 		}
 	}
-	async function le() {
+	async function me() {
 		if (!(!m?.canPublish || !f.id) && confirm("이 원고를 챗GPT 갤러리에 실제로 게시할까요?\n제출 후 결과가 애매하면 자동으로 다시 시도하지 않아요.")) {
 			_("publish");
 			try {
@@ -8176,7 +8219,7 @@ function te() {
 			}
 		}
 	}
-	let ue = u.map((e) => ({
+	let D = u.map((e) => ({
 		sourceType: "upload",
 		sourceId: e.id,
 		name: e.name,
@@ -8263,7 +8306,12 @@ function te() {
 							},
 							placeholder: "본문을 입력해 주세요"
 						})
-					] })
+					] }),
+					/* @__PURE__ */ (0, x.jsx)("p", {
+						className: `autosave-state ${re.includes("실패") ? "failed" : ""}`,
+						"aria-live": "polite",
+						children: re || "내용을 입력하면 서버 초안에 자동 저장해요."
+					})
 				]
 			}),
 			/* @__PURE__ */ (0, x.jsxs)("section", {
@@ -8281,23 +8329,23 @@ function te() {
 								accept: "image/png,image/jpeg,image/webp,image/gif",
 								multiple: !0,
 								disabled: !n || g,
-								onChange: ae
+								onChange: E
 							})]
 						})]
 					}),
 					/* @__PURE__ */ (0, x.jsx)("h3", { children: "업로드 이미지" }),
-					/* @__PURE__ */ (0, x.jsx)(ne, {
-						images: ue,
-						selectedKeys: te,
-						toggle: w,
-						onDelete: (e) => oe(u.find((t) => t.id === e.sourceId)),
+					/* @__PURE__ */ (0, x.jsx)(w, {
+						images: D,
+						selectedKeys: ce,
+						toggle: ue,
+						onDelete: (e) => de(u.find((t) => t.id === e.sourceId)),
 						empty: "아직 업로드한 이미지가 없어요."
 					}),
 					/* @__PURE__ */ (0, x.jsx)("h3", { children: "허브 이미지" }),
-					/* @__PURE__ */ (0, x.jsx)(ne, {
+					/* @__PURE__ */ (0, x.jsx)(w, {
 						images: c,
-						selectedKeys: te,
-						toggle: w,
+						selectedKeys: ce,
+						toggle: ue,
 						empty: e ? "허브 이미지가 없어요." : "불러오는 중…"
 					})
 				]
@@ -8324,17 +8372,17 @@ function te() {
 							] }), /* @__PURE__ */ (0, x.jsx)("span", { children: e.sourceType === "upload" ? "업로드" : "허브" })] }),
 							/* @__PURE__ */ (0, x.jsxs)("nav", { children: [
 								/* @__PURE__ */ (0, x.jsx)("button", {
-									onClick: () => ie(t, -1),
+									onClick: () => T(t, -1),
 									disabled: t === 0 || g,
 									children: "↑"
 								}),
 								/* @__PURE__ */ (0, x.jsx)("button", {
-									onClick: () => ie(t, 1),
+									onClick: () => T(t, 1),
 									disabled: t === f.images.length - 1 || g,
 									children: "↓"
 								}),
 								/* @__PURE__ */ (0, x.jsx)("button", {
-									onClick: () => w(e),
+									onClick: () => ue(e),
 									disabled: g,
 									children: "×"
 								})
@@ -8347,7 +8395,7 @@ function te() {
 					/* @__PURE__ */ (0, x.jsx)("button", {
 						className: "preview-button",
 						disabled: !n || g,
-						onClick: ce,
+						onClick: pe,
 						children: g === "save" ? "검사 중…" : "초안 저장 · 게시 미리보기"
 					}),
 					m && /* @__PURE__ */ (0, x.jsxs)("section", {
@@ -8365,7 +8413,7 @@ function te() {
 							/* @__PURE__ */ (0, x.jsx)("button", {
 								className: "publish-button",
 								disabled: !m.canPublish || g,
-								onClick: le,
+								onClick: me,
 								children: g === "publish" ? "실제 게시 중…" : "DC에 실제 게시"
 							})
 						]
@@ -8380,7 +8428,7 @@ function te() {
 					f.publication && /* @__PURE__ */ (0, x.jsx)("button", {
 						className: "new-draft-button",
 						type: "button",
-						onClick: se,
+						onClick: fe,
 						children: "새 글 작성"
 					})
 				]
@@ -8388,7 +8436,7 @@ function te() {
 		]
 	})] })] });
 }
-function ne({ images: e, selectedKeys: t, toggle: n, onDelete: r = null, empty: i }) {
+function w({ images: e, selectedKeys: t, toggle: n, onDelete: r = null, empty: i }) {
 	return e.length ? /* @__PURE__ */ (0, x.jsx)("div", {
 		className: "image-grid",
 		children: e.map((e) => /* @__PURE__ */ (0, x.jsxs)("article", {
@@ -8419,5 +8467,5 @@ function ne({ images: e, selectedKeys: t, toggle: n, onDelete: r = null, empty: 
 		children: i
 	});
 }
-(0, b.createRoot)(document.querySelector("#dc-root")).render(/* @__PURE__ */ (0, x.jsx)(te, {}));
+(0, b.createRoot)(document.querySelector("#dc-root")).render(/* @__PURE__ */ (0, x.jsx)(re, {}));
 //#endregion
