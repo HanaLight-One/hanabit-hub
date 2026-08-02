@@ -141,3 +141,37 @@ test("관련 글이 있으면 작성자별 번역을 빠뜨린 응답을 거부�
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("통합 응답이 관련 글 번역을 빠뜨리면 작은 별도 요청으로 보충한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-context-fallback-"));
+  const runnerPath = path.join(root, "runner.ps1");
+  await writeFile(runnerPath, "test", "utf8");
+  try {
+    const result = await invokeFreeNewsAnalysis({
+      id: "5".repeat(32),
+      source: { type: "x-post", account: "gdb" },
+      original: {
+        content: "Ask ChatGPT Work to do any recurring task.",
+        contexts: [{ relation: "linked-post", account: "brttbmn", content: "ChatGPT Work is the new cron job." }],
+      },
+    }, {
+      runnerPath,
+      runtimeRoot: path.join(root, "runtime"),
+      async wait() {},
+      async runProcess(command, args) {
+        const outputPath = args[args.indexOf("-Output") + 1];
+        const value = outputPath.includes("context-output-")
+          ? { contextTranslations: [{ index: 1, body: "ChatGPT Work는 새로운 크론 작업입니다." }] }
+          : {
+              translation: { title: "반복 작업", body: "ChatGPT Work에 반복 작업을 맡겨보세요." },
+              contextTranslations: [],
+              triage: { decision: "publish", confidence: 0.9, importance: "high", evidenceTag: "inference", reason: "반복 작업", advice: "유추로 게시", signals: [] },
+            };
+        await writeFile(outputPath, JSON.stringify(value), "utf8");
+      },
+    });
+    assert.equal(result.contextTranslations[0].body, "ChatGPT Work는 새로운 크론 작업입니다.");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

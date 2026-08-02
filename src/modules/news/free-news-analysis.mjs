@@ -137,6 +137,23 @@ function buildPrompt(record) {
   ].join("\n");
 }
 
+function buildContextTranslationPrompt(record) {
+  const contexts = (Array.isArray(record.original?.contexts) ? record.original.contexts : [])
+    .slice(0, 3)
+    .map((context, index) => [
+      `CONTEXT ${index + 1} ACCOUNT: ${String(context?.account ?? "unknown")}`,
+      `CONTEXT ${index + 1} TEXT:`,
+      String(context?.content ?? "").slice(0, 8_000),
+    ].join("\n"));
+  return [
+    "Translate each quoted CONTEXT separately into natural Korean.",
+    "Do not add facts. Omit URLs and media addresses from the translations.",
+    "Return JSON only with exactly one item per CONTEXT and preserve each 1-based index:",
+    '{"contextTranslations":[{"index":1,"body":"..."}]}',
+    ...contexts,
+  ].join("\n");
+}
+
 function run(command, args, { cwd, timeoutMs = 600_000 } = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { cwd, windowsHide: true, stdio: "ignore" });
@@ -169,9 +186,12 @@ export async function invokeFreeNewsAnalysis(
   if (!runner.isFile()) throw new Error("무료 API runner를 사용할 수 없습니다.");
   const workRoot = path.join(runtimeRoot, record.id);
   const promptPath = path.join(workRoot, "prompt.txt");
+  const contextPromptPath = path.join(workRoot, "context-prompt.txt");
   await mkdir(workRoot, { recursive: true });
   try {
     await writeFile(promptPath, `${buildPrompt(record)}\n`, "utf8");
+    const contextCount = Array.isArray(record.original?.contexts) ? Math.min(3, record.original.contexts.length) : 0;
+    if (contextCount > 0) await writeFile(contextPromptPath, `${buildContextTranslationPrompt(record)}\n`, "utf8");
     let lastError;
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       const outputPath = path.join(workRoot, `output-${attempt}.json`);
@@ -185,8 +205,39 @@ export async function invokeFreeNewsAnalysis(
         ], { cwd: workRoot });
         const info = await stat(outputPath);
         if (!info.isFile() || info.size > 256_000) throw new Error("무료 API 결과 크기가 올바르지 않습니다.");
-        const contextCount = Array.isArray(record.original?.contexts) ? Math.min(3, record.original.contexts.length) : 0;
-        return validateResult(parseJson(await readFile(outputPath, "utf8")), contextCount);
+        const parsed = parseJson(await readFile(outputPath, "utf8"));
+        if (contextCount > 0) {
+          try {
+            validateContextTranslations(parsed?.contextTranslations, contextCount);
+          } catch {
+            let contextError;
+            for (let contextAttempt = 1; contextAttempt <= 3; contextAttempt += 1) {
+              const contextOutputPath = path.join(workRoot, `context-output-${attempt}-${contextAttempt}.json`);
+              try {
+                await runProcess(POWERSHELL, [
+                  "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+                  "-File", runnerPath,
+                  "-PromptFile", contextPromptPath,
+                  "-Output", contextOutputPath,
+                  "-MaxOutputTokens", "1200",
+                ], { cwd: workRoot });
+                const contextInfo = await stat(contextOutputPath);
+                if (!contextInfo.isFile() || contextInfo.size > 128_000) {
+                  throw new Error("관련 글 번역 결과 크기가 올바르지 않습니다.");
+                }
+                const contextParsed = parseJson(await readFile(contextOutputPath, "utf8"));
+                parsed.contextTranslations = validateContextTranslations(contextParsed?.contextTranslations, contextCount);
+                contextError = null;
+                break;
+              } catch (error) {
+                contextError = error;
+                if (contextAttempt < 3) await wait(5_000);
+              }
+            }
+            if (contextError) throw contextError;
+          }
+        }
+        return validateResult(parsed, contextCount);
       } catch (error) {
         lastError = error;
         if (attempt < 3) await wait(5_000);
