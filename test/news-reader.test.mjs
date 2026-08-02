@@ -19,12 +19,13 @@ test("뉴스 리더는 내부 경로와 Discord ID 없이 공개 계약을 반�
       workflow: {
         status: "pending_review",
         translation: { title: "한글 제목", body: "한글 본문" },
+        contextTranslations: [{ index: 1, body: "부모 글 번역" }],
         translationReview: { status: "codex_verified", reviewer: "codex-deep-review", reason: "원문에만 근거함" },
         analysisNotice: "주의: 아래 해설은 GPT-5.4 mini와 Codex 심층 검토 모델이 정리한 내용입니다. 원문 번역이 아니며, 최종 판단은 독자에게 있습니다.",
         freeTriage: { decision: "review", confidence: 0.7, importance: "medium", evidenceTag: "inference", reason: "애매함", advice: "상위 검토" },
         triage: { decision: "publish", confidence: 0.95, importance: "high", evidenceTag: "official", reason: "공식 발표", advice: "바로 검토하세요." },
         codexReview: { status: "complete", reviewedAt: "2026-07-31T00:01:00Z", decision: "publish", confidence: 0.95, importance: "high", evidenceTag: "official", reason: "공식 발표", advice: "바로 검토하세요." },
-        analysisPolicyVersion: 3,
+        analysisPolicyVersion: 4,
         dcPublication: null,
       },
       collectedAt: "2026-07-31T00:01:00Z",
@@ -51,6 +52,7 @@ test("뉴스 리더는 내부 경로와 Discord ID 없이 공개 계약을 반�
     assert.equal(payload.items[0].media[0].url, `/api/news/${id}/media/01-news.png`);
     assert.equal(payload.items[0].workflow.translation.title, "한글 제목");
     assert.equal(payload.items[0].workflow.translationReview.status, "codex_verified");
+    assert.equal(payload.items[0].workflow.contextTranslations[0].body, "부모 글 번역");
     assert.match(payload.items[0].workflow.analysisNotice, /원문 번역이 아니며/);
     assert.equal(payload.items[0].workflow.triage.decision, "publish");
     assert.equal(payload.items[0].workflow.triage.advice, "바로 검토하세요.");

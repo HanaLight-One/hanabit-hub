@@ -97,7 +97,7 @@ Hub 생성 메타데이터를 웹 제작 기록에 연결한다.
 Discord Announcement ─┐
                       ├─> Discord watcher ─> JSON 대기함 ─> 무료 API 원문 번역·판정
 X Filtered Stream ─> #x-watch ┘                         │
-                         원문 번역과 관련 문맥을 분리 + 게시가치·정보 성격 태그
+                         원문 번역 + 관련 글별 번역을 분리 + 게시가치·정보 성격 태그
                                       애매한 X만 ─> Codex 번역 귀속 감사·심층검토(일 4건)
                                                          │
                                                          ├─> #news-pending

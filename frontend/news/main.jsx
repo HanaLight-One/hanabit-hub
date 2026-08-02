@@ -162,6 +162,27 @@ function SourceProfile({ profile }) {
   );
 }
 
+function ContextTranslations({ item }) {
+  const translations = item.workflow.contextTranslations ?? [];
+  if (!translations.length) return null;
+  return (
+    <section className="context-translations">
+      <p className="section-label">관련 글 번역</p>
+      {translations.map((translation) => {
+        const context = item.original.contexts?.[translation.index - 1];
+        return (
+          <article key={translation.index}>
+            <strong>{context?.label || context?.account || `관련 글 ${translation.index}`}</strong>
+            <p>{translation.body}</p>
+            {context?.url && <a href={context.url} target="_blank" rel="noopener noreferrer">관련 X 원문 ↗</a>}
+          </article>
+        );
+      })}
+      <small>각 문장은 위 작성자의 관련 글을 별도로 번역한 내용이며, 본문 작성자의 발언이 아닙니다.</small>
+    </section>
+  );
+}
+
 function AutoPublishGate({ gate }) {
   if (!gate) return null;
   return (
@@ -273,6 +294,8 @@ function NewsCard({ item, confirming, busy, error, onBegin, onCancel, onApprove,
           )}
         </section>
       )}
+
+      <ContextTranslations item={item} />
 
       {freeTriage && (
         <TriageBox

@@ -44,6 +44,7 @@ export function createNewsProcessor({ stateRoot, runnerPath, analyze = invokeFre
         const result = await analyze(analysisRecord, { runnerPath, runtimeRoot });
         let finalTriage = result.triage;
         let finalTranslation = result.translation;
+        let finalContextTranslations = result.contextTranslations;
         let translationReview = {
           status: "free_unverified",
           reviewer: "gpt-5.4-mini",
@@ -56,17 +57,23 @@ export function createNewsProcessor({ stateRoot, runnerPath, analyze = invokeFre
             const reviewed = await codexReviewer.review(analysisRecord, result);
             if (reviewed.status === "complete") {
               freeTriage = result.triage;
-              const { translationAudit, ...reviewTriage } = reviewed.result;
+              const { translationAudit, contextTranslationAudits, ...reviewTriage } = reviewed.result;
               finalTriage = { ...reviewTriage, signals: ["codex-review"] };
-              if (translationAudit) {
+              if (translationAudit && Array.isArray(contextTranslationAudits)) {
                 finalTranslation = {
                   title: translationAudit.title,
                   body: translationAudit.body,
                 };
+                finalContextTranslations = contextTranslationAudits.map((entry) => ({
+                  index: entry.index,
+                  body: entry.body,
+                }));
+                const corrected = translationAudit.status === "corrected" ||
+                  contextTranslationAudits.some((entry) => entry.status === "corrected");
                 translationReview = {
-                  status: translationAudit.status === "corrected" ? "codex_corrected" : "codex_verified",
+                  status: corrected ? "codex_corrected" : "codex_verified",
                   reviewer: "codex-deep-review",
-                  reason: translationAudit.reason,
+                  reason: [translationAudit.reason, ...contextTranslationAudits.map((entry) => entry.reason)].join(" ").slice(0, 300),
                   reviewedAt: reviewed.reviewedAt,
                 };
               }
@@ -93,6 +100,7 @@ export function createNewsProcessor({ stateRoot, runnerPath, analyze = invokeFre
             ...current.workflow,
             status: decision === "skip" ? "ignored" : "pending_review",
             translation: finalTranslation,
+            contextTranslations: finalContextTranslations,
             translationReview,
             analysisNotice: createNewsAnalysisNotice({ codexReviewed: codexReview?.status === "complete" }),
             freeTriage,

@@ -20,6 +20,20 @@ const OUTPUT_SCHEMA = Object.freeze({
       required: ["status", "title", "body", "reason"],
       additionalProperties: false,
     },
+    contextTranslationAudits: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          index: { type: "integer", minimum: 1, maximum: 3 },
+          status: { type: "string", enum: ["passed", "corrected"] },
+          body: { type: "string", minLength: 1, maxLength: 4000 },
+          reason: { type: "string", minLength: 1, maxLength: 300 },
+        },
+        required: ["index", "status", "body", "reason"],
+        additionalProperties: false,
+      },
+    },
     decision: { type: "string", enum: ["skip", "review", "publish"] },
     confidence: { type: "number", minimum: 0, maximum: 1 },
     importance: { type: "string", enum: ["low", "medium", "high"] },
@@ -27,7 +41,7 @@ const OUTPUT_SCHEMA = Object.freeze({
     reason: { type: "string", minLength: 1, maxLength: 500 },
     advice: { type: "string", minLength: 1, maxLength: 600 },
   },
-  required: ["translationAudit", "decision", "confidence", "importance", "evidenceTag", "reason", "advice"],
+  required: ["translationAudit", "contextTranslationAudits", "decision", "confidence", "importance", "evidenceTag", "reason", "advice"],
   additionalProperties: false,
 });
 
@@ -37,7 +51,7 @@ function limited(value, maximum, label) {
   return text;
 }
 
-function validateResult(value) {
+function validateResult(value, contextCount) {
   const decision = String(value?.decision ?? "");
   const importance = String(value?.importance ?? "");
   const confidence = Number(value?.confidence);
@@ -48,6 +62,25 @@ function validateResult(value) {
   if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) {
     throw new Error("Codex 뉴스 검토 신뢰도가 올바르지 않습니다.");
   }
+  if (!Array.isArray(value?.contextTranslationAudits) || value.contextTranslationAudits.length !== contextCount) {
+    throw new Error("Codex 관련 글 번역 감사 개수가 올바르지 않습니다.");
+  }
+  const seenContextIndexes = new Set();
+  const contextTranslationAudits = value.contextTranslationAudits.map((entry) => {
+    const index = Number(entry?.index);
+    if (!Number.isInteger(index) || index < 1 || index > contextCount || seenContextIndexes.has(index)) {
+      throw new Error("Codex 관련 글 번역 감사 순서가 올바르지 않습니다.");
+    }
+    seenContextIndexes.add(index);
+    const status = String(entry?.status ?? "");
+    if (!["passed", "corrected"].includes(status)) throw new Error("Codex 관련 글 번역 감사 상태가 올바르지 않습니다.");
+    return Object.freeze({
+      index,
+      status,
+      body: limited(entry?.body, 4_000, "Codex 관련 글 교정 본문"),
+      reason: limited(entry?.reason, 300, "Codex 관련 글 번역 감사 근거"),
+    });
+  }).sort((left, right) => left.index - right.index);
   return Object.freeze({
     translationAudit: Object.freeze({
       status: ["passed", "corrected"].includes(value?.translationAudit?.status)
@@ -57,6 +90,7 @@ function validateResult(value) {
       body: limited(value?.translationAudit?.body, 4_000, "Codex 교정 본문"),
       reason: limited(value?.translationAudit?.reason, 300, "Codex 번역 감사 근거"),
     }),
+    contextTranslationAudits: Object.freeze(contextTranslationAudits),
     decision,
     confidence,
     importance,
@@ -87,6 +121,8 @@ function buildPrompt(record, freeResult) {
     "The translationAudit title and body must translate or faithfully summarize SOURCE TEXT only. Never add a fact, phrase, subject, capability, or claim that exists only in CONTEXT.",
     "Use CONTEXT only for triage reason and editorial advice. If the free translation imported any context claim, set translationAudit.status to corrected and replace it with a source-only Korean translation.",
     "Set translationAudit.status to passed only when the supplied free translation is already attributable entirely to SOURCE TEXT.",
+    "Audit each FREE CONTEXT TRANSLATION against only its matching CONTEXT text. Return one contextTranslationAudits item per CONTEXT with the same 1-based index.",
+    "Context translations are valuable evidence and must be preserved separately; never merge them into SOURCE translation or discard them.",
     "Separate explicit facts from implications. publish means worth sharing with the evidence tag; it still never triggers publication in this process.",
     "Return only the JSON required by the supplied schema, in Korean.",
     `SOURCE TYPE: ${String(record.source?.type ?? "unknown")}`,
@@ -100,6 +136,8 @@ function buildPrompt(record, freeResult) {
     contexts,
     `FREE TRANSLATION TITLE: ${String(freeResult.translation?.title ?? "").slice(0, 120)}`,
     `FREE TRANSLATION BODY: ${String(freeResult.translation?.body ?? "").slice(0, 3_000)}`,
+    ...(freeResult.contextTranslations ?? []).map((entry) =>
+      `FREE CONTEXT TRANSLATION ${entry.index}: ${String(entry.body ?? "").slice(0, 3_000)}`),
     `FREE DECISION: ${String(freeResult.triage?.decision ?? "unknown")}`,
     `FREE CONFIDENCE: ${String(freeResult.triage?.confidence ?? "unknown")}`,
     `FREE EVIDENCE TAG: ${String(freeResult.triage?.evidenceTag ?? "unknown")}`,
@@ -184,7 +222,8 @@ export async function invokeCodexNewsReview(
     if (!info.isFile() || info.size <= 0 || info.size > 128_000) {
       throw new Error("Codex 뉴스 검토 결과 크기가 올바르지 않습니다.");
     }
-    return validateResult(JSON.parse(await readFile(outputPath, "utf8")));
+    const contextCount = Array.isArray(record.original?.contexts) ? Math.min(3, record.original.contexts.length) : 0;
+    return validateResult(JSON.parse(await readFile(outputPath, "utf8")), contextCount);
   } finally {
     await rm(workRoot, { recursive: true, force: true });
   }

@@ -21,6 +21,7 @@ async function fixture(source, analyze, callback, { codexReviewer = null, source
 
 const result = (decision) => ({
   translation: { title: "번역 제목", body: "번역 본문" },
+  contextTranslations: [],
   triage: { decision, confidence: 0.9, importance: "medium", evidenceTag: "inference", reason: "판정 이유", advice: "[유추] 게시 권장", signals: [] },
 });
 
@@ -87,6 +88,7 @@ test("애매한 무료 판정은 Codex 검토 결과를 최종 판정으로 보�
             body: "원문에 있는 내용만 번역했습니다.",
             reason: "무료 번역이 부모 문맥을 섞었다.",
           },
+          contextTranslationAudits: [],
           decision: "publish",
           confidence: 0.88,
           importance: "medium",
@@ -107,6 +109,7 @@ test("애매한 무료 판정은 Codex 검토 결과를 최종 판정으로 보�
     assert.equal(saved.workflow.codexReview.status, "complete");
     assert.equal(saved.workflow.translation.body, "원문에 있는 내용만 번역했습니다.");
     assert.equal(saved.workflow.translationReview.status, "codex_corrected");
+    assert.deepEqual(saved.workflow.contextTranslations, []);
   }, { codexReviewer });
 });
 
@@ -154,7 +157,7 @@ test("승인 전 기존 뉴스는 분석 세대를 올려 새 정책으로 다�
     assert.equal(reprocessed.workflow.status, "pending_review");
     assert.equal(reprocessed.workflow.triage.decision, "publish");
     assert.equal(reprocessed.workflow.analysisRevision, 2);
-    assert.equal(reprocessed.workflow.analysisPolicyVersion, 3);
+    assert.equal(reprocessed.workflow.analysisPolicyVersion, 4);
     assert.equal(typeof reprocessed.workflow.reanalysisRequestedAt, "string");
     await store.update(id, (record) => ({
       ...record,

@@ -24,6 +24,7 @@ function record(id = "a".repeat(32)) {
 function free(decision = "skip", confidence = 0.97, evidenceTag = "inference") {
   return {
     translation: { title: "Codex", body: "Codex" },
+    contextTranslations: [{ index: 1, body: "앱 개발은 쉬운 부분입니다." }],
     triage: { decision, confidence, importance: "low", evidenceTag, reason: "단어 하나", advice: "보류", signals: [] },
   };
 }
@@ -58,6 +59,7 @@ test("Codex exec는 읽기 전용 일회성 스키마 출력만 사용한다", a
         assert.equal(schema.additionalProperties, false);
         await writeFile(outputPath, JSON.stringify({
           translationAudit: { status: "passed", title: "Codex", body: "Codex", reason: "원문과 일치한다." },
+          contextTranslationAudits: [{ index: 1, status: "passed", body: "앱 개발은 쉬운 부분입니다.", reason: "관련 글과 일치한다." }],
           decision: "review",
           confidence: 0.86,
           importance: "medium",
@@ -70,6 +72,7 @@ test("Codex exec는 읽기 전용 일회성 스키마 출력만 사용한다", a
     assert.equal(result.decision, "review");
     assert.equal(result.evidenceTag, "inference");
     assert.equal(result.translationAudit.status, "passed");
+    assert.equal(result.contextTranslationAudits[0].index, 1);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -85,7 +88,7 @@ test("Codex 심층검토는 날짜별 상한과 항목별 영수증으로 반복
     now: () => new Date("2026-08-02T01:00:00Z"),
     async invoke() {
       calls += 1;
-      return { translationAudit: { status: "passed", title: "Codex", body: "Codex", reason: "원문과 일치" }, decision: "publish", confidence: 0.9, importance: "high", evidenceTag: "inference", reason: "의미 있음", advice: "[유추] 게시 권장" };
+      return { translationAudit: { status: "passed", title: "Codex", body: "Codex", reason: "원문과 일치" }, contextTranslationAudits: [{ index: 1, status: "passed", body: "앱 개발은 쉬운 부분입니다.", reason: "관련 글과 일치" }], decision: "publish", confidence: 0.9, importance: "high", evidenceTag: "inference", reason: "의미 있음", advice: "[유추] 게시 권장" };
     },
   });
   try {

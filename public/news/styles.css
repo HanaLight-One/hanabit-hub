@@ -51,6 +51,12 @@ h1 em { color: var(--accent); font-style: normal; }
 .translation-box p { margin: 12px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
 .translation-boundary { display: block; margin-top: 14px; color: #a9b6c2; font-size: 12px; line-height: 1.55; }
 .analysis-notice { margin: 14px 0 0; padding: 13px 15px; border: 1px solid rgb(255 197 84 / 34%); border-radius: 12px; background: rgb(255 197 84 / 7%); color: #f2d89c; line-height: 1.6; }
+.context-translations { margin-top: 14px; padding: 16px 18px; border: 1px solid rgb(118 171 255 / 30%); border-radius: 14px; background: rgb(118 171 255 / 6%); }
+.context-translations article + article { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.context-translations strong { color: #c7d8f7; }
+.context-translations p { margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; }
+.context-translations a { color: var(--accent); font-size: 13px; }
+.context-translations small { display: block; margin-top: 14px; color: var(--muted); line-height: 1.55; }
 .section-label { margin: 0 0 9px !important; color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .14em; }
 .body-label { margin-top: 20px !important; padding-top: 16px; border-top: 1px solid rgb(216 255 82 / 16%); }
 .muted-box { color: var(--muted); }

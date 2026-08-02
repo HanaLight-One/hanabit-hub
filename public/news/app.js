@@ -8192,7 +8192,33 @@ function ue({ profile: e }) {
 		})]
 	}) : null;
 }
-function T({ gate: e }) {
+function T({ item: e }) {
+	let t = e.workflow.contextTranslations ?? [];
+	return t.length ? /* @__PURE__ */ (0, x.jsxs)("section", {
+		className: "context-translations",
+		children: [
+			/* @__PURE__ */ (0, x.jsx)("p", {
+				className: "section-label",
+				children: "관련 글 번역"
+			}),
+			t.map((t) => {
+				let n = e.original.contexts?.[t.index - 1];
+				return /* @__PURE__ */ (0, x.jsxs)("article", { children: [
+					/* @__PURE__ */ (0, x.jsx)("strong", { children: n?.label || n?.account || `관련 글 ${t.index}` }),
+					/* @__PURE__ */ (0, x.jsx)("p", { children: t.body }),
+					n?.url && /* @__PURE__ */ (0, x.jsx)("a", {
+						href: n.url,
+						target: "_blank",
+						rel: "noopener noreferrer",
+						children: "관련 X 원문 ↗"
+					})
+				] }, t.index);
+			}),
+			/* @__PURE__ */ (0, x.jsx)("small", { children: "각 문장은 위 작성자의 관련 글을 별도로 번역한 내용이며, 본문 작성자의 발언이 아닙니다." })
+		]
+	}) : null;
+}
+function E({ gate: e }) {
 	return e ? /* @__PURE__ */ (0, x.jsxs)("section", {
 		className: `auto-gate auto-gate-${e.decision}`,
 		children: [
@@ -8202,7 +8228,7 @@ function T({ gate: e }) {
 		]
 	}) : null;
 }
-function E({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a, onApprove: o }) {
+function de({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a, onApprove: o }) {
 	return e.workflow.publishedToDc ? /* @__PURE__ */ (0, x.jsx)("div", {
 		className: "approval approved",
 		children: "DC 게시 완료 영수증이 확인됐어요."
@@ -8248,7 +8274,7 @@ function E({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a,
 		children: "번역과 판정이 끝난 검토 후보만 승인할 수 있어요."
 	});
 }
-function de({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a, onApprove: o, onRetry: s, onReanalyze: c }) {
+function fe({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a, onApprove: o, onRetry: s, onReanalyze: c }) {
 	let l = e.workflow.triage, u = e.workflow.freeTriage, d = e.workflow.codexReview;
 	return /* @__PURE__ */ (0, x.jsxs)("article", {
 		className: "news-card",
@@ -8338,6 +8364,7 @@ function de({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a
 					})
 				]
 			}),
+			/* @__PURE__ */ (0, x.jsx)(T, { item: e }),
 			u && /* @__PURE__ */ (0, x.jsx)(le, {
 				triage: u,
 				label: "무료 API 1차 판정",
@@ -8362,7 +8389,7 @@ function de({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a
 				className: "codex-review-note",
 				children: "Codex 심층검토를 완료하지 못해 무료 API 판정을 보존했어요."
 			}),
-			/* @__PURE__ */ (0, x.jsx)(T, { gate: e.workflow.autoPublishGate }),
+			/* @__PURE__ */ (0, x.jsx)(E, { gate: e.workflow.autoPublishGate }),
 			e.workflow.canReanalyze && /* @__PURE__ */ (0, x.jsx)("button", {
 				type: "button",
 				className: "reanalysis-button",
@@ -8382,7 +8409,7 @@ function de({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a
 				}, e.url))
 			})] }),
 			/* @__PURE__ */ (0, x.jsx)(se, { item: e }),
-			/* @__PURE__ */ (0, x.jsx)(E, {
+			/* @__PURE__ */ (0, x.jsx)(de, {
 				item: e,
 				confirming: t,
 				busy: n,
@@ -8394,7 +8421,7 @@ function de({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a
 		]
 	});
 }
-function fe() {
+function pe() {
 	let [e, t] = (0, y.useState)(null), [n, r] = (0, y.useState)(""), [i, a] = (0, y.useState)(null), [o, s] = (0, y.useState)(null), [c, l] = (0, y.useState)(""), [u, d] = (0, y.useState)(null), [f, p] = (0, y.useState)("action");
 	async function m() {
 		let e = await fetch("/api/news", { cache: "no-store" });
@@ -8527,7 +8554,7 @@ function fe() {
 		/* @__PURE__ */ (0, x.jsx)("section", {
 			className: "news-list",
 			"aria-label": "수집된 뉴스",
-			children: g.map((e) => /* @__PURE__ */ (0, x.jsx)(de, {
+			children: g.map((e) => /* @__PURE__ */ (0, x.jsx)(fe, {
 				item: e,
 				confirming: i === e.id,
 				busy: o === e.id,
@@ -8545,5 +8572,5 @@ function fe() {
 		})
 	] })] });
 }
-(0, b.createRoot)(document.querySelector("#news-root")).render(/* @__PURE__ */ (0, x.jsx)(fe, {}));
+(0, b.createRoot)(document.querySelector("#news-root")).render(/* @__PURE__ */ (0, x.jsx)(pe, {}));
 //#endregion

@@ -120,6 +120,12 @@ function publicItem(record, sourceProfiles) {
             body: safeText(record.workflow.translation.body, 4_000),
           }
         : null,
+      contextTranslations: Array.isArray(record?.workflow?.contextTranslations)
+        ? record.workflow.contextTranslations.slice(0, 3).map((entry) => ({
+            index: Math.max(1, Math.min(3, Number(entry?.index) || 1)),
+            body: safeText(entry?.body, 4_000),
+          })).filter((entry) => entry.body)
+        : [],
       translationReview: {
         status: translationReviewStatus,
         reason: safeText(record?.workflow?.translationReview?.reason, 300) || null,
