@@ -53,8 +53,17 @@ function validateContextTranslations(value, contextCount) {
 
 function contextTranslationEntries(value) {
   if (Array.isArray(value)) return value;
-  if (Array.isArray(value?.contextTranslations)) return value.contextTranslations;
-  if (Array.isArray(value?.translations)) return value.translations;
+  const nested = value?.contextTranslations ?? value?.translations ?? value;
+  if (Array.isArray(nested)) return nested;
+  if (nested && typeof nested === "object" && Number.isInteger(Number(nested.index)) && nested.body) {
+    return [nested];
+  }
+  if (nested && typeof nested === "object") {
+    const numbered = Object.entries(nested).map(([index, body]) => ({ index: Number(index), body }));
+    if (numbered.length > 0 && numbered.every((entry) => Number.isInteger(entry.index) && typeof entry.body === "string")) {
+      return numbered;
+    }
+  }
   return null;
 }
 
