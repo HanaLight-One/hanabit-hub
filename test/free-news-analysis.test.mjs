@@ -39,6 +39,8 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
         assert.match(prompt, /CONTEXT 1 RELATION: linked-post/);
         assert.match(prompt, /A new model is available today/);
         assert.match(prompt, /translation object must contain only SOURCE TEXT/);
+        assert.match(prompt, /Do not compress SOURCE into a headline/);
+        assert.match(prompt, /Translate empower or empowering as enabling the person/);
         assert.match(prompt, /Do not omit CONTEXT translations/);
         assert.match(prompt, /credible insider explicitly saying they used a named capability is usually inference/);
         assert.match(prompt, /newsworthiness separately from certainty/);
@@ -63,6 +65,51 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
     assert.equal(result.triage.evidenceTag, "confirmed");
     assert.equal(result.contextTranslations[0].body, "오늘 새 모델을 사용할 수 있습니다.");
     await assert.rejects(() => readFile(path.join(runtimeRoot, "e".repeat(32), "prompt.txt"), "utf8"), /ENOENT/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("empowering의 자립 의미와 링크 소개 구조가 빠진 번역은 다시 요청한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-fidelity-"));
+  const runnerPath = path.join(root, "runner.ps1");
+  await writeFile(runnerPath, "test", "utf8");
+  let attempts = 0;
+  try {
+    const result = await invokeFreeNewsAnalysis({
+      id: "6".repeat(32),
+      source: { type: "x-post", account: "gdb" },
+      original: {
+        content: "chatgpt for empowering your dad to build: https://t.co/example",
+        contexts: [],
+      },
+    }, {
+      runnerPath,
+      runtimeRoot: path.join(root, "runtime"),
+      async wait() {},
+      async runProcess(command, args) {
+        attempts += 1;
+        const outputPath = args[args.indexOf("-Output") + 1];
+        const body = attempts === 1
+          ? "ChatGPT로 아빠가 무언가를 만들도록 돕기"
+          : "아빠가 직접 무언가를 만들 수 있게 해주는 ChatGPT:";
+        await writeFile(outputPath, JSON.stringify({
+          translation: { title: "아빠의 만들기를 돕는 ChatGPT", body },
+          contextTranslations: [],
+          triage: {
+            decision: "publish",
+            confidence: 0.9,
+            importance: "medium",
+            evidenceTag: "confirmed",
+            reason: "구체적인 활용 사례",
+            advice: "사례로 소개",
+            signals: ["use-case"],
+          },
+        }), "utf8");
+      },
+    });
+    assert.equal(attempts, 2);
+    assert.equal(result.translation.body, "아빠가 직접 무언가를 만들 수 있게 해주는 ChatGPT:");
   } finally {
     await rm(root, { recursive: true, force: true });
   }
