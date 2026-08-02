@@ -9,13 +9,24 @@ import { createNewsProcessor } from "../src/modules/news/news-processor.mjs";
 async function fixture(source, analyze, callback, { codexReviewer = null, sourceProfiles = new Map() } = {}) {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-processor-"));
   const runnerPath = path.join(root, "runner.ps1");
+  const pythonExecutablePath = path.join(root, "free-python.exe");
+  const keyStorePath = path.join(root, "openai-api-key.dpapi");
   await writeFile(runnerPath, "test", "utf8");
   const store = createPendingNewsStore({ root });
   const id = "f".repeat(32);
   await store.create({ id, source, original: { content: "news", embeds: [] }, workflow: { status: "pending_translation", dcPublication: null } });
   try {
-    const processor = createNewsProcessor({ stateRoot: root, runnerPath, analyze, codexReviewer, sourceProfiles, now: () => new Date("2026-08-01T04:00:00Z") });
-    await callback({ processor, store, id });
+    const processor = createNewsProcessor({
+      stateRoot: root,
+      runnerPath,
+      pythonExecutablePath,
+      keyStorePath,
+      analyze,
+      codexReviewer,
+      sourceProfiles,
+      now: () => new Date("2026-08-01T04:00:00Z"),
+    });
+    await callback({ processor, store, id, pythonExecutablePath, keyStorePath });
   } finally { await rm(root, { recursive: true, force: true }); }
 }
 
@@ -23,6 +34,23 @@ const result = (decision) => ({
   translation: { title: "번역 제목", body: "번역 본문" },
   contextTranslations: [],
   triage: { decision, confidence: 0.9, importance: "medium", evidenceTag: "inference", reason: "판정 이유", advice: "[유추] 게시 권장", signals: [] },
+});
+
+test("뉴스 분석기에 추적 실행기와 외부 Python·키 저장소 경계를 함께 전달한다", async () => {
+  let received;
+  await fixture(
+    { type: "x-post" },
+    async (_record, options) => {
+      received = options;
+      return result("review");
+    },
+    async ({ processor, pythonExecutablePath, keyStorePath }) => {
+      await processor.process("f".repeat(32));
+      assert.equal(received.pythonExecutablePath, pythonExecutablePath);
+      assert.equal(received.keyStorePath, keyStorePath);
+      assert.match(received.runnerPath, /runner\.ps1$/u);
+    },
+  );
 });
 
 test("X 판정 결과를 게시 검토 또는 보류 상태로 결정적으로 저장한다", async () => {

@@ -28,6 +28,11 @@ test("Image Studio 외부 경로는 절대경로만 허용한다", () => {
       }),
     /pythonExecutablePath.*절대경로/,
   );
+
+  assert.throws(
+    () => validateImageStudioConfig({ generation: { freeTextKeyStorePath: "runtime/key.dpapi" } }),
+    /freeTextKeyStorePath.*절대경로/,
+  );
 });
 
 test("비어 있는 예시 경로와 절대경로 설정을 허용한다", () => {
@@ -38,6 +43,8 @@ test("비어 있는 예시 경로와 절대경로 설정을 허용한다", () =>
       stateRoot: "C:\\runtime\\image-studio-state",
       generation: {
         pythonExecutablePath: "C:\\Python\\python.exe",
+        freeTextPythonExecutablePath: "C:\\OpenAI\\python.exe",
+        freeTextKeyStorePath: "C:\\OpenAI\\key.dpapi",
       },
     }),
   );

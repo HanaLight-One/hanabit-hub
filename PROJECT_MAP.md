@@ -130,6 +130,10 @@ Responses API 공용 텍스트 실행기의 복구 가능한 정본은 `tools/op
 운영 경로는 `config.local.json`으로 계속 외부 주입하며, 정본 동기화는
 `scripts/sync-openai-free-runner.ps1`의 고정 allowlist와 명시적 확인 문구를 거친다.
 키·DPAPI 암호문·가상환경·실행 결과는 정본과 Git에 포함하지 않는다.
+운영 호출은 각 checkout의 추적된 `tools/openai-free/invoke-free-text.ps1`을 사용하고,
+외부 Python과 DPAPI 저장소만 `freeTextPythonExecutablePath`,
+`freeTextKeyStorePath`로 주입한다. 같은 설정은 뉴스 직접 호출과 이미지 worker 자식
+프로세스에 함께 전달된다.
 
 ## 이미지와 운세 연결 경계
 

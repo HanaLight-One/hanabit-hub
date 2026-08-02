@@ -37,7 +37,15 @@ async function requireFile(target, label) {
   }
 }
 
-function defaultLaunch({ pythonExecutablePath, responsesWorkerPath, freeTextRunnerPath, jobPath, contextPath }) {
+function defaultLaunch({
+  pythonExecutablePath,
+  responsesWorkerPath,
+  freeTextRunnerPath,
+  freeTextPythonExecutablePath,
+  freeTextKeyStorePath,
+  jobPath,
+  contextPath,
+}) {
   return new Promise((resolve, reject) => {
     const child = spawn(
       pythonExecutablePath,
@@ -47,7 +55,16 @@ function defaultLaunch({ pythonExecutablePath, responsesWorkerPath, freeTextRunn
         detached: true,
         windowsHide: true,
         stdio: "ignore",
-        env: { ...process.env, HANABIT_FREE_TEXT_RUNNER: freeTextRunnerPath },
+        env: {
+          ...process.env,
+          HANABIT_FREE_TEXT_RUNNER: freeTextRunnerPath,
+          ...(freeTextPythonExecutablePath
+            ? { HANABIT_OPENAI_FREE_PYTHON: freeTextPythonExecutablePath }
+            : {}),
+          ...(freeTextKeyStorePath
+            ? { OPENAI_DPAPI_KEY_PATH: freeTextKeyStorePath }
+            : {}),
+        },
       },
     );
     child.once("error", reject);
@@ -66,6 +83,8 @@ export function createPromptOnlyExecutor({
   pythonExecutablePath,
   responsesWorkerPath,
   freeTextRunnerPath,
+  freeTextPythonExecutablePath = null,
+  freeTextKeyStorePath = null,
   launchWorker = defaultLaunch,
   buildContext = buildImageStudioQueueContext,
   writeContext = writeImageStudioQueueContext,
@@ -78,6 +97,8 @@ export function createPromptOnlyExecutor({
     pythonExecutablePath,
     responsesWorkerPath,
     freeTextRunnerPath,
+    ...(freeTextPythonExecutablePath ? { freeTextPythonExecutablePath } : {}),
+    ...(freeTextKeyStorePath ? { freeTextKeyStorePath } : {}),
   })) {
     if (!path.isAbsolute(target ?? "")) throw new TypeError(`${label}는 절대경로여야 합니다.`);
   }
@@ -105,6 +126,12 @@ export function createPromptOnlyExecutor({
       requireFile(pythonExecutablePath, "Python"),
       requireFile(responsesWorkerPath, "이미지 worker"),
       requireFile(freeTextRunnerPath, "무료 API runner"),
+      ...(freeTextPythonExecutablePath
+        ? [requireFile(freeTextPythonExecutablePath, "무료 API Python")]
+        : []),
+      ...(freeTextKeyStorePath
+        ? [requireFile(freeTextKeyStorePath, "무료 API 키 저장소")]
+        : []),
     ]);
     await mkdir(path.join(jobRoot, "receipts"), { recursive: true });
     const target = paths(safeId);
@@ -154,6 +181,8 @@ export function createPromptOnlyExecutor({
         pythonExecutablePath,
         responsesWorkerPath,
         freeTextRunnerPath,
+        freeTextPythonExecutablePath,
+        freeTextKeyStorePath,
         jobPath: target.job,
         contextPath: target.context,
       });

@@ -8,6 +8,8 @@ import { invokeFreeNewsAnalysis } from "../src/modules/news/free-news-analysis.m
 test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 파일을 정리한다", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-analysis-"));
   const runnerPath = path.join(root, "runner.ps1");
+  const pythonExecutablePath = path.join(root, "python.exe");
+  const keyStorePath = path.join(root, "openai-api-key.dpapi");
   const runtimeRoot = path.join(root, "runtime");
   await writeFile(runnerPath, "test", "utf8");
   try {
@@ -22,11 +24,15 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
     }, {
       runnerPath,
       runtimeRoot,
+      pythonExecutablePath,
+      keyStorePath,
       async runProcess(command, args) {
         assert.match(command, /powershell\.exe$/i);
         const promptPath = args[args.indexOf("-PromptFile") + 1];
         const outputPath = args[args.indexOf("-Output") + 1];
         const schemaPath = args[args.indexOf("-JsonSchemaFile") + 1];
+        assert.equal(args[args.indexOf("-PythonExecutablePath") + 1], pythonExecutablePath);
+        assert.equal(args[args.indexOf("-KeyStorePath") + 1], keyStorePath);
         const prompt = await readFile(promptPath, "utf8");
         const schema = JSON.parse(await readFile(schemaPath, "utf8"));
         assert.match(prompt, /One more day/);

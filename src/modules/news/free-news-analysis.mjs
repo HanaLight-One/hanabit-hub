@@ -261,11 +261,19 @@ export async function invokeFreeNewsAnalysis(
   {
     runnerPath,
     runtimeRoot,
+    pythonExecutablePath = null,
+    keyStorePath = null,
     runProcess = run,
     wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
   } = {},
 ) {
-  if (!path.isAbsolute(runnerPath) || !path.isAbsolute(runtimeRoot) || !path.isAbsolute(POWERSHELL)) {
+  if (
+    !path.isAbsolute(runnerPath) ||
+    !path.isAbsolute(runtimeRoot) ||
+    !path.isAbsolute(POWERSHELL) ||
+    (pythonExecutablePath && !path.isAbsolute(pythonExecutablePath)) ||
+    (keyStorePath && !path.isAbsolute(keyStorePath))
+  ) {
     throw new TypeError("무료 API runner와 실행 상태는 절대경로여야 합니다.");
   }
   const runner = await stat(runnerPath);
@@ -296,6 +304,8 @@ export async function invokeFreeNewsAnalysis(
           "-PromptFile", promptPath,
           "-Output", outputPath,
           "-JsonSchemaFile", schemaPath,
+          ...(pythonExecutablePath ? ["-PythonExecutablePath", pythonExecutablePath] : []),
+          ...(keyStorePath ? ["-KeyStorePath", keyStorePath] : []),
           "-MaxOutputTokens", "1800",
         ], { cwd: workRoot });
         const info = await stat(outputPath);
@@ -315,6 +325,8 @@ export async function invokeFreeNewsAnalysis(
                   "-PromptFile", contextPromptPath,
                   "-Output", contextOutputPath,
                   "-JsonSchemaFile", contextSchemaPath,
+                  ...(pythonExecutablePath ? ["-PythonExecutablePath", pythonExecutablePath] : []),
+                  ...(keyStorePath ? ["-KeyStorePath", keyStorePath] : []),
                   "-MaxOutputTokens", "1200",
                 ], { cwd: workRoot });
                 const contextInfo = await stat(contextOutputPath);

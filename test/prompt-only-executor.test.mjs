@@ -15,6 +15,8 @@ async function fixture(callback, { now } = {}) {
   const pythonExecutablePath = path.join(root, "python.exe");
   const responsesWorkerPath = path.join(root, "worker.py");
   const freeTextRunnerPath = path.join(root, "free.ps1");
+  const freeTextPythonExecutablePath = path.join(root, "free-python.exe");
+  const freeTextKeyStorePath = path.join(root, "openai-api-key.dpapi");
   await mkdir(outputRoot, { recursive: true });
   await Promise.all([
     writeFile(assetIndexPath, JSON.stringify({
@@ -38,6 +40,8 @@ async function fixture(callback, { now } = {}) {
     writeFile(pythonExecutablePath, "test", "utf8"),
     writeFile(responsesWorkerPath, "test", "utf8"),
     writeFile(freeTextRunnerPath, "test", "utf8"),
+    writeFile(freeTextPythonExecutablePath, "test", "utf8"),
+    writeFile(freeTextKeyStorePath, "test", "utf8"),
   ]);
   const catalog = { async list() { return {
     styles: [{ id: "calm", label: "calm" }],
@@ -53,15 +57,33 @@ async function fixture(callback, { now } = {}) {
     pythonExecutablePath,
     responsesWorkerPath,
     freeTextRunnerPath,
+    freeTextPythonExecutablePath,
+    freeTextKeyStorePath,
     ...(now ? { now } : {}),
     async launchWorker(input) { launches.push(input); return { pid: 1234 }; },
   });
-  try { await callback({ drafts, executor, launches, jobRoot }); }
+  try {
+    await callback({
+      drafts,
+      executor,
+      launches,
+      jobRoot,
+      freeTextPythonExecutablePath,
+      freeTextKeyStorePath,
+    });
+  }
   finally { await rm(root, { recursive: true, force: true }); }
 }
 
 test("프롬프트 자유 생성은 모의 worker에 1장으로 한 번만 전달한다", async () => {
-  await fixture(async ({ drafts, executor, launches, jobRoot }) => {
+  await fixture(async ({
+    drafts,
+    executor,
+    launches,
+    jobRoot,
+    freeTextPythonExecutablePath,
+    freeTextKeyStorePath,
+  }) => {
     const draft = await drafts.create({
       prompt: "자유로운 우주 정거장 장면",
       purpose: "free-play",
@@ -73,6 +95,8 @@ test("프롬프트 자유 생성은 모의 worker에 1장으로 한 번만 전�
     const started = await executor.start(draft.id);
     assert.deepEqual(started, { id: draft.id, status: "processing", route: "prompt-only", executionMode: "prompt-only", count: 1 });
     assert.equal(launches.length, 1);
+    assert.equal(launches[0].freeTextPythonExecutablePath, freeTextPythonExecutablePath);
+    assert.equal(launches[0].freeTextKeyStorePath, freeTextKeyStorePath);
     const job = JSON.parse(await readFile(path.join(jobRoot, `${draft.id}.json`), "utf8"));
     const context = JSON.parse(
       (await readFile(path.join(jobRoot, `${draft.id}.worker-context.json`), "utf8")).replace(/^\uFEFF/u, ""),

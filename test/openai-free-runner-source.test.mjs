@@ -13,6 +13,9 @@ test("공용 무료 텍스트 실행기 정본은 키 없이 구조화 출력 �
   ]);
 
   assert.match(wrapper, /\[string\]\$JsonSchemaFile/);
+  assert.match(wrapper, /\[string\]\$PythonExecutablePath/);
+  assert.match(wrapper, /\[string\]\$KeyStorePath/);
+  assert.match(wrapper, /HANABIT_OPENAI_FREE_PYTHON/);
   assert.match(wrapper, /--json-schema-file/);
   assert.match(runner, /"type": "json_schema"/);
   assert.match(runner, /"strict": True/);

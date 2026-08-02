@@ -119,6 +119,8 @@ const promptOnlyExecutor =
         pythonExecutablePath: generationConfig.pythonExecutablePath,
         responsesWorkerPath: generationConfig.responsesWorkerPath,
         freeTextRunnerPath: generationConfig.freeTextRunnerPath,
+        freeTextPythonExecutablePath: generationConfig.freeTextPythonExecutablePath,
+        freeTextKeyStorePath: generationConfig.freeTextKeyStorePath,
       })
     : null;
 const themeHistory =
@@ -173,6 +175,8 @@ const newsProcessor = path.isAbsolute(generationConfig?.freeTextRunnerPath ?? ""
   ? createNewsProcessor({
       stateRoot: path.join(APP_ROOT, "state", "news"),
       runnerPath: generationConfig.freeTextRunnerPath,
+      pythonExecutablePath: generationConfig.freeTextPythonExecutablePath,
+      keyStorePath: generationConfig.freeTextKeyStorePath,
       codexReviewer: newsCodexReviewer,
       sourceProfiles: newsSourceProfiles,
     })

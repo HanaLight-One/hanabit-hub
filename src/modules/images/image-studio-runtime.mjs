@@ -55,6 +55,9 @@ export function createImageStudioRuntime(config = {}) {
       pythonExecutablePath: config.generation?.pythonExecutablePath || null,
       responsesWorkerPath: config.generation?.responsesWorkerPath || null,
       freeTextRunnerPath: config.generation?.freeTextRunnerPath || null,
+      freeTextPythonExecutablePath:
+        config.generation?.freeTextPythonExecutablePath || null,
+      freeTextKeyStorePath: config.generation?.freeTextKeyStorePath || null,
       codexResponsesBridgePath:
         config.generation?.codexResponsesBridgePath || null,
     }),

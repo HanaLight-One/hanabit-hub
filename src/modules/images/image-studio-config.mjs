@@ -19,6 +19,8 @@ const GENERATION_PATH_FIELDS = [
   "pythonExecutablePath",
   "responsesWorkerPath",
   "freeTextRunnerPath",
+  "freeTextPythonExecutablePath",
+  "freeTextKeyStorePath",
   "codexResponsesBridgePath",
   "workflowPath",
   "codexExecutablePath",

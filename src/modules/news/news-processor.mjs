@@ -23,8 +23,22 @@ function failureCode(error) {
   return "unknown";
 }
 
-export function createNewsProcessor({ stateRoot, runnerPath, analyze = invokeFreeNewsAnalysis, codexReviewer = null, sourceProfiles = new Map(), now = () => new Date() }) {
-  if (!path.isAbsolute(stateRoot) || !path.isAbsolute(runnerPath)) {
+export function createNewsProcessor({
+  stateRoot,
+  runnerPath,
+  pythonExecutablePath = null,
+  keyStorePath = null,
+  analyze = invokeFreeNewsAnalysis,
+  codexReviewer = null,
+  sourceProfiles = new Map(),
+  now = () => new Date(),
+}) {
+  if (
+    !path.isAbsolute(stateRoot) ||
+    !path.isAbsolute(runnerPath) ||
+    (pythonExecutablePath && !path.isAbsolute(pythonExecutablePath)) ||
+    (keyStorePath && !path.isAbsolute(keyStorePath))
+  ) {
     throw new TypeError("뉴스 상태와 무료 API runner는 절대경로여야 합니다.");
   }
   const store = createPendingNewsStore({ root: stateRoot });
@@ -41,7 +55,12 @@ export function createNewsProcessor({ stateRoot, runnerPath, analyze = invokeFre
         const analysisRecord = profile
           ? { ...record, source: { ...record.source, profile } }
           : record;
-        const result = await analyze(analysisRecord, { runnerPath, runtimeRoot });
+        const result = await analyze(analysisRecord, {
+          runnerPath,
+          runtimeRoot,
+          pythonExecutablePath,
+          keyStorePath,
+        });
         let finalTriage = result.triage;
         let finalTranslation = result.translation;
         let finalContextTranslations = result.contextTranslations;

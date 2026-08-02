@@ -23,6 +23,8 @@
         "pythonExecutablePath": "",
         "responsesWorkerPath": "",
         "freeTextRunnerPath": "",
+        "freeTextPythonExecutablePath": "",
+        "freeTextKeyStorePath": "",
         "codexResponsesBridgePath": "",
         "workflowPath": "",
         "codexExecutablePath": ""

@@ -51,6 +51,8 @@ test("준비 상태 응답은 절대경로를 노출하지 않는다", async () 
       pythonExecutablePath: await file("python.exe"),
       responsesWorkerPath: await file("worker.py"),
       freeTextRunnerPath: await file("free-text.ps1"),
+      freeTextPythonExecutablePath: await file("free-python.exe"),
+      freeTextKeyStorePath: await file("openai-key.dpapi"),
       codexResponsesBridgePath: await file("bridge.py"),
     },
   };
@@ -58,5 +60,8 @@ test("준비 상태 응답은 절대경로를 노출하지 않는다", async () 
   const result = await inspectImageStudioRuntime(config);
   assert.equal(result.ready, true);
   assert.equal(result.groups.generation.available, true);
+  const runtime = createImageStudioRuntime(config);
+  assert.equal(runtime.generation.freeTextPythonExecutablePath, config.generation.freeTextPythonExecutablePath);
+  assert.equal(runtime.generation.freeTextKeyStorePath, config.generation.freeTextKeyStorePath);
   assert.equal(JSON.stringify(result).includes(root), false);
 });
