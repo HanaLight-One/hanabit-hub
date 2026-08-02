@@ -4,6 +4,7 @@ import { createPendingNewsStore } from "./news-item-store.mjs";
 import { findNewsSourceProfile } from "./news-source-profiles.mjs";
 import { NEWS_ANALYSIS_POLICY_VERSION } from "./news-auto-publish-policy.mjs";
 import { createNewsAnalysisNotice } from "./news-analysis-notice.mjs";
+import { auditFreeNewsTranslation } from "./news-translation-audit.mjs";
 
 const OFFICIAL_TYPES = new Set(["discord-announcement"]);
 const OFFICIAL_X_ACCOUNTS = new Set(["openai", "openaidevs"]);
@@ -110,6 +111,18 @@ export function createNewsProcessor({
           } catch {
             codexReview = { status: "failed", reviewedAt: now().toISOString() };
           }
+        }
+        if (translationReview.status === "free_unverified") {
+          const audit = auditFreeNewsTranslation(analysisRecord, {
+            translation: finalTranslation,
+            contextTranslations: finalContextTranslations,
+          });
+          translationReview = {
+            status: audit.status === "passed" ? "local_verified" : "free_unverified",
+            reviewer: "local-source-boundary-v1",
+            reason: audit.reason,
+            reviewedAt: now().toISOString(),
+          };
         }
         const official = isOfficialSource(record.source);
         const decision = official ? "publish" : finalTriage.decision;

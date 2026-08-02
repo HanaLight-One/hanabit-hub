@@ -124,6 +124,9 @@ X Filtered Stream ─> #x-watch ┘                         │
 `src/modules/news/news-editorial-governor.mjs`는 최근 뉴스의 직접 링크와 번역 핵심어로
 사건을 묶고 대표 원고·연속 게시 대기를 계산하는 읽기 전용 그림자 편집장이다. 결과는
 `news-reader.mjs`가 API에만 노출하며 승인·게시 상태 파일을 변경하지 않는다.
+`src/modules/news/news-translation-audit.mjs`는 무료 API가 만든 원문 번역과 관련 글 번역의
+경계·링크·영문명·수치를 로컬에서 재검사한다. 새 뉴스는 `news-processor.mjs`가 감사 영수증을
+저장하고 기존 뉴스는 `news-reader.mjs`가 읽기 전용으로 같은 검사를 적용한다.
 DC 원고는 `src/modules/news/news-dc-copy.mjs`가 태그·출처·번역·AI 해설·원문 링크를
 결정적으로 조립한다. 그림 이모지와 결합문자를 게시 전에 제거 또는 차단하고, 알려진
 `/sk` 위험 경로 링크는 원고에서 제외한다. 실제 게시 진입점은

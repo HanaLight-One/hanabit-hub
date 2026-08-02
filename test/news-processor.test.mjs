@@ -64,6 +64,19 @@ test("X 판정 결과를 게시 검토 또는 보류 상태로 결정적으로 �
   });
 });
 
+test("원문 경계를 통과한 무료 번역은 자동 검증 영수증으로 저장한다", async () => {
+  await fixture({ type: "x-post" }, async () => ({
+    ...result("publish"),
+    triage: { ...result("publish").triage, evidenceTag: "use_case" },
+  }), async ({ processor, store, id }) => {
+    await processor.process(id);
+    const saved = await store.read(id);
+    assert.equal(saved.workflow.translationReview.status, "local_verified");
+    assert.equal(saved.workflow.translationReview.reviewer, "local-source-boundary-v1");
+    assert.match(saved.workflow.translationReview.reason, /원문·관련 글 분리/u);
+  });
+});
+
 test("OpenAI 공식 Announcement는 번역 후 반드시 게시 검토로 보낸다", async () => {
   await fixture({ type: "discord-announcement" }, async () => result("skip"), async ({ processor, store, id }) => {
     await processor.process(id);

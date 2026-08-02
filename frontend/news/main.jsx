@@ -351,6 +351,9 @@ function NewsCard({ item, preview, busy, error, onPreview, onPublish, onRetry, o
             원문만 번역 · 관련 글의 정보는 번역문에 포함하지 않음
             {item.workflow.translationReview?.status === "codex_corrected" && " · Codex가 귀속 오류를 교정함"}
             {item.workflow.translationReview?.status === "codex_verified" && " · Codex 귀속 검증 완료"}
+            {item.workflow.translationReview?.status === "local_verified" && " · 원문 경계 자동 검증 완료"}
+            {item.workflow.translationReview?.status === "free_unverified" && item.workflow.translationReview.reason &&
+              ` · 자동 검증 보류: ${item.workflow.translationReview.reason}`}
           </small>
         </section>
       ) : (

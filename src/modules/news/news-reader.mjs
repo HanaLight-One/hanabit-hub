@@ -4,6 +4,7 @@ import { findNewsSourceProfile } from "./news-source-profiles.mjs";
 import { evaluateNewsAutoPublish, NEWS_ANALYSIS_POLICY_VERSION } from "./news-auto-publish-policy.mjs";
 import { createNewsAnalysisNotice } from "./news-analysis-notice.mjs";
 import { applyNewsEditorialShadow } from "./news-editorial-governor.mjs";
+import { auditFreeNewsTranslation } from "./news-translation-audit.mjs";
 
 const ID_PATTERN = /^[a-f0-9]{32}$/u;
 const MEDIA_NAME_PATTERN = /^[a-zA-Z0-9_-]+\.(gif|jpe?g|png|webp)$/u;
@@ -93,11 +94,28 @@ function publicItem(record, sourceProfiles) {
     ? record.workflow.codexReview.status
     : null;
 
+  const storedReviewStatus = record?.workflow?.translationReview?.status;
+  const localAudit = storedReviewStatus === "free_unverified"
+    ? auditFreeNewsTranslation(record)
+    : null;
+  const effectiveRecord = localAudit
+    ? {
+        ...record,
+        workflow: {
+          ...record.workflow,
+          translationReview: {
+            status: localAudit.status === "passed" ? "local_verified" : "free_unverified",
+            reviewer: "local-source-boundary-v1",
+            reason: localAudit.reason,
+          },
+        },
+      }
+    : record;
   const sourceProfile = findNewsSourceProfile(record?.source, sourceProfiles);
-  const autoPublishGate = evaluateNewsAutoPublish(record, sourceProfile);
-  const translationReviewStatus = ["free_unverified", "codex_verified", "codex_corrected", "human_verified"]
-    .includes(record?.workflow?.translationReview?.status)
-    ? record.workflow.translationReview.status
+  const autoPublishGate = evaluateNewsAutoPublish(effectiveRecord, sourceProfile);
+  const translationReviewStatus = ["free_unverified", "local_verified", "codex_verified", "codex_corrected", "human_verified"]
+    .includes(effectiveRecord?.workflow?.translationReview?.status)
+    ? effectiveRecord.workflow.translationReview.status
     : "free_unverified";
   const analysisNotice = safeText(record?.workflow?.analysisNotice, 300) ||
     createNewsAnalysisNotice({ codexReviewed: codexReviewStatus === "complete" });
@@ -147,7 +165,7 @@ function publicItem(record, sourceProfiles) {
         : [],
       translationReview: {
         status: translationReviewStatus,
-        reason: safeText(record?.workflow?.translationReview?.reason, 300) || null,
+        reason: safeText(effectiveRecord?.workflow?.translationReview?.reason, 300) || null,
       },
       analysisNotice,
       triage,

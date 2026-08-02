@@ -21,7 +21,8 @@ export function evaluateNewsAutoPublish(record, sourceProfile = null) {
   if (!triage.evidenceTag) {
     return result("human_review", "legacy_analysis", "새 정보 성격 태그로 다시 판정해야 해요.");
   }
-  if (!["codex_verified", "codex_corrected", "human_verified"].includes(workflow.translationReview?.status)) {
+  const translationReviewStatus = workflow.translationReview?.status;
+  if (!["local_verified", "codex_verified", "codex_corrected", "human_verified"].includes(translationReviewStatus)) {
     return result("human_review", "translation_unverified", "원문 전용 번역의 귀속 검증이 끝나지 않아 자동 게시하지 않아요.");
   }
   if (!String(workflow.analysisNotice ?? "").includes("원문 번역이 아니며")) {
@@ -55,6 +56,9 @@ export function evaluateNewsAutoPublish(record, sourceProfile = null) {
     GOOD_IMPORTANCE.has(triage.importance) &&
     confidence >= 0.82
   ) {
+    if (translationReviewStatus === "local_verified") {
+      return result("human_review", "inference_deep_review", "[유추]는 Codex 심층검토가 끝나야 자동 게시 후보가 될 수 있어요.");
+    }
     return result("eligible", "trusted_inference", "핵심 인물의 구체적인 초기 신호라 [유추] 표현으로 자동 게시할 수 있어요.");
   }
   if (["rumor", "opinion"].includes(triage.evidenceTag)) {

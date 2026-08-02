@@ -53,3 +53,15 @@ test("원문 귀속이 검증되지 않은 번역은 자동 게시하지 않는�
   assert.equal(result.decision, "human_review");
   assert.equal(result.code, "translation_unverified");
 });
+
+test("로컬 원문 경계 검증은 확정·사례만 통과시키고 유추는 심층검토로 보낸다", () => {
+  const useCase = record("use_case");
+  useCase.workflow.translationReview = { status: "local_verified" };
+  assert.equal(evaluateNewsAutoPublish(useCase, profile).decision, "eligible");
+
+  const inferred = record("inference");
+  inferred.workflow.translationReview = { status: "local_verified" };
+  const result = evaluateNewsAutoPublish(inferred, profile);
+  assert.equal(result.decision, "human_review");
+  assert.equal(result.code, "inference_deep_review");
+});

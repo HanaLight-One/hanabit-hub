@@ -8409,7 +8409,9 @@ function D({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a,
 						children: [
 							"원문만 번역 · 관련 글의 정보는 번역문에 포함하지 않음",
 							e.workflow.translationReview?.status === "codex_corrected" && " · Codex가 귀속 오류를 교정함",
-							e.workflow.translationReview?.status === "codex_verified" && " · Codex 귀속 검증 완료"
+							e.workflow.translationReview?.status === "codex_verified" && " · Codex 귀속 검증 완료",
+							e.workflow.translationReview?.status === "local_verified" && " · 원문 경계 자동 검증 완료",
+							e.workflow.translationReview?.status === "free_unverified" && e.workflow.translationReview.reason && ` · 자동 검증 보류: ${e.workflow.translationReview.reason}`
 						]
 					})
 				]
