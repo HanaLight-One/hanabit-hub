@@ -182,6 +182,7 @@ h1 em { color: var(--accent); font-style: normal; }
   font-weight: 850;
   white-space: nowrap;
 }
+.secondary-toolbar-action { border: 1px solid var(--line); background: var(--panel); color: var(--text); }
 
 .generation-status {
   min-height: 42px;
@@ -333,9 +334,11 @@ h1 em { color: var(--accent); font-style: normal; }
 .card-record strong { display: block; color: var(--text); }
 .card-record p { display: -webkit-box; margin: 7px 0 0; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
 .card-actions { margin-top: auto; display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); }
-.card-actions a { padding: 11px 5px; color: var(--muted); text-align: center; text-decoration: none; font-size: 10px; font-weight: 800; }
-.card-actions a + a { border-left: 1px solid var(--line); }
+.card-actions.has-trash { grid-template-columns: repeat(4, 1fr); }
+.card-actions a, .card-actions button { padding: 11px 5px; border: 0; background: transparent; color: var(--muted); text-align: center; text-decoration: none; font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; }
+.card-actions > * + * { border-left: 1px solid var(--line); }
 .card-actions a:hover, .card-actions a:focus-visible { color: var(--accent); background: rgb(216 255 82 / 5%); }
+.card-actions .card-trash-action:hover, .card-actions .card-trash-action:focus-visible { color: #ff8d9e; background: rgb(255 107 127 / 7%); }
 
 .panel-backdrop {
   position: fixed;
@@ -449,7 +452,7 @@ h1 em { color: var(--accent); font-style: normal; }
   background: linear-gradient(transparent, #0e1318 22%);
 }
 
-.panel-actions a {
+.panel-actions a, .panel-actions button {
   padding: 13px 16px;
   border-radius: 12px;
   text-align: center;
@@ -464,6 +467,13 @@ h1 em { color: var(--accent); font-style: normal; }
   border: 1px solid rgb(216 255 82 / 36%);
   background: rgb(216 255 82 / 8%);
   color: var(--accent);
+}
+.danger-action {
+  grid-column: 1 / -1;
+  border: 1px solid rgb(255 107 127 / 45%);
+  background: rgb(255 107 127 / 8%);
+  color: #ff9aaa;
+  cursor: pointer;
 }
 
 @media (max-width: 720px) {

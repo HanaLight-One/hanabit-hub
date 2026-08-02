@@ -334,5 +334,18 @@ export function createImageMetadataCatalog({ database, archive, jobRoot, dailyMa
     );
   }
 
-  return Object.freeze({ get, synchronize, availableImageIds });
+  function deleteImage(imageId) {
+    const id = String(imageId ?? "");
+    database.exec("BEGIN IMMEDIATE");
+    try {
+      database.prepare("DELETE FROM image_generation_metadata WHERE image_id = ?").run(id);
+      database.prepare("DELETE FROM image_assets WHERE id = ?").run(id);
+      database.exec("COMMIT");
+    } catch (error) {
+      database.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
+  return Object.freeze({ get, synchronize, availableImageIds, deleteImage });
 }

@@ -58,6 +58,9 @@ test("완료된 Hub 작업을 이미지 ID와 연결해 프롬프트와 선택 �
     const stored = database.prepare("SELECT storage_key FROM image_assets WHERE id = ?").get(image.id);
     assert.equal(stored.storage_key, "2026-08-01/extra-requests/free-play/job-a/result.png");
     assert.equal(stored.storage_key.includes(root), false);
+    catalog.deleteImage(image.id);
+    assert.deepEqual(catalog.availableImageIds(), []);
+    assert.equal(database.prepare("SELECT id FROM image_assets WHERE id = ?").get(image.id), undefined);
   } finally {
     database.close();
     await rm(root, { recursive: true, force: true });

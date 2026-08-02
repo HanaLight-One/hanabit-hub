@@ -25,6 +25,7 @@ const elements = {
   createLink: document.querySelector("#create-link"),
   originalLink: document.querySelector("#original-link"),
   downloadLink: document.querySelector("#download-link"),
+  trashButton: document.querySelector("#trash-button"),
 };
 
 const state = {
@@ -52,6 +53,27 @@ const STAGE_LABELS = Object.freeze({
   failed: "최근 생성 실패",
   stalled: "생성 확인 필요",
 });
+const DELETABLE_CATEGORIES = new Set(["theme-extra", "free-extra", "legacy-extra"]);
+
+async function moveToTrash(image) {
+  if (!DELETABLE_CATEGORIES.has(image.category)) return;
+  if (!confirm(`'${image.name}' 이미지를 휴지통으로 옮길까요?\n휴지통에서는 복원하거나 영구 삭제할 수 있어요.`)) return;
+  const response = await fetch(`/api/images/${encodeURIComponent(image.id)}/trash`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ confirmation: "move-image-to-trash" }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    alert(payload.error ?? "이미지를 휴지통으로 옮기지 못했어요.");
+    return;
+  }
+  state.images = state.images.filter((candidate) => candidate.id !== image.id);
+  state.productionRecords.delete(image.id);
+  closePanel();
+  renderFilters();
+  renderGrid();
+}
 
 function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -166,6 +188,15 @@ function renderGrid() {
       link.href = `/images/create?source=${encodeURIComponent(image.id)}&mode=${mode}`;
       link.textContent = label;
       actions.append(link);
+    }
+    if (DELETABLE_CATEGORIES.has(image.category)) {
+      actions.classList.add("has-trash");
+      const trash = document.createElement("button");
+      trash.type = "button";
+      trash.className = "card-trash-action";
+      trash.textContent = "휴지통";
+      trash.addEventListener("click", () => moveToTrash(image));
+      actions.append(trash);
     }
     card.append(main, record, actions);
     main.addEventListener("click", () => openPanel(image, main));
@@ -349,6 +380,7 @@ function openPanel(image, trigger) {
     `/images/create?source=${encodeURIComponent(image.id)}&mode=same-combination`;
   elements.originalLink.href = image.contentUrl;
   elements.downloadLink.href = image.downloadUrl;
+  elements.trashButton.hidden = !DELETABLE_CATEGORIES.has(image.category);
   appendDefinitionList(elements.basicRecord, [
     ["날짜", image.date ?? "날짜 없음"],
     ["앨범", image.album],
@@ -388,6 +420,10 @@ elements.categoryTabs.addEventListener("click", (event) => {
 });
 elements.close.addEventListener("click", closePanel);
 elements.backdrop.addEventListener("click", closePanel);
+elements.trashButton.addEventListener("click", () => {
+  const image = state.images.find((candidate) => candidate.id === state.selectedImageId);
+  if (image) moveToTrash(image);
+});
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && elements.panel.classList.contains("open")) closePanel();
 });

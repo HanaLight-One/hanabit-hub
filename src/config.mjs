@@ -58,7 +58,11 @@ function validateConfig(config) {
   if (!Array.isArray(config.allowedActions)) {
     throw new Error("allowedActions는 배열이어야 합니다.");
   }
-  const knownActions = new Set(["restart-codex", "publish-news-to-dc"]);
+  const knownActions = new Set([
+    "restart-codex",
+    "publish-news-to-dc",
+    "manage-image-trash",
+  ]);
   const invalidAction = config.allowedActions.find(
     (action) => typeof action !== "string" || !knownActions.has(action),
   );

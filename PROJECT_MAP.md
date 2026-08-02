@@ -48,6 +48,7 @@
 | 이미지 아카이브 | `/images` | `public/images/` | 정적 JavaScript |
 | 이미지 생성실 | `/images/create` | `public/images/create/` | 정적 JavaScript |
 | 화풍 관리 | `/images/styles` | `public/images/styles/` | 정적 JavaScript |
+| 이미지 휴지통 | `/images/trash` | `public/images/trash/` | 정적 JavaScript |
 | 오늘의 운세 | `/fortune` | `public/fortune/` | 정적 JavaScript |
 | 뉴스 검수실 | `/news` | `frontend/news/main.jsx` | React, 빌드 결과는 `public/news/app.js` |
 | 모바일 알림 | `/notifications` | `frontend/notifications/main.jsx` | React, 빌드 결과는 `public/notifications/app.js` |
@@ -83,6 +84,7 @@ HTTP 라우트는 검증과 응답만 맡고 실제 동작은 같은 기능 폴�
 | Push 구독·키 | `state/notifications/` | 모바일 Web Push 상태 | 제외 |
 | 이미지 생성 초안·작업 | `state/image-generation-*` | Hub가 만든 초안과 1장 작업 상태 | 제외 |
 | 이미지·테마·제작 기록 | 외부 설정 루트 | 기존 저장소를 이동 없이 연결 | 외부 |
+| 이미지 휴지통 | 외부 `stateRoot/trash/hub-v1/` | 추가 생성 파일의 복원 영수증과 격리 파일 | 외부 |
 | 운세 결과·게시 상태 | 외부 설정 루트 | 읽기 전용 연결 | 외부 |
 
 SQLite 스키마는 `src/modules/database/hub-database.mjs`, 뉴스 원장 연산은
@@ -159,6 +161,7 @@ Responses API 공용 텍스트 실행기의 복구 가능한 정본은 `tools/op
 
 - 이미지 파일, Python 파이프라인, 생성 자산과 기존 8787은 이동하지 않는다.
 - Hub는 `config.local.json`으로 주입된 루트와 고정 실행 파일만 사용한다.
+- 이미지 휴지통 쓰기는 `manage-image-trash` allowlist가 켜진 관리자 Hub에서만 허용한다. 오테 본편은 보호하고 추가 생성 이미지만 이동하며, 영구 삭제 시 파일·썸네일 캐시·SQLite 제작 기록을 함께 제거한다.
 - 이미지 운영일은 서울 시간 오전 02시에 바뀐다.
 - 운세 계산·템플릿·예약 게시 코드는 이 저장소의 책임이 아니다.
 - 실제 게시, 예약 작업, Tunnel·DNS 변경은 사용자 승인 전 실행하지 않는다.

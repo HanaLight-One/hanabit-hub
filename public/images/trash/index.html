@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#090c10" />
+    <title>이미지 휴지통 · Hanabit Hub</title>
+    <link rel="stylesheet" href="/images/styles.css?v=20260802-trash" />
+    <link rel="stylesheet" href="/images/trash/styles.css?v=20260802-trash" />
+    <link rel="stylesheet" href="/codex-usage-indicator.css" />
+    <script src="/codex-usage-indicator.js" type="module"></script>
+    <script src="/images/trash/app.js?v=20260802-trash" type="module"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/images" aria-label="이미지 아카이브로 돌아가기">
+        <span class="brand-mark">H</span><span>HANABIT <b>TRASH</b></span>
+      </a>
+      <a class="back-link" href="/images">이미지로 돌아가기</a>
+    </header>
+    <main>
+      <section class="trash-hero">
+        <p class="eyebrow">RECOVERABLE FIRST</p>
+        <h1>이미지 <em>휴지통.</em></h1>
+        <p class="intro">추가 생성 이미지만 이곳으로 와요. 복원은 원래 위치로 돌려놓고, 영구 삭제는 서버 파일과 썸네일 캐시, DB 기록을 함께 제거합니다.</p>
+      </section>
+      <p id="message" class="archive-message" aria-live="polite">휴지통을 확인하는 중이에요.</p>
+      <section id="trash-grid" class="trash-grid" aria-live="polite"></section>
+    </main>
+  </body>
+</html>

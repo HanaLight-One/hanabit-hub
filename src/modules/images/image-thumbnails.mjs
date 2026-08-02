@@ -64,5 +64,15 @@ export function createImageThumbnailService({
     return Object.freeze(await jobs.get(cacheKey));
   }
 
-  return Object.freeze({ ensure });
+  async function remove(imageId, modifiedAt) {
+    const cacheKey = crypto
+      .createHash("sha256")
+      .update(`${imageId}:${modifiedAt}`)
+      .digest("hex");
+    await rm(path.join(resolvedCacheRoot, cacheKey.slice(0, 2), `${cacheKey}.webp`), {
+      force: true,
+    });
+  }
+
+  return Object.freeze({ ensure, remove });
 }

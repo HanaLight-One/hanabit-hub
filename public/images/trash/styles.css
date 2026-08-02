@@ -1,0 +1,14 @@
+.back-link { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 800; }
+.trash-hero { padding: clamp(54px, 8vw, 94px) 0 38px; }
+.trash-hero h1 { margin: 8px 0 20px; font-size: clamp(44px, 8vw, 82px); line-height: .95; }
+.trash-hero em { color: var(--accent); font-style: normal; }
+.trash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; padding-bottom: 80px; }
+.trash-card { overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--panel); }
+.trash-card img { width: 100%; aspect-ratio: 1; display: block; object-fit: cover; background: var(--panel-raised); }
+.trash-card-body { padding: 18px; }
+.trash-card h2 { margin: 0 0 8px; font-size: 19px; }
+.trash-card p { margin: 7px 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.trash-actions { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.trash-actions button { padding: 12px; border: 1px solid var(--line); border-radius: 11px; background: transparent; color: var(--text); font: inherit; font-weight: 800; cursor: pointer; }
+.trash-actions .permanent-delete { border-color: rgb(255 107 127 / 45%); color: #ff9aaa; }
+@media (max-width: 720px) { .back-link { font-size: 11px; } .trash-grid { grid-template-columns: 1fr 1fr; gap: 10px; } .trash-card-body { padding: 12px; } .trash-actions { grid-template-columns: 1fr; } }

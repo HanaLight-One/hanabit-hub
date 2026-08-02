@@ -44,6 +44,8 @@ import { handleImageDownloadRoute } from "./modules/images/image-download-route.
 import { handleImageListRoute } from "./modules/images/image-list-route.mjs";
 import { handleImageThumbnailRoute } from "./modules/images/image-thumbnail-route.mjs";
 import { createImageThumbnailService } from "./modules/images/image-thumbnails.mjs";
+import { createImageTrashService } from "./modules/images/image-trash.mjs";
+import { handleImageTrashRoute } from "./modules/images/image-trash-route.mjs";
 import { createStyleAssetManager } from "./modules/images/style-assets.mjs";
 import { handleStyleAssetsRoute } from "./modules/images/style-assets-route.mjs";
 import { handleProductionRecordRoute } from "./modules/images/production-record-route.mjs";
@@ -226,6 +228,7 @@ const fortuneArchive = fortuneConfig?.enabled
 
 let runtimeDatabase = null;
 let runtimeRecordStore = productionRecordStore;
+let runtimeImageTrash = null;
 if (IS_MAIN && imageArchive && generationConfig?.outputRoot) {
   runtimeDatabase = openHubDatabase({
     filePath: path.join(APP_ROOT, "state", "hanabit-hub.sqlite"),
@@ -244,6 +247,15 @@ if (IS_MAIN && imageArchive && generationConfig?.outputRoot) {
     console.error("이미지 제작 기록 DB의 시작 색인을 완료하지 못했습니다.");
   });
 }
+if (IS_MAIN && imageArchive && imageStudioConfig?.stateRoot) {
+  runtimeImageTrash = createImageTrashService({
+    archive: imageArchive,
+    root: path.join(imageStudioConfig.stateRoot, "trash", "hub-v1"),
+    recordStore: runtimeRecordStore,
+    thumbnails: imageThumbnails,
+    enabled: config.allowedActions.includes("manage-image-trash"),
+  });
+}
 
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -260,6 +272,8 @@ const PAGE_ROUTES = Object.freeze({
   "/images/create/": "images/create/index.html",
   "/images/styles": "images/styles/index.html",
   "/images/styles/": "images/styles/index.html",
+  "/images/trash": "images/trash/index.html",
+  "/images/trash/": "images/trash/index.html",
   "/setup/discord": "setup/discord/index.html",
   "/setup/discord/": "setup/discord/index.html",
   "/news": "news/index.html",
@@ -307,7 +321,7 @@ async function serveStatic(response, pathname) {
     response.writeHead(200, {
       "content-type": CONTENT_TYPES[path.extname(target)] ?? "application/octet-stream",
       "cache-control": "no-cache",
-      ...(pathname.startsWith("/setup/discord") || pathname.startsWith("/images/styles") || pathname.startsWith("/news") || pathname.startsWith("/notifications")
+      ...(pathname.startsWith("/setup/discord") || pathname.startsWith("/images/styles") || pathname.startsWith("/images/trash") || pathname.startsWith("/news") || pathname.startsWith("/notifications")
         ? {
             "content-security-policy":
               "default-src 'self'; img-src 'self' data:; style-src 'self'; " +
@@ -346,6 +360,7 @@ export function createServer({
   drafts = generationDrafts,
   generationExecutor = promptOnlyExecutor,
   styleAssetManager = styleAssets,
+  imageTrash = runtimeImageTrash,
 } = {}) {
   return http.createServer(async (request, response) => {
     try {
@@ -597,6 +612,18 @@ export function createServer({
       }
 
       if (
+        await handleImageTrashRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          trash: imageTrash,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
         await handleImageListRoute({
           request,
           response,
@@ -684,7 +711,7 @@ export function createServer({
 }
 
 if (IS_MAIN) {
-  const server = createServer({ recordStore: runtimeRecordStore });
+  const server = createServer({ recordStore: runtimeRecordStore, imageTrash: runtimeImageTrash });
   server.once("close", () => runtimeDatabase?.close());
   server.listen(config.port, config.host, () => {
     console.log(`Hanabit Hub listening on http://${config.host}:${config.port}`);

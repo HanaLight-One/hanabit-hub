@@ -25,6 +25,8 @@ uploads/
 generated/
 thumbnails/
 trash/
+!public/images/trash/
+!public/images/trash/**
 
 # Editors and operating systems
 .vscode/

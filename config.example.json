@@ -53,5 +53,5 @@
     "timezone": "Asia/Seoul",
     "dayStartsAtHour": 2
   },
-  "allowedActions": ["restart-codex"]
+  "allowedActions": ["restart-codex", "manage-image-trash"]
 }

@@ -240,5 +240,14 @@ export function createImageArchive({
     return Object.freeze([...entriesById.values()]);
   }
 
-  return Object.freeze({ find, findByTarget, list, listIndexable });
+  function containsTarget(target) {
+    if (!path.isAbsolute(target ?? "")) return false;
+    const resolvedTarget = path.resolve(target);
+    return SOURCES.some((source) => roots[source].some((root) => {
+      const relative = path.relative(root, resolvedTarget);
+      return relative !== "" && relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+    }));
+  }
+
+  return Object.freeze({ find, findByTarget, list, listIndexable, containsTarget });
 }
