@@ -112,6 +112,9 @@ X Filtered Stream ─> #x-watch ┘                         │
 `config/news-x-sources.json`이고 비밀 토큰은 코드나 지도에 기록하지 않는다.
 뉴스 재분석은 `POST /api/news/:id/analysis-retry`에서 명시적 확인값을 받은
 `translation_failed` 항목에만 허용하며 이미지 분석 API는 호출하지 않는다.
+무료 API 뉴스 분석은 공용 Responses API 텍스트 실행기에 요청별 strict JSON Schema를
+전달해 원문 번역·관련 글 번역·판정 필드의 구조를 고정한다. 스키마 파일은 실행별 임시
+상태에만 만들고 종료 시 제거하며, 스키마를 생략하는 다른 공용 실행기 호출은 종전과 같다.
 판정 완료 항목의 새 정책 재판정은 `POST /api/news/:id/reanalysis`, 결정론적 자동 게시
 가능성 표시는 `src/modules/news/news-auto-publish-policy.mjs`가 담당한다. 게이트는
 원문 전용 번역의 귀속 검증과 AI 해설 주의 문구가 없으면 자동 게시 가능으로 판정하지

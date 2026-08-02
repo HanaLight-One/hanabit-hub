@@ -13,6 +13,76 @@ const POWERSHELL = path.join(
   "powershell.exe",
 );
 
+function contextTranslationSchema(contextCount) {
+  return {
+    type: "array",
+    minItems: contextCount,
+    maxItems: contextCount,
+    items: {
+      type: "object",
+      properties: {
+        index: {
+          type: "integer",
+          minimum: 1,
+          maximum: Math.max(1, contextCount),
+        },
+        body: { type: "string" },
+      },
+      required: ["index", "body"],
+      additionalProperties: false,
+    },
+  };
+}
+
+function analysisSchema(contextCount) {
+  return {
+    type: "object",
+    properties: {
+      translation: {
+        type: "object",
+        properties: {
+          title: { type: "string" },
+          body: { type: "string" },
+        },
+        required: ["title", "body"],
+        additionalProperties: false,
+      },
+      contextTranslations: contextTranslationSchema(contextCount),
+      triage: {
+        type: "object",
+        properties: {
+          decision: { type: "string", enum: [...DECISIONS] },
+          confidence: { type: "number", minimum: 0, maximum: 1 },
+          importance: { type: "string", enum: [...IMPORTANCE_LEVELS] },
+          evidenceTag: { type: "string", enum: [...EVIDENCE_TAGS] },
+          reason: { type: "string" },
+          advice: { type: "string" },
+          signals: {
+            type: "array",
+            maxItems: 6,
+            items: { type: "string" },
+          },
+        },
+        required: ["decision", "confidence", "importance", "evidenceTag", "reason", "advice", "signals"],
+        additionalProperties: false,
+      },
+    },
+    required: ["translation", "contextTranslations", "triage"],
+    additionalProperties: false,
+  };
+}
+
+function contextOnlySchema(contextCount) {
+  return {
+    type: "object",
+    properties: {
+      contextTranslations: contextTranslationSchema(contextCount),
+    },
+    required: ["contextTranslations"],
+    additionalProperties: false,
+  };
+}
+
 function limited(value, maximum, label) {
   const text = String(value ?? "").trim();
   if (!text || text.length > maximum) throw new Error(`${label} 형식이 올바르지 않습니다.`);
@@ -203,11 +273,19 @@ export async function invokeFreeNewsAnalysis(
   const workRoot = path.join(runtimeRoot, record.id);
   const promptPath = path.join(workRoot, "prompt.txt");
   const contextPromptPath = path.join(workRoot, "context-prompt.txt");
+  const schemaPath = path.join(workRoot, "response-schema.json");
+  const contextSchemaPath = path.join(workRoot, "context-response-schema.json");
   await mkdir(workRoot, { recursive: true });
   try {
-    await writeFile(promptPath, `${buildPrompt(record)}\n`, "utf8");
     const contextCount = Array.isArray(record.original?.contexts) ? Math.min(3, record.original.contexts.length) : 0;
-    if (contextCount > 0) await writeFile(contextPromptPath, `${buildContextTranslationPrompt(record)}\n`, "utf8");
+    await Promise.all([
+      writeFile(promptPath, `${buildPrompt(record)}\n`, "utf8"),
+      writeFile(schemaPath, `${JSON.stringify(analysisSchema(contextCount), null, 2)}\n`, "utf8"),
+      ...(contextCount > 0 ? [
+        writeFile(contextPromptPath, `${buildContextTranslationPrompt(record)}\n`, "utf8"),
+        writeFile(contextSchemaPath, `${JSON.stringify(contextOnlySchema(contextCount), null, 2)}\n`, "utf8"),
+      ] : []),
+    ]);
     let lastError;
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       const outputPath = path.join(workRoot, `output-${attempt}.json`);
@@ -217,6 +295,7 @@ export async function invokeFreeNewsAnalysis(
           "-File", runnerPath,
           "-PromptFile", promptPath,
           "-Output", outputPath,
+          "-JsonSchemaFile", schemaPath,
           "-MaxOutputTokens", "1800",
         ], { cwd: workRoot });
         const info = await stat(outputPath);
@@ -235,6 +314,7 @@ export async function invokeFreeNewsAnalysis(
                   "-File", runnerPath,
                   "-PromptFile", contextPromptPath,
                   "-Output", contextOutputPath,
+                  "-JsonSchemaFile", contextSchemaPath,
                   "-MaxOutputTokens", "1200",
                 ], { cwd: workRoot });
                 const contextInfo = await stat(contextOutputPath);

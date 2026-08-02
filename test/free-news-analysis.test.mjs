@@ -26,7 +26,9 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
         assert.match(command, /powershell\.exe$/i);
         const promptPath = args[args.indexOf("-PromptFile") + 1];
         const outputPath = args[args.indexOf("-Output") + 1];
+        const schemaPath = args[args.indexOf("-JsonSchemaFile") + 1];
         const prompt = await readFile(promptPath, "utf8");
+        const schema = JSON.parse(await readFile(schemaPath, "utf8"));
         assert.match(prompt, /One more day/);
         assert.match(prompt, /CONTEXT 1 RELATION: linked-post/);
         assert.match(prompt, /A new model is available today/);
@@ -34,6 +36,14 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
         assert.match(prompt, /Do not omit CONTEXT translations/);
         assert.match(prompt, /credible insider explicitly saying they used a named capability is usually inference/);
         assert.match(prompt, /newsworthiness separately from certainty/);
+        assert.equal(schema.type, "object");
+        assert.deepEqual(schema.required, ["translation", "contextTranslations", "triage"]);
+        assert.equal(schema.additionalProperties, false);
+        assert.equal(schema.properties.contextTranslations.minItems, 1);
+        assert.equal(schema.properties.contextTranslations.maxItems, 1);
+        assert.equal(schema.properties.contextTranslations.items.additionalProperties, false);
+        assert.equal(schema.properties.triage.additionalProperties, false);
+        assert.deepEqual(schema.properties.triage.properties.decision.enum, ["skip", "review", "publish"]);
         await mkdir(path.dirname(outputPath), { recursive: true });
         await writeFile(outputPath, JSON.stringify({
           translation: { title: "코덱스 한도 초기화", body: "사용량 한도가 초기화됐습니다." },
@@ -160,6 +170,15 @@ test("통합 응답이 관련 글 번역을 빠뜨리면 작은 별도 요청으
       async wait() {},
       async runProcess(command, args) {
         const outputPath = args[args.indexOf("-Output") + 1];
+        const schemaPath = args[args.indexOf("-JsonSchemaFile") + 1];
+        const schema = JSON.parse(await readFile(schemaPath, "utf8"));
+        if (outputPath.includes("context-output-")) {
+          assert.deepEqual(schema.required, ["contextTranslations"]);
+          assert.equal(schema.properties.contextTranslations.minItems, 1);
+          assert.equal(schema.properties.contextTranslations.maxItems, 1);
+        } else {
+          assert.deepEqual(schema.required, ["translation", "contextTranslations", "triage"]);
+        }
         const value = outputPath.includes("context-output-")
           ? { contextTranslations: { "1": "ChatGPT Work는 새로운 크론 작업입니다." } }
           : {
