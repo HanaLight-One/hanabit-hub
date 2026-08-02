@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="/images/create/styles.css" />
     <link rel="stylesheet" href="/codex-usage-indicator.css" />
     <script src="/codex-usage-indicator.js" type="module"></script>
-    <script src="/images/create/app.js" type="module"></script>
+    <script src="/images/create/app.js?v=20260802-source-picker" type="module"></script>
   </head>
   <body>
     <header class="topbar">
@@ -46,7 +46,8 @@
             </div>
             <div class="source-controls">
               <span id="source-status" class="source-status">새 요청</span>
-              <button id="source-picker-open" class="source-picker-open" type="button">소스 선택</button>
+              <button id="source-picker-open" class="source-picker-open" type="button"
+                aria-haspopup="dialog" aria-controls="source-picker">＋ 소스 이미지 선택</button>
             </div>
           </div>
 

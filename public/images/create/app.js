@@ -245,7 +245,7 @@ async function loadCreationOptions() {
 async function loadSourceContext(preferredMode = requestedMode) {
   if (!source) {
     elements.sourceStatus.textContent = "새 요청";
-    elements.sourcePickerOpen.textContent = "소스 선택";
+    elements.sourcePickerOpen.textContent = "＋ 소스 이미지 선택";
     elements.previewSource.textContent = "없음";
     return;
   }
@@ -339,7 +339,17 @@ function renderSourcePicker(query = "") {
 }
 
 async function openSourcePicker() {
-  elements.sourcePicker.showModal();
+  try {
+    if (typeof elements.sourcePicker.showModal === "function") {
+      if (!elements.sourcePicker.open) elements.sourcePicker.showModal();
+    } else {
+      elements.sourcePicker.setAttribute("open", "");
+      elements.sourcePicker.dataset.fallbackOpen = "true";
+    }
+  } catch {
+    elements.sourcePicker.setAttribute("open", "");
+    elements.sourcePicker.dataset.fallbackOpen = "true";
+  }
   elements.sourceSearch.value = "";
   elements.sourceSearch.focus();
   if (sourceImages) {
@@ -360,8 +370,17 @@ async function openSourcePicker() {
   }
 }
 
+function closeSourcePicker() {
+  delete elements.sourcePicker.dataset.fallbackOpen;
+  if (typeof elements.sourcePicker.close === "function" && elements.sourcePicker.open) {
+    elements.sourcePicker.close();
+  } else {
+    elements.sourcePicker.removeAttribute("open");
+  }
+}
+
 elements.sourcePickerOpen.addEventListener("click", openSourcePicker);
-elements.sourcePickerClose.addEventListener("click", () => elements.sourcePicker.close());
+elements.sourcePickerClose.addEventListener("click", closeSourcePicker);
 elements.sourceSearch.addEventListener("input", () => renderSourcePicker(elements.sourceSearch.value));
 elements.sourcePickerGrid.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-source-id]");
@@ -389,7 +408,7 @@ elements.sourcePickerGrid.addEventListener("click", async (event) => {
   source = button.dataset.sourceId;
   const query = new URLSearchParams({ source, mode: preferredMode });
   window.history.replaceState(null, "", `${window.location.pathname}?${query}`);
-  elements.sourcePicker.close();
+  closeSourcePicker();
   resetDraftAfterSourceChange();
   await loadSourceContext(preferredMode);
 });
@@ -402,7 +421,7 @@ elements.sourceRemove.addEventListener("click", () => {
   elements.sourceImage.alt = "";
   elements.sourceRecord.replaceChildren();
   elements.sourceStatus.textContent = "새 요청 · 소스 없음";
-  elements.sourcePickerOpen.textContent = "소스 선택";
+  elements.sourcePickerOpen.textContent = "＋ 소스 이미지 선택";
   elements.previewSource.textContent = "없음";
   setSourceModesEnabled(false);
   const newMode = elements.form.querySelector('input[name="mode"][value="new"]');

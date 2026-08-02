@@ -134,17 +134,21 @@
 
 .source-controls { display: flex; align-items: center; gap: 8px; }
 .source-picker-open {
-  padding: 8px 11px;
-  border: 1px solid rgb(216 255 82 / 38%);
+  padding: 9px 13px;
+  border: 1px solid var(--accent);
   border-radius: 999px;
-  background: rgb(216 255 82 / 7%);
-  color: var(--accent);
+  background: var(--accent);
+  color: #111709;
   cursor: pointer;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 900;
   white-space: nowrap;
 }
-.source-picker-open:hover, .source-picker-open:focus-visible { border-color: var(--accent); outline: none; }
+.source-picker-open:hover, .source-picker-open:focus-visible {
+  box-shadow: 0 0 0 4px rgb(216 255 82 / 14%);
+  filter: brightness(1.06);
+  outline: none;
+}
 
 .source-picker {
   width: min(940px, calc(100% - 28px));
@@ -157,6 +161,13 @@
   color: var(--text);
 }
 .source-picker::backdrop { background: rgb(0 0 0 / 72%); backdrop-filter: blur(4px); }
+.source-picker[data-fallback-open="true"] {
+  position: fixed;
+  inset: 14px;
+  z-index: 1000;
+  display: block;
+  margin: auto;
+}
 .source-picker-head { display: flex; align-items: start; justify-content: space-between; gap: 20px; }
 .source-picker-head h2 { margin: 4px 0 0; font-size: 26px; }
 .source-picker-close { width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--text); cursor: pointer; font-size: 24px; }
