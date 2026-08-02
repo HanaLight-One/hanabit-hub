@@ -36,6 +36,7 @@ const state = {
   lastFocused: null,
   themeRequest: 0,
   previousActiveCount: null,
+  productionRecords: new Map(),
 };
 
 const CATEGORY_LABELS = Object.freeze({
@@ -129,10 +130,12 @@ function renderGrid() {
 
   const fragment = document.createDocumentFragment();
   for (const image of images) {
-    const card = document.createElement("button");
+    const card = document.createElement("article");
     card.className = "image-card";
-    card.type = "button";
-    card.setAttribute("aria-label", `${image.name} 제작 기록 열기`);
+    const main = document.createElement("button");
+    main.className = "image-card-main";
+    main.type = "button";
+    main.setAttribute("aria-label", `${image.name} 제작 기록 열기`);
 
     const preview = document.createElement("img");
     preview.src = image.thumbnailUrl;
@@ -146,11 +149,62 @@ function renderGrid() {
     const meta = document.createElement("span");
     meta.textContent = `${image.date ?? "날짜 없음"} · ${CATEGORY_LABELS[image.category] ?? image.group}`;
     copy.append(name, meta);
-    card.append(preview, copy);
-    card.addEventListener("click", () => openPanel(image, card));
+    main.append(preview, copy);
+
+    const record = document.createElement("div");
+    record.className = "card-record";
+    record.textContent = "제작 기록을 불러오는 중";
+
+    const actions = document.createElement("nav");
+    actions.className = "card-actions";
+    for (const [label, mode] of [
+      ["편집", "same-combination"],
+      ["인물 유지", "same-characters"],
+      ["화풍 유지", "same-style"],
+    ]) {
+      const link = document.createElement("a");
+      link.href = `/images/create?source=${encodeURIComponent(image.id)}&mode=${mode}`;
+      link.textContent = label;
+      actions.append(link);
+    }
+    card.append(main, record, actions);
+    main.addEventListener("click", () => openPanel(image, main));
+    hydrateImageCard(image, record);
     fragment.append(card);
   }
   elements.grid.append(fragment);
+}
+
+async function hydrateImageCard(image, target) {
+  let record = state.productionRecords.get(image.id);
+  if (record === undefined) {
+    try {
+      const response = await fetch(image.productionRecordUrl, { cache: "no-store" });
+      record = response.ok ? (await response.json()).record : null;
+    } catch {
+      record = null;
+    }
+    state.productionRecords.set(image.id, record);
+  }
+  if (!target.isConnected) return;
+  if (!record) {
+    target.textContent = "이전 이미지 · 상세 기록 없음";
+    return;
+  }
+  const characters = record.characters?.length
+    ? record.characters.join(", ")
+    : record.characterMode === "none" ? "등장인물 없음" : "등장인물 자동";
+  const style = record.style
+    ?? (record.styleMode === "none" ? "화풍 없음" : record.styleMode === "prompt" ? "프롬프트 화풍" : "화풍 자동");
+  target.replaceChildren();
+  const facts = document.createElement("strong");
+  facts.textContent = `${characters} · ${style}`;
+  target.append(facts);
+  if (record.prompt) {
+    const prompt = document.createElement("p");
+    prompt.textContent = record.prompt;
+    target.append(prompt);
+  }
 }
 
 function renderFilters() {

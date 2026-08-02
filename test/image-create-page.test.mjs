@@ -82,6 +82,10 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(scriptBody, /previewSceneDetails\.open = false/);
     assert.match(scriptBody, /window\.confirm/);
     assert.match(scriptBody, /\/api\/images\/generation-jobs/);
+    assert.match(scriptBody, /같은 조합으로/);
+    assert.match(scriptBody, /인물만 유지/);
+    assert.match(scriptBody, /화풍만 유지/);
+    assert.match(scriptBody, /job\.images/);
     assert.match(scriptBody, /applySourcePurpose/);
     assert.match(scriptBody, /purpose/);
     assert.equal(scriptBody.includes('method: "PUT"'), false);

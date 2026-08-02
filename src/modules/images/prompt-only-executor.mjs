@@ -11,6 +11,18 @@ const ID_PATTERN = /^[a-f0-9]{32}$/u;
 const STALE_AFTER_MS = 20 * 60 * 1000;
 const PURPOSES = new Set(["theme-followup", "free-play"]);
 
+function safePublicPrompt(value) {
+  const prompt = String(value ?? "").trim().slice(0, 12_000);
+  if (!prompt) return null;
+  const internalPath = /(?:[a-z]:[\\/]|file:\/\/|\\\\)/iu;
+  return prompt
+    .split(/\r?\n/u)
+    .map((line) => internalPath.test(line) ? "[내부 참조 경로 숨김]" : line)
+    .filter((line, index, lines) => line !== "[내부 참조 경로 숨김]" || lines[index - 1] !== line)
+    .join("\n")
+    .trim() || null;
+}
+
 function executionError(code, message) {
   return Object.assign(new Error(message), { code });
 }
@@ -85,6 +97,8 @@ export function createPromptOnlyExecutor({
   freeTextRunnerPath,
   freeTextPythonExecutablePath = null,
   freeTextKeyStorePath = null,
+  archive = null,
+  optionsCatalog = null,
   launchWorker = defaultLaunch,
   buildContext = buildImageStudioQueueContext,
   writeContext = writeImageStudioQueueContext,
@@ -199,7 +213,7 @@ export function createPromptOnlyExecutor({
     }
   }
 
-  function normalizeJob(job, currentTime = now()) {
+  async function normalizeJob(job, currentTime = now()) {
     const id = validateId(job.id);
     const startedAtMs = Date.parse(job.startedAt ?? job.createdAt ?? "");
     const completedAtMs = Date.parse(job.completedAt ?? job.failedAt ?? "");
@@ -222,6 +236,30 @@ export function createPromptOnlyExecutor({
               ? "generating"
               : "planning";
     const purpose = PURPOSES.has(job.purpose) ? job.purpose : "legacy-extra";
+    let optionLabels = { characters: new Map(), styles: new Map() };
+    if (optionsCatalog) {
+      try {
+        const options = await optionsCatalog.list();
+        optionLabels = {
+          characters: new Map(options.characters.map((item) => [item.id, item.label])),
+          styles: new Map(options.styles.map((item) => [item.id, item.label])),
+        };
+      } catch {}
+    }
+    const characterIds = job.characters?.mode === "custom" && Array.isArray(job.characters.ids)
+      ? job.characters.ids.slice(0, 6).map(String)
+      : [];
+    const characters = characterIds.map((id) => optionLabels.characters.get(id) ?? id);
+    const styleId = typeof job.style?.id === "string" ? job.style.id : null;
+    const styleLabel = styleId ? optionLabels.styles.get(styleId) ?? styleId : null;
+    const images = [];
+    if (archive?.findByTarget && Array.isArray(job.outputs)) {
+      for (const output of job.outputs.slice(0, 4)) {
+        if (!path.isAbsolute(output ?? "")) continue;
+        const image = await archive.findByTarget(output);
+        if (image) images.push(image.record);
+      }
+    }
     return Object.freeze({
       id,
       purpose,
@@ -235,6 +273,13 @@ export function createPromptOnlyExecutor({
         completed: Math.max(0, Math.min(1, Number(job.progress?.completed) || 0)),
         total: 1,
       },
+      prompt: safePublicPrompt(job.prompt),
+      characters: Object.freeze(characters),
+      characterMode: job.characters?.mode ?? "unknown",
+      style: styleLabel,
+      styleMode: job.style?.mode ?? "unknown",
+      useImageAnchors: typeof job.useImageAnchors === "boolean" ? job.useImageAnchors : null,
+      images: Object.freeze(images),
       message:
         stage === "complete"
           ? "이미지 1장 생성 완료"
@@ -261,7 +306,7 @@ export function createPromptOnlyExecutor({
   }
 
   async function status(id) {
-    return normalizeJob(await readJob(id));
+    return await normalizeJob(await readJob(id));
   }
 
   async function list() {
@@ -276,7 +321,7 @@ export function createPromptOnlyExecutor({
     for (const entry of entries) {
       if (!entry.isFile() || !ID_PATTERN.test(entry.name.replace(/\.json$/u, ""))) continue;
       try {
-        jobs.push(normalizeJob(JSON.parse(await readFile(path.join(jobRoot, entry.name), "utf8"))));
+        jobs.push(await normalizeJob(JSON.parse(await readFile(path.join(jobRoot, entry.name), "utf8"))));
       } catch (error) {
         if (
           !(error instanceof SyntaxError)

@@ -537,18 +537,83 @@ function renderJobs(payload) {
   for (const job of jobs) {
     const card = document.createElement("article");
     card.className = `job-card ${job.status}`;
+
+    const image = job.images?.[0] ?? null;
+    const visual = document.createElement("div");
+    visual.className = `job-visual ${image ? "has-image" : "is-placeholder"}`;
+    if (image) {
+      const preview = document.createElement("img");
+      preview.src = image.thumbnailUrl;
+      preview.alt = `${image.name} 생성 결과`;
+      preview.loading = "lazy";
+      visual.append(preview);
+    } else {
+      const pulse = document.createElement("span");
+      pulse.className = "job-pulse";
+      const placeholder = document.createElement("strong");
+      placeholder.textContent = job.status === "processing" ? "빛을 모으는 중" : STAGE_LABELS[job.stage] ?? "결과 확인 중";
+      visual.append(pulse, placeholder);
+    }
+
+    const body = document.createElement("div");
+    body.className = "job-body";
     const top = document.createElement("div");
-    const purpose = document.createElement("strong");
+    top.className = "job-top";
+    const purpose = document.createElement("span");
+    purpose.className = "job-purpose";
     purpose.textContent = PURPOSE_LABELS[job.purpose] ?? "추가 생성";
     const stage = document.createElement("span");
     stage.className = "job-stage";
     stage.textContent = STAGE_LABELS[job.stage] ?? "상태 확인";
     top.append(purpose, stage);
+
+    const facts = document.createElement("p");
+    facts.className = "job-facts";
+    const characterLabel = job.characters?.length
+      ? job.characters.join(", ")
+      : job.characterMode === "none" ? "등장인물 없음" : "등장인물 자동";
+    const styleLabel = job.style
+      ?? (job.styleMode === "none" ? "화풍 없음" : job.styleMode === "prompt" ? "프롬프트 화풍" : "화풍 자동");
+    facts.textContent = `${characterLabel} · ${styleLabel}`;
+
     const message = document.createElement("p");
+    message.className = "job-message";
     message.textContent = job.message;
     const meta = document.createElement("small");
+    meta.className = "job-meta";
     meta.textContent = `${job.progress.completed}/${job.progress.total} · ${formatDuration(job.durationMs)} · ${formatDateTime(job.startedAt)}`;
-    card.append(top, message, meta);
+
+    body.append(top, facts, message, meta);
+    if (job.prompt) {
+      const prompt = document.createElement("details");
+      prompt.className = "job-prompt";
+      const summary = document.createElement("summary");
+      summary.textContent = `${job.prompt.length.toLocaleString("ko-KR")}자 프롬프트 보기`;
+      const text = document.createElement("pre");
+      text.textContent = job.prompt;
+      prompt.append(summary, text);
+      body.append(prompt);
+    }
+
+    if (image) {
+      const actions = document.createElement("nav");
+      actions.className = "job-actions";
+      const links = [
+        ["결과 크게 보기", image.contentUrl],
+        ["같은 조합으로", `/images/create?source=${encodeURIComponent(image.id)}&mode=same-combination`],
+        ["인물만 유지", `/images/create?source=${encodeURIComponent(image.id)}&mode=same-characters`],
+        ["화풍만 유지", `/images/create?source=${encodeURIComponent(image.id)}&mode=same-style`],
+      ];
+      for (const [label, href] of links) {
+        const link = document.createElement("a");
+        link.href = href;
+        link.textContent = label;
+        if (label === "결과 크게 보기") link.target = "_blank";
+        actions.append(link);
+      }
+      body.append(actions);
+    }
+    card.append(visual, body);
     elements.jobsList.append(card);
   }
 }

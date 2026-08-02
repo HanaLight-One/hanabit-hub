@@ -193,6 +193,10 @@ Responses API 공용 텍스트 실행기의 복구 가능한 정본은 `tools/op
 ## 2026-08-01 추가 연결
 
 - 오테 완료 manifest -> 이미지 SQLite 제작 기록: `src/modules/images/image-metadata-catalog.mjs`
+- 추가 생성 작업 카드 -> 안전한 프롬프트·선택 인물·화풍·결과 이미지와 후속 생성 링크:
+  `src/modules/images/prompt-only-executor.mjs`, `public/images/create/app.js`
+- 이미지 홈 카드 -> 제작 기록 요약과 편집·인물 유지·화풍 유지 바로가기:
+  `public/images/app.js`
 - Codex 공식 사용량 -> 홈 남은량 카드: `src/modules/system/codex-usage.mjs`
 - API: `GET /api/system/codex/usage`
 - 안전 경계와 상세 계약: `docs/codex-usage-and-daily-manifests.md`

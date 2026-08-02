@@ -128,6 +128,8 @@ const promptOnlyExecutor =
         freeTextRunnerPath: generationConfig.freeTextRunnerPath,
         freeTextPythonExecutablePath: generationConfig.freeTextPythonExecutablePath,
         freeTextKeyStorePath: generationConfig.freeTextKeyStorePath,
+        archive: imageArchive,
+        optionsCatalog: creationOptions,
       })
     : null;
 const themeHistory =

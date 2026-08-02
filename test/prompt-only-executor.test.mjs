@@ -47,6 +47,18 @@ async function fixture(callback, { now } = {}) {
     styles: [{ id: "calm", label: "calm" }],
     characters: [{ id: "pink-bridge", label: "핑크브릿지" }, { id: "헤일라", label: "헤일라" }],
   }; } };
+  const archive = {
+    async findByTarget(target) {
+      if (path.basename(target) !== "result.png") return null;
+      return { record: {
+        id: "a".repeat(64),
+        name: "result.png",
+        thumbnailUrl: `/api/images/${"a".repeat(64)}/thumbnail`,
+        contentUrl: `/api/images/${"a".repeat(64)}/content`,
+        downloadUrl: `/api/images/${"a".repeat(64)}/download`,
+      } };
+    },
+  };
   const drafts = createGenerationDraftStore({ root: draftRoot, catalog, archive: null });
   const launches = [];
   const executor = createPromptOnlyExecutor({
@@ -59,6 +71,8 @@ async function fixture(callback, { now } = {}) {
     freeTextRunnerPath,
     freeTextPythonExecutablePath,
     freeTextKeyStorePath,
+    archive,
+    optionsCatalog: catalog,
     ...(now ? { now } : {}),
     async launchWorker(input) { launches.push(input); return { pid: 1234 }; },
   });
@@ -68,6 +82,7 @@ async function fixture(callback, { now } = {}) {
       executor,
       launches,
       jobRoot,
+      outputRoot,
       freeTextPythonExecutablePath,
       freeTextKeyStorePath,
     });
@@ -119,6 +134,38 @@ test("프롬프트 자유 생성은 모의 worker에 1장으로 한 번만 전�
     assert.equal(listing.jobs[0].status, "failed");
     assert.equal(JSON.stringify(listing).includes("SECRET"), false);
     assert.equal(JSON.stringify(listing).includes("internal"), false);
+  });
+});
+
+test("완료 작업은 안전한 프롬프트와 선택 자산, 결과 이미지 카드를 제공한다", async () => {
+  await fixture(async ({ drafts, executor, jobRoot, outputRoot }) => {
+    const draft = await drafts.create({
+      prompt: "다과회\nReference: C:\\private\\anchor.png\n따뜻한 오후",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "custom", ids: ["pink-bridge", "헤일라"] },
+      style: { mode: "selected", id: "calm" },
+    });
+    await executor.start(draft.id);
+    const jobPath = path.join(jobRoot, `${draft.id}.json`);
+    const job = JSON.parse(await readFile(jobPath, "utf8"));
+    await writeFile(jobPath, JSON.stringify({
+      ...job,
+      status: "complete",
+      completedAt: "2026-08-01T03:00:00.000Z",
+      progress: { completed: 1, total: 1 },
+      outputs: [path.join(outputRoot, "result.png")],
+    }), "utf8");
+
+    const status = await executor.status(draft.id);
+    assert.deepEqual(status.characters, ["핑크브릿지", "헤일라"]);
+    assert.equal(status.style, "calm");
+    assert.match(status.prompt, /다과회/);
+    assert.match(status.prompt, /내부 참조 경로 숨김/);
+    assert.equal(status.prompt.includes("C:\\"), false);
+    assert.equal(status.images[0].name, "result.png");
+    assert.equal(JSON.stringify(status).includes(outputRoot), false);
   });
 });
 
@@ -214,7 +261,7 @@ test("등장인물 없이 저장 화풍을 고르면 프롬프트 인물과 선�
   });
 });
 
-test("20분 넘게 갱신되지 않은 작업은 내부 정보 없이 확인 필요로 표시한다", async () => {
+test("20분 넘게 갱신되지 않은 작업은 오류·내부 경로 없이 확인 필요로 표시한다", async () => {
   const current = new Date("2026-08-01T03:00:00.000Z");
   await fixture(async ({ drafts, executor, jobRoot }) => {
     const draft = await drafts.create({
@@ -231,14 +278,15 @@ test("20분 넘게 갱신되지 않은 작업은 내부 정보 없이 확인 필
     await writeFile(jobPath, JSON.stringify({
       ...job,
       startedAt: "2026-08-01T02:39:59.000Z",
-      prompt: "외부에 보이면 안 되는 프롬프트",
+      prompt: "확인 가능한 사용자 프롬프트\nC:\\internal\\worker.log",
     }), "utf8");
 
     const status = await executor.status(draft.id);
     assert.equal(status.status, "attention");
     assert.equal(status.stage, "stalled");
     assert.equal(status.durationMs, 1_201_000);
-    assert.equal(JSON.stringify(status).includes("프롬프트"), false);
+    assert.match(status.prompt, /확인 가능한 사용자 프롬프트/);
+    assert.equal(JSON.stringify(status).includes("C:\\internal"), false);
   }, { now: () => current });
 });
 

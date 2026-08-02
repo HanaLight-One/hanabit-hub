@@ -54,6 +54,9 @@ test("이미지 화면의 스크립트와 스타일을 제공한다", async () =
     assert.match(scriptBody, /theme-extra/);
     assert.match(scriptBody, /프롬프트 펼치기/);
     assert.match(scriptBody, /이미지 앵커/);
+    assert.match(scriptBody, /hydrateImageCard/);
+    assert.match(scriptBody, /인물 유지/);
+    assert.match(scriptBody, /화풍 유지/);
     assert.equal(style.status, 200);
     assert.match(style.headers.get("content-type"), /text\/css/);
   });
