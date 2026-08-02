@@ -93,12 +93,16 @@ test("empowering의 자립 의미와 링크 소개 구조가 빠진 번역은 �
         const outputPath = args[args.indexOf("-Output") + 1];
         if (attempts === 2) {
           assert.match(await readFile(promptPath, "utf8"), /previous translation flattened empower/u);
+        } else if (attempts === 3) {
+          assert.match(await readFile(promptPath, "utf8"), /left enable, enabling, or empower in English/u);
         }
         const body = attempts === 1
           ? "ChatGPT로 아빠가 무언가를 만들도록 돕기"
-          : "아빠가 직접 무언가를 만들 수 있도록 지원하는 ChatGPT.";
+          : attempts === 2
+            ? "아빠가 직접 무언가를 만들 수 있도록 enabling 하는 ChatGPT."
+            : "아빠가 직접 무언가를 만들 수 있도록 지원하는 ChatGPT.";
         await writeFile(outputPath, JSON.stringify({
-          translation: { title: attempts === 1 ? "아빠의 만들기를 돕는 ChatGPT" : "", body },
+          translation: { title: attempts < 3 ? "아빠의 만들기를 돕는 ChatGPT" : "", body },
           contextTranslations: [],
           triage: {
             decision: "publish",
@@ -112,7 +116,7 @@ test("empowering의 자립 의미와 링크 소개 구조가 빠진 번역은 �
         }), "utf8");
       },
     });
-    assert.equal(attempts, 2);
+    assert.equal(attempts, 3);
     assert.equal(result.translation.title, "아빠가 직접 무언가를 만들 수 있도록 지원하는 ChatGPT");
     assert.equal(result.translation.body, "아빠가 직접 무언가를 만들 수 있도록 지원하는 ChatGPT:");
   } finally {

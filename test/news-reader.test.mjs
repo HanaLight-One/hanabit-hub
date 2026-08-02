@@ -25,7 +25,7 @@ test("뉴스 리더는 내부 경로와 Discord ID 없이 공개 계약을 반�
         freeTriage: { decision: "review", confidence: 0.7, importance: "medium", evidenceTag: "inference", reason: "애매함", advice: "상위 검토" },
         triage: { decision: "publish", confidence: 0.95, importance: "high", evidenceTag: "official", reason: "공식 발표", advice: "바로 검토하세요." },
         codexReview: { status: "complete", reviewedAt: "2026-07-31T00:01:00Z", decision: "publish", confidence: 0.95, importance: "high", evidenceTag: "official", reason: "공식 발표", advice: "바로 검토하세요." },
-        analysisPolicyVersion: 6,
+        analysisPolicyVersion: 7,
         dcPublication: null,
       },
       collectedAt: "2026-07-31T00:01:00Z",

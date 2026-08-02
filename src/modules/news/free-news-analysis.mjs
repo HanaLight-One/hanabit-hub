@@ -117,6 +117,9 @@ function preserveSourceStructure(sourceText, translatedBody) {
 
 function validateTranslationFidelity(sourceText, translatedBody) {
   const source = meaningfulSourceText(sourceText);
+  if (/\b(?:enabl(?:e|ed|ing)|empower(?:ed|ing|ment|s)?)\b/iu.test(translatedBody)) {
+    throw new Error("원문의 영어 핵심어가 한국어 번역에 남았습니다.");
+  }
   if (/\bempower(?:ed|ing|ment|s)?\b/iu.test(source) &&
       !/(?:할|해낼|만들)\s*수\s*(?:있게|있도록)|가능하게|힘을\s*실어|역량|권한|능력을\s*(?:주|부여)|(?:직접|스스로).{0,30}(?:돕|지원)/u.test(translatedBody)) {
     throw new Error("원문의 자립·가능 의미가 번역에서 누락되었습니다.");
@@ -132,6 +135,9 @@ function retryCorrection(error) {
   const message = String(error?.message ?? "");
   if (message.includes("자립·가능 의미")) {
     return "The previous translation flattened empower into generic assistance. Explicitly preserve that the person can do the action themselves.";
+  }
+  if (message.includes("영어 핵심어")) {
+    return "The previous Korean translation left enable, enabling, or empower in English. Replace it with fully natural Korean while preserving the enabling meaning.";
   }
   if (message.includes("관련 글 번역")) {
     return "The previous response omitted or malformed contextTranslations. Return exactly one indexed translation for every supplied CONTEXT.";
