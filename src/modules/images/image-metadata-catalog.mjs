@@ -98,14 +98,21 @@ export function createImageMetadataCatalog({ database, archive, jobRoot, dailyMa
     const characterLabels = characterIds.map((id) => optionLabels.characters.get(id) ?? id);
     let styleMode = "unknown";
     let styleId = null;
+    let styleLabel = null;
     if (job.style && typeof job.style === "object" && STYLE_MODES.has(job.style.mode)) {
       styleMode = job.style.mode;
-      styleId = safeText(job.style.id, 120);
+      const styleIds = styleMode === "selected"
+        ? [...new Set((Array.isArray(job.style.ids) ? job.style.ids : [job.style.id]).map((value) => safeText(value, 80)).filter(Boolean))].slice(0, 3)
+        : [safeText(job.style.id, 120)].filter(Boolean);
+      styleId = safeText(styleIds.join(" + "), 120);
+      styleLabel = styleIds.length
+        ? safeText(styleIds.map((selectedId) => optionLabels.styles.get(selectedId) ?? selectedId).join(" + "), 240)
+        : null;
     } else if (typeof job.style === "string" && safeText(job.style, 120)) {
       styleMode = "selected";
       styleId = safeText(job.style, 120);
+      styleLabel = optionLabels.styles.get(styleId) ?? styleId;
     }
-    const styleLabel = styleId == null ? null : optionLabels.styles.get(styleId) ?? styleId;
     const indexedAt = now().toISOString();
     const prompt = safePrompt(job.prompt);
     const createdAt = safeDate(job.completedAt ?? job.startedAt ?? job.createdAt);

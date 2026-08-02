@@ -10,7 +10,12 @@ const CHARACTER_IDS = ["pink-bridge", "헤일라", "리벨라", "세이라", "�
 const catalog = {
   async list() {
     return {
-      styles: [{ id: "gothic", label: "gothic" }],
+      styles: [
+        { id: "gothic", label: "gothic" },
+        { id: "watercolor", label: "watercolor" },
+        { id: "neon", label: "neon" },
+        { id: "ink", label: "ink" },
+      ],
       characters: CHARACTER_IDS.map((id) => ({ id, label: id === "pink-bridge" ? "핑크브릿지" : id })),
     };
   },
@@ -106,6 +111,33 @@ test("프롬프트 화풍과 고정 렌더링은 자산 없는 실제 실행 초
     assert.equal(rendering.executionMode, "guided-cast");
     const saved = JSON.parse(await readFile(path.join(root, `${rendering.id}.json`), "utf8"));
     assert.deepEqual(saved.style, { mode: "rendering", id: "semi-realistic-anime" });
+  });
+});
+
+test("저장 화풍은 중복 없이 최대 3개를 혼합 선택으로 보존한다", async () => {
+  await fixture(async ({ store }) => {
+    const result = await store.create({
+      prompt: "고딕 수채화 네온 골목",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "none", ids: [] },
+      style: { mode: "selected", id: "gothic", ids: ["gothic", "watercolor", "gothic"] },
+    });
+    const saved = await store.get(result.id);
+    assert.deepEqual(saved.style, {
+      mode: "selected",
+      id: "gothic",
+      ids: ["gothic", "watercolor"],
+    });
+    await assert.rejects(() => store.create({
+      prompt: "너무 많은 화풍",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "none", ids: [] },
+      style: { mode: "selected", id: "gothic", ids: ["gothic", "watercolor", "neon", "ink"] },
+    }), /최대 3개/);
   });
 });
 

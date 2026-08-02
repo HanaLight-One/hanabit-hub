@@ -264,8 +264,14 @@ export function createPromptOnlyExecutor({
       ? job.characters.ids.slice(0, 6).map(String)
       : [];
     const characters = characterIds.map((id) => optionLabels.characters.get(id) ?? id);
-    const styleId = typeof job.style?.id === "string" ? job.style.id : null;
-    const styleLabel = styleId ? optionLabels.styles.get(styleId) ?? styleId : null;
+    const styleIds = job.style?.mode === "selected"
+      ? [...new Set((Array.isArray(job.style.ids) ? job.style.ids : [job.style.id]).filter(Boolean).map(String))]
+      : typeof job.style?.id === "string"
+        ? [job.style.id]
+        : [];
+    const styleLabel = styleIds.length
+      ? styleIds.map((id) => optionLabels.styles.get(id) ?? id).join(" + ")
+      : null;
     const images = [];
     if (archive?.findByTarget && Array.isArray(job.outputs)) {
       for (const output of job.outputs.slice(0, 4)) {

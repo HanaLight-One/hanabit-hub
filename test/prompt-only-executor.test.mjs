@@ -23,7 +23,10 @@ async function fixture(callback, { now } = {}) {
   await mkdir(outputRoot, { recursive: true });
   await Promise.all([
     writeFile(assetIndexPath, JSON.stringify({
-      styles: { calm: { id: "calm", filename: "calm.txt", content: "calm ink style" } },
+      styles: {
+        calm: { id: "calm", filename: "calm.txt", content: "calm ink style" },
+        vivid: { id: "vivid", filename: "vivid.txt", content: "vivid neon style" },
+      },
       characters: {
         핑크브릿지: {
           name: "핑크브릿지",
@@ -48,7 +51,7 @@ async function fixture(callback, { now } = {}) {
     writeFile(sourceImagePath, "source", "utf8"),
   ]);
   const catalog = { async list() { return {
-    styles: [{ id: "calm", label: "calm" }],
+    styles: [{ id: "calm", label: "calm" }, { id: "vivid", label: "vivid" }],
     characters: [{ id: "pink-bridge", label: "핑크브릿지" }, { id: "헤일라", label: "헤일라" }],
   }; } };
   const archive = {
@@ -267,6 +270,27 @@ test("등장인물 없이 저장 화풍을 고르면 프롬프트 인물과 선�
     assert.equal(context.selected_style.id, "calm");
     assert.equal(context.cast_packages, undefined);
     assert.match(context.job.prompt, /목록에 없는 인물/);
+  });
+});
+
+test("등장인물 없이 고른 두 화풍을 혼합해 같은 worker 계약으로 실행한다", async () => {
+  await fixture(async ({ drafts, executor, jobRoot }) => {
+    const draft = await drafts.create({
+      prompt: "고요하지만 선명한 네온 서재",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "none", ids: [] },
+      style: { mode: "selected", id: "calm", ids: ["calm", "vivid"] },
+    });
+    await executor.start(draft.id);
+    const context = JSON.parse(
+      (await readFile(path.join(jobRoot, `${draft.id}.worker-context.json`), "utf8")).replace(/^\uFEFF/u, ""),
+    );
+    assert.equal(context.job.mode, "style");
+    assert.equal(context.selected_style.id, "blend:calm+vivid");
+    assert.match(context.selected_style.content, /calm ink style/);
+    assert.match(context.selected_style.content, /vivid neon style/);
   });
 });
 

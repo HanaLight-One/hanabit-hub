@@ -82,6 +82,9 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(scriptBody, /generate-one-draft-image/);
     assert.match(scriptBody, /선택 인물로 1장 실제 생성/);
     assert.match(scriptBody, /MAX_CUSTOM_CHARACTERS = 6/);
+    assert.match(scriptBody, /MAX_SELECTED_STYLES = 3/);
+    assert.match(scriptBody, /최대 \$\{MAX_SELECTED_STYLES\}개 혼합/);
+    assert.match(scriptBody, /name = blendable \? "style" : "style-mode"/);
     assert.doesNotMatch(scriptBody, /pinkBridge\.checked = false/);
     assert.match(body, /이미지 앵커 사용/);
     assert.match(scriptBody, /useImageAnchors/);

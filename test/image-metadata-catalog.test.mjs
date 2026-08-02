@@ -21,7 +21,7 @@ test("완료된 Hub 작업을 이미지 ID와 연결해 프롬프트와 선택 �
     status: "complete",
     prompt: "고딕 다과회에서 서로 웃고 있는 세 사람",
     characters: { mode: "custom", ids: ["pink-bridge", "헤일라", "리벨라"] },
-    style: { mode: "selected", id: "gothic" },
+    style: { mode: "selected", id: "gothic", ids: ["gothic", "watercolor"] },
     useImageAnchors: true,
     purpose: "free-play",
     executionMode: "guided-cast",
@@ -38,7 +38,10 @@ test("완료된 Hub 작업을 이미지 ID와 연결해 프롬프트와 선택 �
       { id: "헤일라", label: "헤일라" },
       { id: "리벨라", label: "리벨라" },
     ],
-    styles: [{ id: "gothic", label: "고딕" }],
+    styles: [
+      { id: "gothic", label: "고딕" },
+      { id: "watercolor", label: "수채화" },
+    ],
   }; } };
   try {
     const catalog = createImageMetadataCatalog({ database, archive, jobRoot, optionsCatalog });
@@ -50,7 +53,8 @@ test("완료된 Hub 작업을 이미지 ID와 연결해 프롬프트와 선택 �
     assert.deepEqual(catalog.availableImageIds(), [image.id]);
     assert.deepEqual(record.characterIds, ["pink-bridge", "헤일라", "리벨라"]);
     assert.deepEqual(record.characters, ["핑크브릿지", "헤일라", "리벨라"]);
-    assert.equal(record.style, "고딕");
+    assert.equal(record.style, "고딕 + 수채화");
+    assert.equal(record.styleId, "gothic + watercolor");
     assert.equal(record.styleMode, "selected");
     assert.equal(record.useImageAnchors, true);
     assert.equal(record.durationMs, 154_000);

@@ -7,6 +7,7 @@ const MODE_LABELS = Object.freeze({
 const SAFE_SOURCE_ID = /^[a-f0-9]{64}$/;
 const PINK_BRIDGE_ID = "pink-bridge";
 const MAX_CUSTOM_CHARACTERS = 6;
+const MAX_SELECTED_STYLES = 3;
 const BUILTIN_RENDERING_COUNT = 4;
 const PURPOSE_LABELS = Object.freeze({
   "theme-followup": "오테 추가",
@@ -141,12 +142,12 @@ function appendSourceRecord(rows) {
   }
 }
 
-function appendStyleOption({ id, label }, { checked = false } = {}) {
+function appendStyleOption({ id, label }, { checked = false, blendable = false } = {}) {
   const card = document.createElement("label");
   card.className = "style-card";
   const input = document.createElement("input");
-  input.type = "radio";
-  input.name = "style";
+  input.type = blendable ? "checkbox" : "radio";
+  input.name = blendable ? "style" : "style-mode";
   input.value = id;
   input.checked = checked;
   const copy = document.createElement("span");
@@ -234,11 +235,11 @@ async function loadCreationOptions() {
     const payload = await response.json();
     const styles = Array.isArray(payload.styles) ? payload.styles : [];
     const characters = Array.isArray(payload.characters) ? payload.characters : [];
-    for (const style of styles) appendStyleOption(style);
+    for (const style of styles) appendStyleOption(style, { blendable: true });
     for (const character of characters) appendCharacterOption(character);
     connectedStyleCount = styles.length;
     connectedCharacterCount = characters.length;
-    elements.styleStatus.textContent = `${styles.length}개 저장 화풍 + 렌더링 ${BUILTIN_RENDERING_COUNT}종 · 자동 선택`;
+    elements.styleStatus.textContent = `${styles.length}개 저장 화풍 · 최대 ${MAX_SELECTED_STYLES}개 혼합 + 렌더링 ${BUILTIN_RENDERING_COUNT}종 · 자동 선택`;
     elements.characterStatus.textContent = `${characters.length}명 · 최대 ${MAX_CUSTOM_CHARACTERS}명 · 자동 선택`;
   } catch {
     elements.styleStatus.textContent = "화풍 목록을 불러오지 못했어요.";
@@ -577,15 +578,39 @@ elements.characterGrid.addEventListener("change", (event) => {
   updateCharacterSelection();
 });
 
-elements.styleGrid.addEventListener("change", (event) => {
-  if (!(event.target instanceof HTMLInputElement) || event.target.name !== "style") {
-    return;
+function selectedStyleInputs() {
+  return [...elements.styleGrid.querySelectorAll('input[name="style"]:checked')];
+}
+
+function updateStyleSelection() {
+  const selectedStyles = selectedStyleInputs();
+  const reachedLimit = selectedStyles.length >= MAX_SELECTED_STYLES;
+  for (const input of elements.styleGrid.querySelectorAll('input[name="style"]')) {
+    input.disabled = reachedLimit && !input.checked;
   }
-  const selected = styleLabels.get(event.target.value) ?? "자동 선택";
+  const selectedMode = elements.styleGrid.querySelector('input[name="style-mode"]:checked');
+  const selected = selectedStyles.length
+    ? `혼합 ${selectedStyles.length}개 · ${selectedStyles.map((input) => styleLabels.get(input.value)).join(" + ")}`
+    : styleLabels.get(selectedMode?.value) ?? "자동 선택";
   const prefix = connectedStyleCount
-    ? `${connectedStyleCount}개 저장 화풍 + 렌더링 ${BUILTIN_RENDERING_COUNT}종 · `
+    ? `${connectedStyleCount}개 저장 화풍 · 최대 ${MAX_SELECTED_STYLES}개 혼합 + 렌더링 ${BUILTIN_RENDERING_COUNT}종 · `
     : "";
   elements.styleStatus.textContent = `${prefix}${selected.replace(/^🎲\s*/u, "")}`;
+}
+
+elements.styleGrid.addEventListener("change", (event) => {
+  if (!(event.target instanceof HTMLInputElement)) return;
+  if (event.target.name === "style-mode") {
+    for (const input of elements.styleGrid.querySelectorAll('input[name="style"]')) input.checked = false;
+  } else if (event.target.name === "style") {
+    for (const input of elements.styleGrid.querySelectorAll('input[name="style-mode"]')) input.checked = false;
+    if (!selectedStyleInputs().length) {
+      elements.styleGrid.querySelector('input[name="style-mode"][value="random"]').checked = true;
+    }
+  } else {
+    return;
+  }
+  updateStyleSelection();
 });
 
 elements.scene.addEventListener("input", () => {
@@ -611,7 +636,11 @@ elements.form.addEventListener("submit", (event) => {
   const data = new FormData(elements.form);
   const mode = MODE_LABELS[data.get("mode")] ?? MODE_LABELS.new;
   const characterSummary = selectedCharacterSummary();
-  const style = styleLabels.get(data.get("style")) ?? "자동 선택";
+  const selectedStyles = selectedStyleInputs();
+  const styleModeValue = data.get("style-mode");
+  const style = selectedStyles.length
+    ? selectedStyles.map((input) => styleLabels.get(input.value)).join(" + ")
+    : styleLabels.get(styleModeValue) ?? "자동 선택";
   const scene = elements.scene.value.trim();
   const selectedCharacters = [
     ...elements.characterGrid.querySelectorAll('input[name="character"]:checked'),
@@ -622,10 +651,12 @@ elements.form.addEventListener("submit", (event) => {
   const characterSelection = selectedCharacters.length
     ? { mode: "custom", ids: selectedCharacters }
     : { mode: characterModeInput?.value === "none" ? "none" : "auto", ids: [] };
-  const styleValue = data.get("style");
+  const styleValue = styleModeValue;
   const purpose = data.get("purpose");
   const styleSelection =
-    styleValue === "prompt"
+    selectedStyles.length
+      ? { mode: "selected", id: selectedStyles[0].value, ids: selectedStyles.map((input) => input.value) }
+      : styleValue === "prompt"
       ? { mode: "prompt", id: null }
       : styleValue === "random"
         ? { mode: "auto", id: null }

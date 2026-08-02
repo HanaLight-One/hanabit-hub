@@ -12,6 +12,7 @@ const STYLE_MODES = new Set(["auto", "none", "selected", "prompt", "rendering"])
 const NO_CHARACTER_STYLE_MODES = new Set(["none", "selected", "prompt", "rendering"]);
 const PURPOSES = new Set(["theme-followup", "free-play"]);
 const MAX_CUSTOM_CHARACTERS = 6;
+const MAX_SELECTED_STYLES = 3;
 
 function draftError(code, message) {
   return Object.assign(new Error(message), { code });
@@ -65,9 +66,20 @@ function normalizeStyle(value, allowedIds) {
   }
   const id = value.id == null ? null : String(value.id);
   if (value.mode === "selected") {
-    if (!id || !allowedIds.has(id)) {
-      throw draftError("INVALID_SELECTION", "현재 화풍 목록에서 선택해주세요.");
+    const ids = [...new Set(
+      (Array.isArray(value.ids) ? value.ids : id == null ? [] : [id]).map(String),
+    )];
+    if (
+      ids.length < 1 ||
+      ids.length > MAX_SELECTED_STYLES ||
+      ids.some((selectedId) => !allowedIds.has(selectedId))
+    ) {
+      throw draftError(
+        "INVALID_SELECTION",
+        `현재 화풍 목록에서 최대 ${MAX_SELECTED_STYLES}개까지 선택해주세요.`,
+      );
     }
+    return Object.freeze({ mode: value.mode, id: ids[0], ids: Object.freeze(ids) });
   } else if (value.mode === "rendering") {
     if (!id || !RENDERING_PRESETS[id]) {
       throw draftError("INVALID_SELECTION", "현재 렌더링 목록에서 선택해주세요.");

@@ -21,6 +21,11 @@ async function fixture() {
           filename: "[화풍] 차분.txt",
           content: "quiet restrained illustration",
         },
+        vivid: {
+          id: "vivid",
+          filename: "[화풍] 선명.txt",
+          content: "vivid geometric color rhythm",
+        },
       },
       characters: {
         핑크브릿지: {
@@ -174,6 +179,27 @@ test("이미지 앵커를 끄면 일반 인물도 텍스트 외형 앵커만 전
   assert.equal(context.cast_packages[0].characters[0].image_anchor_path, null);
   assert.equal(context.cast_packages[0].characters[1].image_anchor_path, null);
   assert.equal(context.selected_style.id, "calm");
+});
+
+test("저장 화풍 여러 개는 worker가 이해하는 단일 혼합 화풍으로 조립한다", async () => {
+  const { assetIndexPath, outputRoot } = await fixture();
+  const context = await buildImageStudioQueueContext(
+    {
+      id: "blended-style",
+      prompt: "비 온 뒤 네온 정원",
+      count: 1,
+      mode: "selected-style",
+      purpose: "free-play",
+      style: { mode: "selected", id: "calm", ids: ["calm", "vivid"] },
+    },
+    { assetIndexPath, outputRoot },
+  );
+  assert.equal(context.job.mode, "style");
+  assert.equal(context.selected_style.id, "blend:calm+vivid");
+  assert.deepEqual(context.selected_style.component_ids, ["calm", "vivid"]);
+  assert.match(context.selected_style.content, /quiet restrained illustration/);
+  assert.match(context.selected_style.content, /vivid geometric color rhythm/);
+  assert.match(context.selected_style.content, /one coherent visual language/);
 });
 
 test("인물 없는 고정 렌더링도 locked style worker 문맥을 사용한다", async () => {

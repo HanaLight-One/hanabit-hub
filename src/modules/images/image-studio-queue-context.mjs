@@ -34,6 +34,31 @@ function indexedStyles(index) {
     : Object.values(index.styles || {});
 }
 
+function selectedStyleIds(style) {
+  if (style?.mode !== "selected") return [];
+  return [...new Set(
+    (Array.isArray(style.ids) ? style.ids : [style.id]).filter(Boolean).map(String),
+  )];
+}
+
+function blendStyles(styles) {
+  if (styles.length === 1) {
+    const [selected] = styles;
+    return { id: selected.id, filename: selected.filename, content: selected.content };
+  }
+  return {
+    id: `blend:${styles.map((style) => style.id).join("+")}`,
+    filename: null,
+    component_ids: styles.map((style) => style.id),
+    content: [
+      "[STYLE BLEND] Merge the following style directions into one coherent visual language.",
+      "Give every component meaningful influence; reconcile conflicts instead of choosing only one component.",
+      "Do not make a split-screen, collage, or separate style regions unless the user's scene explicitly asks for that.",
+      ...styles.map((style, index) => `\n[STYLE COMPONENT ${index + 1}: ${style.id}]\n${style.content}`),
+    ].join("\n"),
+  };
+}
+
 function applyGuidedStyle(context, style, index, seed) {
   if (applyDraftStyle(context, style)) {
     context.job.mode = "cast";
@@ -41,22 +66,19 @@ function applyGuidedStyle(context, style, index, seed) {
   }
   if (style?.mode === "none") return false;
   const styles = indexedStyles(index);
+  const requestedStyleIds = selectedStyleIds(style);
   const selected = style?.mode === "selected"
-    ? styles.find((item) => item.id === style.id)
+    ? requestedStyleIds.map((id) => styles.find((item) => item.id === id))
     : style?.mode === "auto"
-      ? styles[stableIndex(`${seed}:guided-style`, styles.length)]
+      ? [styles[stableIndex(`${seed}:guided-style`, styles.length)]]
       : null;
-  if (!selected) {
+  if (!selected || selected.some((item) => !item)) {
     if (style?.mode === "selected") {
-      throw new Error(`선택한 화풍을 자산 색인에서 찾지 못했습니다: ${style.id}`);
+      throw new Error(`선택한 화풍을 자산 색인에서 찾지 못했습니다: ${requestedStyleIds.join(", ")}`);
     }
     return false;
   }
-  context.selected_style = {
-    id: selected.id,
-    filename: selected.filename,
-    content: selected.content,
-  };
+  context.selected_style = blendStyles(selected);
   return true;
 }
 

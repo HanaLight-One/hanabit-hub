@@ -387,6 +387,11 @@
   color: var(--accent);
 }
 
+.style-card input:disabled + span {
+  cursor: not-allowed;
+  opacity: .42;
+}
+
 .style-card input:focus-visible + span,
 .character-card input:focus-visible + span { outline: 2px solid var(--accent); }
 

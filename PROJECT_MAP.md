@@ -230,7 +230,7 @@ publication-jobs/` 아래에 격리 사본을 만든 뒤 `scripts/publish-dc-com
 ## 2026-08-01 추가 연결
 
 - 오테 완료 manifest -> 이미지 SQLite 제작 기록: `src/modules/images/image-metadata-catalog.mjs`
-- 추가 생성 작업 카드 -> 안전한 프롬프트·선택 인물·화풍·결과 이미지와 후속 생성 링크:
+- 추가 생성 작업 카드 -> 안전한 프롬프트·선택 인물·최대 3개 저장 화풍 혼합·결과 이미지와 후속 생성 링크:
   `src/modules/images/prompt-only-executor.mjs`, `public/images/create/app.js`
 - 직접 업로드 소스 -> `POST /api/images/source-uploads`가 최대 20MB PNG·JPG·WebP를
   Hub 상태 폴더에 저장하고, 새 장면 초안의 `sourceImageId`와 worker의
