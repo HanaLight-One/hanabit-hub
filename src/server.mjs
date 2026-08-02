@@ -173,6 +173,7 @@ const newsProcessor = path.isAbsolute(generationConfig?.freeTextRunnerPath ?? ""
       stateRoot: path.join(APP_ROOT, "state", "news"),
       runnerPath: generationConfig.freeTextRunnerPath,
       codexReviewer: newsCodexReviewer,
+      sourceProfiles: newsSourceProfiles,
     })
   : null;
 const newsApproval = createNewsApprovalService({ root: path.join(APP_ROOT, "state", "news") });

@@ -6,7 +6,7 @@ import test from "node:test";
 import { createPendingNewsStore } from "../src/modules/news/news-item-store.mjs";
 import { createNewsProcessor } from "../src/modules/news/news-processor.mjs";
 
-async function fixture(source, analyze, callback, { codexReviewer = null } = {}) {
+async function fixture(source, analyze, callback, { codexReviewer = null, sourceProfiles = new Map() } = {}) {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-processor-"));
   const runnerPath = path.join(root, "runner.ps1");
   await writeFile(runnerPath, "test", "utf8");
@@ -14,14 +14,14 @@ async function fixture(source, analyze, callback, { codexReviewer = null } = {})
   const id = "f".repeat(32);
   await store.create({ id, source, original: { content: "news", embeds: [] }, workflow: { status: "pending_translation", dcPublication: null } });
   try {
-    const processor = createNewsProcessor({ stateRoot: root, runnerPath, analyze, codexReviewer, now: () => new Date("2026-08-01T04:00:00Z") });
+    const processor = createNewsProcessor({ stateRoot: root, runnerPath, analyze, codexReviewer, sourceProfiles, now: () => new Date("2026-08-01T04:00:00Z") });
     await callback({ processor, store, id });
   } finally { await rm(root, { recursive: true, force: true }); }
 }
 
 const result = (decision) => ({
   translation: { title: "번역 제목", body: "번역 본문" },
-  triage: { decision, confidence: 0.9, importance: "medium", reason: "판정 이유", advice: "사람 검토 권장", signals: [] },
+  triage: { decision, confidence: 0.9, importance: "medium", evidenceTag: "inference", reason: "판정 이유", advice: "[유추] 게시 권장", signals: [] },
 });
 
 test("X 판정 결과를 게시 검토 또는 보류 상태로 결정적으로 저장한다", async () => {
@@ -41,6 +41,7 @@ test("OpenAI 공식 Announcement는 번역 후 반드시 게시 검토로 보낸
     const saved = await store.read(id);
     assert.equal(saved.workflow.status, "pending_review");
     assert.equal(saved.workflow.triage.decision, "publish");
+    assert.equal(saved.workflow.triage.evidenceTag, "official");
   });
 });
 
@@ -83,6 +84,7 @@ test("애매한 무료 판정은 Codex 검토 결과를 최종 판정으로 보�
           decision: "publish",
           confidence: 0.88,
           importance: "medium",
+          evidenceTag: "inference",
           reason: "부모 글과 결합하면 제품 활용 범위 확장을 시사한다.",
           advice: "사람이 이미지를 확인한 뒤 게시 후보로 검토하세요.",
         },
@@ -95,6 +97,31 @@ test("애매한 무료 판정은 Codex 검토 결과를 최종 판정으로 보�
     assert.equal(saved.workflow.status, "pending_review");
     assert.equal(saved.workflow.freeTriage.decision, "review");
     assert.equal(saved.workflow.triage.decision, "publish");
+    assert.equal(saved.workflow.triage.evidenceTag, "inference");
     assert.equal(saved.workflow.codexReview.status, "complete");
   }, { codexReviewer });
+});
+
+test("판정 모델에는 등록된 출처 역할과 추적 이유를 함께 전달한다", async () => {
+  const profile = {
+    displayName: "Greg Brockman",
+    affiliation: "OpenAI",
+    roles: ["사장·공동 창립자"],
+    topics: ["모델"],
+    trustLabel: "핵심 인물",
+    whyTracked: "OpenAI 방향을 직접 언급할 수 있는 핵심 인물이에요.",
+  };
+  await fixture(
+    { type: "x-post", account: "gdb" },
+    async (record) => {
+      assert.equal(record.source.profile.roles[0], "사장·공동 창립자");
+      assert.equal(record.source.profile.trustLabel, "핵심 인물");
+      return result("publish");
+    },
+    async ({ processor, store, id }) => {
+      await processor.process(id);
+      assert.equal((await store.read(id)).workflow.status, "pending_review");
+    },
+    { sourceProfiles: new Map([["gdb", profile]]) },
+  );
 });

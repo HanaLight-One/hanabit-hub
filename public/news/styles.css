@@ -34,12 +34,17 @@ h1 em { color: var(--accent); font-style: normal; }
 .card-top { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 22px; }
 .card-top time { color: var(--muted); font-size: 13px; }
 .badges { display: flex; flex-wrap: wrap; gap: 8px; }
-.status, .decision { padding: 7px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; }
+.status, .decision, .evidence { padding: 7px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; }
 .status { background: rgb(216 255 82 / 12%); color: var(--accent); }
 .decision { background: #202831; color: #c8d0d8; }
 .decision-publish { background: rgb(216 255 82 / 12%); color: var(--accent); }
 .decision-review { background: rgb(255 220 129 / 12%); color: #ffdc81; }
 .codex-badge { background: rgb(118 171 255 / 14%); color: #9bc0ff; }
+.evidence { background: #1b232b; color: #d6dde3; }
+.evidence-official, .evidence-confirmed { background: rgb(216 255 82 / 12%); color: var(--accent); }
+.evidence-inference { background: rgb(118 171 255 / 14%); color: #9bc0ff; }
+.evidence-rumor { background: rgb(255 142 156 / 13%); color: #ff9eaa; }
+.evidence-opinion { background: rgb(192 160 255 / 13%); color: #cbb2ff; }
 .source-label { margin: 14px 0 0; color: var(--accent); font-size: 12px; font-weight: 800; }
 .translation-box { margin-top: 18px; padding: 18px; border: 1px solid rgb(216 255 82 / 28%); border-radius: 14px; background: rgb(216 255 82 / 6%); }
 .translation-box h2 { margin: 0; font-size: 20px; }

@@ -18,6 +18,13 @@ const DECISION_LABELS = {
 };
 
 const IMPORTANCE_LABELS = { low: "낮음", medium: "중간", high: "높음" };
+const EVIDENCE_LABELS = {
+  official: "공식",
+  confirmed: "확정",
+  inference: "유추",
+  rumor: "루머",
+  opinion: "의견",
+};
 const FAILURE_LABELS = {
   timeout: "응답 시간이 초과됐어요.",
   invalid_response: "응답 형식이 깨져 번역을 저장하지 못했어요.",
@@ -119,6 +126,7 @@ function TriageBox({ triage, label, advice, className = "" }) {
       <small>
         신뢰도 {Math.round(triage.confidence * 100)}%
         {triage.importance && ` · 중요도 ${IMPORTANCE_LABELS[triage.importance]}`}
+        {triage.evidenceTag && ` · 정보 성격 [${EVIDENCE_LABELS[triage.evidenceTag]}]`}
       </small>
     </section>
   );
@@ -197,6 +205,11 @@ function NewsCard({ item, confirming, busy, error, onBegin, onCancel, onApprove,
         <div className="badges">
           <span className="status">{STATUS_LABELS[item.workflow.status] ?? "상태 확인 필요"}</span>
           {triage && <span className={`decision decision-${triage.decision}`}>{DECISION_LABELS[triage.decision]}</span>}
+          {triage?.evidenceTag && (
+            <span className={`evidence evidence-${triage.evidenceTag}`}>
+              [{EVIDENCE_LABELS[triage.evidenceTag]}]
+            </span>
+          )}
           {codexReview?.status === "complete" && <span className="decision codex-badge">Codex 검토 완료</span>}
         </div>
         <time>{formatDate(item.source.publishedAt)}</time>
@@ -214,7 +227,10 @@ function NewsCard({ item, confirming, busy, error, onBegin, onCancel, onApprove,
       {item.workflow.translation ? (
         <section className="translation-box">
           <p className="section-label">제목</p>
-          <h2>{item.workflow.translation.title || "제목 없음"}</h2>
+          <h2>
+            {triage?.evidenceTag && `[${EVIDENCE_LABELS[triage.evidenceTag]}] `}
+            {item.workflow.translation.title || "제목 없음"}
+          </h2>
           <p className="section-label body-label">본문 번역</p>
           <p>{item.workflow.translation.body}</p>
         </section>

@@ -21,16 +21,16 @@ function record(id = "a".repeat(32)) {
   };
 }
 
-function free(decision = "skip", confidence = 0.97) {
+function free(decision = "skip", confidence = 0.97, evidenceTag = "inference") {
   return {
     translation: { title: "Codex", body: "Codex" },
-    triage: { decision, confidence, importance: "low", reason: "단어 하나", advice: "보류", signals: [] },
+    triage: { decision, confidence, importance: "low", evidenceTag, reason: "단어 하나", advice: "보류", signals: [] },
   };
 }
 
 test("애매한 X 글만 Codex 심층검토 대상으로 승격한다", () => {
   assert.equal(shouldEscalateToCodex(record(), free("skip", 0.97)), true);
-  assert.equal(shouldEscalateToCodex({ ...record(), media: [], original: { content: "ordinary chatter", contexts: [] } }, free("skip", 0.97)), false);
+  assert.equal(shouldEscalateToCodex({ ...record(), media: [], original: { content: "ordinary chatter", contexts: [] } }, free("skip", 0.97, "opinion")), false);
   assert.equal(shouldEscalateToCodex({ ...record(), source: { type: "discord-announcement" } }, free("review", 0.5)), false);
 });
 
@@ -51,6 +51,7 @@ test("Codex exec는 읽기 전용 일회성 스키마 출력만 사용한다", a
         assert.equal(args[args.indexOf("--sandbox") + 1], "read-only");
         assert.match(options.input, /Developing your App is the easy part/);
         assert.match(options.input, /No image pixels are attached/);
+        assert.match(options.input, /concrete inference can be publish/i);
         const outputPath = args[args.indexOf("--output-last-message") + 1];
         const schemaPath = args[args.indexOf("--output-schema") + 1];
         const schema = JSON.parse(await readFile(schemaPath, "utf8"));
@@ -59,12 +60,14 @@ test("Codex exec는 읽기 전용 일회성 스키마 출력만 사용한다", a
           decision: "review",
           confidence: 0.86,
           importance: "medium",
+          evidenceTag: "inference",
           reason: "앱 개발 장벽 완화를 암시하는 맥락이다.",
           advice: "이미지는 사람이 확인하고 게시 후보로 검토하세요.",
         }), "utf8");
       },
     });
     assert.equal(result.decision, "review");
+    assert.equal(result.evidenceTag, "inference");
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -80,7 +83,7 @@ test("Codex 심층검토는 날짜별 상한과 항목별 영수증으로 반복
     now: () => new Date("2026-08-02T01:00:00Z"),
     async invoke() {
       calls += 1;
-      return { decision: "publish", confidence: 0.9, importance: "high", reason: "의미 있음", advice: "사람 승인 권장" };
+      return { decision: "publish", confidence: 0.9, importance: "high", evidenceTag: "inference", reason: "의미 있음", advice: "[유추] 게시 권장" };
     },
   });
   try {

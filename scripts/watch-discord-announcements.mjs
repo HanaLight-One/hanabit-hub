@@ -9,7 +9,8 @@ import { loadDiscordNewsConfig, redactSecret } from "../src/modules/news/discord
 import { createNewsProcessor } from "../src/modules/news/news-processor.mjs";
 import { createCodexNewsReviewer } from "../src/modules/news/codex-news-review.mjs";
 import { createXWatchCollector } from "../src/modules/news/x-watch-collector.mjs";
-import { loadXSourceAllowlist } from "../src/modules/news/x-watch-source.mjs";
+import { loadXSourceAllowlist, loadXSourceRoster } from "../src/modules/news/x-watch-source.mjs";
+import { createNewsSourceProfileIndex } from "../src/modules/news/news-source-profiles.mjs";
 import { runXFilteredStream } from "../src/modules/news/x-filtered-stream.mjs";
 import { createXStreamDiscordBridge } from "../src/modules/news/x-stream-discord-bridge.mjs";
 import { loadXStreamConfig } from "../src/modules/news/x-stream-config.mjs";
@@ -102,12 +103,13 @@ try {
     channelId: config.openaiChannelId,
   });
   const allowedXHandles = await loadXSourceAllowlist(xSourcesPath);
+  const newsSourceProfiles = createNewsSourceProfileIndex(await loadXSourceRoster(xSourcesPath));
   const xCollector = createXWatchCollector({
     stateRoot,
     channelId: config.xWatchChannelId,
     allowedHandles: allowedXHandles,
   });
-  processor = createNewsProcessor({ stateRoot, runnerPath, codexReviewer });
+  processor = createNewsProcessor({ stateRoot, runnerPath, codexReviewer, sourceProfiles: newsSourceProfiles });
   client = new Client({
     intents: [
       GatewayIntentBits.Guilds,

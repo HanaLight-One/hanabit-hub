@@ -4,6 +4,7 @@ import path from "node:path";
 
 const DECISIONS = new Set(["skip", "review", "publish"]);
 const IMPORTANCE_LEVELS = new Set(["low", "medium", "high"]);
+const EVIDENCE_TAGS = new Set(["official", "confirmed", "inference", "rumor", "opinion"]);
 const POWERSHELL = path.join(
   String(process.env.SystemRoot ?? ""),
   "System32",
@@ -34,6 +35,10 @@ function validateResult(value) {
   if (!IMPORTANCE_LEVELS.has(importance)) {
     throw new Error("뉴스 중요도 형식이 올바르지 않습니다.");
   }
+  const evidenceTag = String(value?.triage?.evidenceTag ?? "");
+  if (!EVIDENCE_TAGS.has(evidenceTag)) {
+    throw new Error("뉴스 정보 성격 형식이 올바르지 않습니다.");
+  }
   return Object.freeze({
     translation: Object.freeze({
       title: limited(value?.translation?.title, 120, "번역 제목"),
@@ -43,6 +48,7 @@ function validateResult(value) {
       decision,
       confidence,
       importance,
+      evidenceTag,
       reason: limited(value?.triage?.reason, 400, "판정 이유"),
       advice: limited(value?.triage?.advice, 500, "편집 조언"),
       signals: Object.freeze((Array.isArray(value?.triage?.signals) ? value.triage.signals : [])
@@ -74,13 +80,21 @@ function buildPrompt(record) {
     "Translate only SOURCE TEXT. Use CONTEXT only to resolve references and judge importance; do not merge context into the translation.",
     "A short reply can still be newsworthy when its parent or quoted CONTEXT reveals a meaningful product direction, capability, policy, or industry signal.",
     "Distinguish explicit facts from implications. Never claim to have seen or understood an image; no image pixels are included in this request.",
-    "Classify decision as exactly one of: skip, review, publish.",
-    "skip: chatter with no useful AI news. review: ambiguous hype or a potentially useful hint. publish: concrete product, model, policy, outage, usage-limit, safety, pricing, or availability news.",
-    "Set importance to low, medium, or high. In advice, tell a Korean human editor what this may mean and whether to post, wait, or seek context.",
+    "Judge newsworthiness separately from certainty. Classify decision as exactly one of: skip, review, publish.",
+    "skip: no useful AI signal. review: source identity or meaning is materially uncertain. publish: useful enough to share, including a clearly framed early signal or reasonable inference.",
+    "Classify evidenceTag as exactly one of: official, confirmed, inference, rumor, opinion.",
+    "official: direct organization announcement. confirmed: a concrete fact or availability is directly established. inference: credible first-party words or context reasonably suggest an unreleased feature or direction. rumor: unverified second-hand claim or leak. opinion: mainly evaluation, prediction, or casual commentary.",
+    "A credible insider explicitly saying they used a named capability is usually inference, not rumor. It may be publish even without a public product page when the signal is concrete and useful; use cautious wording and never imply public availability.",
+    "Do not demand perfect confirmation in advice when an inference is itself newsworthy. Give a ready-to-post cautious framing instead.",
+    "Set importance to low, medium, or high. In advice, tell a Korean editor how to frame the item according to its evidenceTag.",
     "Return JSON only with this exact shape:",
-    '{"translation":{"title":"...","body":"..."},"triage":{"decision":"skip|review|publish","confidence":0.0,"importance":"low|medium|high","reason":"...","advice":"...","signals":["..."]}}',
+    '{"translation":{"title":"...","body":"..."},"triage":{"decision":"skip|review|publish","confidence":0.0,"importance":"low|medium|high","evidenceTag":"official|confirmed|inference|rumor|opinion","reason":"...","advice":"...","signals":["..."]}}',
     `SOURCE TYPE: ${record.source?.type}`,
     `SOURCE ACCOUNT: ${record.source?.account ?? "OpenAI official Discord"}`,
+    `SOURCE AFFILIATION: ${record.source?.profile?.affiliation ?? "unknown"}`,
+    `SOURCE ROLES: ${(record.source?.profile?.roles ?? []).join(", ") || "unknown"}`,
+    `SOURCE TRUST: ${record.source?.profile?.trustLabel ?? "unknown"}`,
+    `WHY TRACKED: ${record.source?.profile?.whyTracked ?? "unknown"}`,
     "SOURCE TEXT:",
     String(record.original?.content ?? ""),
     embeds,
