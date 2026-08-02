@@ -35,6 +35,9 @@ function publicTriage(value) {
     evidenceTag: ["official", "confirmed", "use_case", "inference", "rumor", "opinion"].includes(value.evidenceTag)
       ? value.evidenceTag
       : null,
+    boardCategory: ["news", "information", "chatter", "ai_creation"].includes(value.boardCategory)
+      ? value.boardCategory
+      : null,
     reason: safeText(value.reason, 500),
     advice: safeText(value.advice, 600) || null,
   };

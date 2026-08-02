@@ -56,7 +56,7 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
         await writeFile(outputPath, JSON.stringify({
           translation: { title: "코덱스 한도 초기화", body: "사용량 한도가 초기화됐습니다." },
           contextTranslations: [{ index: 1, body: "오늘 새 모델을 사용할 수 있습니다. https://example.com/context" }],
-          triage: { decision: "publish", confidence: 0.98, importance: "high", evidenceTag: "confirmed", reason: "구체적인 서비스 변경", advice: "게시 가치가 높습니다.", signals: ["usage-limit"] },
+          triage: { decision: "publish", confidence: 0.98, importance: "high", evidenceTag: "confirmed", boardCategory: "news", reason: "구체적인 서비스 변경", advice: "게시 가치가 높습니다.", signals: ["usage-limit"] },
         }), "utf8");
       },
     });
@@ -109,6 +109,7 @@ test("empowering의 자립 의미와 링크 소개 구조가 빠진 번역은 �
             confidence: 0.9,
             importance: "medium",
             evidenceTag: "use_case",
+            boardCategory: "news",
             reason: "구체적인 활용 사례",
             advice: "사례로 소개",
             signals: ["use-case"],
@@ -143,7 +144,7 @@ test("URL만 남긴 짧은 원문 번역 본문은 원문 전용 제목 번역�
         await writeFile(outputPath, JSON.stringify({
           translation: { title: "반복 작업", body: "https://example.com/post" },
           contextTranslations: [],
-          triage: { decision: "publish", confidence: 0.9, importance: "high", evidenceTag: "inference", reason: "반복 작업", advice: "유추로 게시", signals: [] },
+          triage: { decision: "publish", confidence: 0.9, importance: "high", evidenceTag: "inference", boardCategory: "news", reason: "반복 작업", advice: "유추로 게시", signals: [] },
         }), "utf8");
       },
     });
@@ -174,7 +175,7 @@ test("무료 API 일시 실패는 최대 두 번 다시 시도하고 성공 결�
         await writeFile(outputPath, JSON.stringify({
           translation: { title: "초기화", body: "사용량이 초기화됐습니다." },
           contextTranslations: [],
-          triage: { decision: "publish", confidence: 0.9, importance: "medium", evidenceTag: "inference", reason: "구체적인 변경", advice: "[유추]로 게시하세요.", signals: [] },
+          triage: { decision: "publish", confidence: 0.9, importance: "medium", evidenceTag: "inference", boardCategory: "news", reason: "구체적인 변경", advice: "[유추]로 게시하세요.", signals: [] },
         }), "utf8");
       },
     });
@@ -206,7 +207,7 @@ test("관련 글이 있으면 작성자별 번역을 빠뜨린 응답을 거부�
         await writeFile(outputPath, JSON.stringify({
           translation: { title: "반복 작업", body: "ChatGPT Work에 반복 작업을 맡겨보세요." },
           contextTranslations: [],
-          triage: { decision: "publish", confidence: 0.9, importance: "high", evidenceTag: "inference", reason: "반복 작업", advice: "유추로 게시", signals: [] },
+          triage: { decision: "publish", confidence: 0.9, importance: "high", evidenceTag: "inference", boardCategory: "news", reason: "반복 작업", advice: "유추로 게시", signals: [] },
         }), "utf8");
       },
     }), /관련 글 번역 개수/);
@@ -247,7 +248,7 @@ test("통합 응답이 관련 글 번역을 빠뜨리면 작은 별도 요청으
           : {
               translation: { title: "반복 작업", body: "ChatGPT Work에 반복 작업을 맡겨보세요." },
               contextTranslations: [],
-              triage: { decision: "publish", confidence: 0.9, importance: "high", evidenceTag: "inference", reason: "반복 작업", advice: "유추로 게시", signals: [] },
+              triage: { decision: "publish", confidence: 0.9, importance: "high", evidenceTag: "inference", boardCategory: "news", reason: "반복 작업", advice: "유추로 게시", signals: [] },
             };
         await writeFile(outputPath, JSON.stringify(value), "utf8");
       },

@@ -26,6 +26,12 @@ const EVIDENCE_LABELS = {
   rumor: "루머",
   opinion: "의견",
 };
+const BOARD_CATEGORY_LABELS = {
+  news: "뉴스/소식",
+  information: "💡 정보",
+  chatter: "잡담",
+  ai_creation: "AI창작",
+};
 const AUTO_GATE_LABELS = {
   eligible: "자동 게시 가능",
   human_review: "사람 확인 필요",
@@ -134,6 +140,7 @@ function TriageBox({ triage, label, advice, className = "" }) {
         신뢰도 {Math.round(triage.confidence * 100)}%
         {triage.importance && ` · 중요도 ${IMPORTANCE_LABELS[triage.importance]}`}
         {triage.evidenceTag && ` · 정보 성격 [${EVIDENCE_LABELS[triage.evidenceTag]}]`}
+        {triage.boardCategory && ` · 게시 분류 ${BOARD_CATEGORY_LABELS[triage.boardCategory]}`}
       </small>
     </section>
   );

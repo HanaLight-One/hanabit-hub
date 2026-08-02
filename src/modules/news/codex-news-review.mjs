@@ -6,6 +6,7 @@ import path from "node:path";
 const DECISIONS = new Set(["skip", "review", "publish"]);
 const IMPORTANCE_LEVELS = new Set(["low", "medium", "high"]);
 const EVIDENCE_TAGS = new Set(["official", "confirmed", "use_case", "inference", "rumor", "opinion"]);
+const BOARD_CATEGORIES = new Set(["news", "information", "chatter", "ai_creation"]);
 const OUTPUT_SCHEMA = Object.freeze({
   type: "object",
   properties: {
@@ -38,10 +39,11 @@ const OUTPUT_SCHEMA = Object.freeze({
     confidence: { type: "number", minimum: 0, maximum: 1 },
     importance: { type: "string", enum: ["low", "medium", "high"] },
     evidenceTag: { type: "string", enum: ["official", "confirmed", "use_case", "inference", "rumor", "opinion"] },
+    boardCategory: { type: "string", enum: ["news", "information", "chatter", "ai_creation"] },
     reason: { type: "string", minLength: 1, maxLength: 500 },
     advice: { type: "string", minLength: 1, maxLength: 600 },
   },
-  required: ["translationAudit", "contextTranslationAudits", "decision", "confidence", "importance", "evidenceTag", "reason", "advice"],
+  required: ["translationAudit", "contextTranslationAudits", "decision", "confidence", "importance", "evidenceTag", "boardCategory", "reason", "advice"],
   additionalProperties: false,
 });
 
@@ -65,7 +67,8 @@ function validateResult(value, contextCount) {
   const importance = String(value?.importance ?? "");
   const confidence = Number(value?.confidence);
   const evidenceTag = String(value?.evidenceTag ?? "");
-  if (!DECISIONS.has(decision) || !IMPORTANCE_LEVELS.has(importance) || !EVIDENCE_TAGS.has(evidenceTag)) {
+  const boardCategory = String(value?.boardCategory ?? "");
+  if (!DECISIONS.has(decision) || !IMPORTANCE_LEVELS.has(importance) || !EVIDENCE_TAGS.has(evidenceTag) || !BOARD_CATEGORIES.has(boardCategory)) {
     throw new Error("Codex 뉴스 검토 형식이 올바르지 않습니다.");
   }
   if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) {
@@ -104,6 +107,7 @@ function validateResult(value, contextCount) {
     confidence,
     importance,
     evidenceTag,
+    boardCategory,
     reason: limited(value.reason, 500, "Codex 검토 근거"),
     advice: limited(value.advice, 600, "Codex 편집 조언"),
   });
@@ -127,6 +131,7 @@ function buildPrompt(record, freeResult) {
     "Classify evidenceTag as official, confirmed, use_case, inference, rumor, or opinion.",
     "use_case means the post itself directly describes a real usage example, demonstration, workflow, or user experience. Keep broader implications in reason instead of mislabeling the actual example as inference.",
     "A credible insider suggesting an unreleased capability or future direction is usually inference, not rumor.",
+    "Classify boardCategory as news, information, chatter, or ai_creation. news covers timely announcements, industry signals, and notable tracked-person use cases; information covers reusable guidance or reference; chatter covers light anecdotes or personal reactions; ai_creation means the generated artifact itself is central.",
     "A concrete inference can be publish even without an official product page. Preserve uncertainty in the headline and advice instead of discarding the signal.",
     "Audit the FREE TRANSLATION against SOURCE TEXT before judging newsworthiness.",
     "The translationAudit title and body must translate or faithfully summarize SOURCE TEXT only. Never add a fact, phrase, subject, capability, or claim that exists only in CONTEXT.",
@@ -154,6 +159,7 @@ function buildPrompt(record, freeResult) {
     `FREE DECISION: ${String(freeResult.triage?.decision ?? "unknown")}`,
     `FREE CONFIDENCE: ${String(freeResult.triage?.confidence ?? "unknown")}`,
     `FREE EVIDENCE TAG: ${String(freeResult.triage?.evidenceTag ?? "unknown")}`,
+    `FREE BOARD CATEGORY: ${String(freeResult.triage?.boardCategory ?? "unknown")}`,
     `FREE REASON: ${String(freeResult.triage?.reason ?? "").slice(0, 400)}`,
   ].filter(Boolean).join("\n");
 }

@@ -5,6 +5,7 @@ import path from "node:path";
 const DECISIONS = new Set(["skip", "review", "publish"]);
 const IMPORTANCE_LEVELS = new Set(["low", "medium", "high"]);
 const EVIDENCE_TAGS = new Set(["official", "confirmed", "use_case", "inference", "rumor", "opinion"]);
+const BOARD_CATEGORIES = new Set(["news", "information", "chatter", "ai_creation"]);
 const POWERSHELL = path.join(
   String(process.env.SystemRoot ?? ""),
   "System32",
@@ -55,6 +56,7 @@ function analysisSchema(contextCount) {
           confidence: { type: "number", minimum: 0, maximum: 1 },
           importance: { type: "string", enum: [...IMPORTANCE_LEVELS] },
           evidenceTag: { type: "string", enum: [...EVIDENCE_TAGS] },
+          boardCategory: { type: "string", enum: [...BOARD_CATEGORIES] },
           reason: { type: "string" },
           advice: { type: "string" },
           signals: {
@@ -63,7 +65,7 @@ function analysisSchema(contextCount) {
             items: { type: "string" },
           },
         },
-        required: ["decision", "confidence", "importance", "evidenceTag", "reason", "advice", "signals"],
+        required: ["decision", "confidence", "importance", "evidenceTag", "boardCategory", "reason", "advice", "signals"],
         additionalProperties: false,
       },
     },
@@ -145,6 +147,9 @@ function retryCorrection(error) {
   if (message.includes("정보 성격")) {
     return "The previous evidenceTag was invalid. Use only official, confirmed, use_case, inference, rumor, or opinion.";
   }
+  if (message.includes("게시 분류")) {
+    return "The previous boardCategory was invalid. Use only news, information, chatter, or ai_creation.";
+  }
   return "The previous response failed local format validation. Return every required field with the exact JSON shape and allowed enum values, while keeping all translations non-empty.";
 }
 
@@ -194,6 +199,10 @@ function validateResult(value, contextCount, sourceText) {
   if (!EVIDENCE_TAGS.has(evidenceTag)) {
     throw new Error("뉴스 정보 성격 형식이 올바르지 않습니다.");
   }
+  const boardCategory = String(value?.triage?.boardCategory ?? "");
+  if (!BOARD_CATEGORIES.has(boardCategory)) {
+    throw new Error("뉴스 게시 분류 형식이 올바르지 않습니다.");
+  }
   const translatedTitle = cleanTranslatedText(value?.translation?.title);
   const translatedBody = cleanTranslatedText(value?.translation?.body);
   const body = preserveSourceStructure(
@@ -217,6 +226,7 @@ function validateResult(value, contextCount, sourceText) {
       confidence,
       importance,
       evidenceTag,
+      boardCategory,
       reason: limited(value?.triage?.reason, 400, "판정 이유"),
       advice: limited(value?.triage?.advice, 500, "편집 조언"),
       signals: Object.freeze((Array.isArray(value?.triage?.signals) ? value.triage.signals : [])
@@ -260,11 +270,14 @@ function buildPrompt(record) {
     "Classify evidenceTag as exactly one of: official, confirmed, use_case, inference, rumor, opinion.",
     "official: direct organization announcement. confirmed: a concrete fact or availability is directly established. use_case: a real usage example, demonstration, workflow, or user experience is directly described. inference: credible first-party words or context reasonably suggest an unreleased feature or future direction. rumor: unverified second-hand claim or leak. opinion: mainly evaluation, prediction, or casual commentary.",
     "Choose use_case when the post itself primarily shows what someone actually did with AI. Keep broader product-direction implications in reason; do not label the post inference only because the example may imply a future direction.",
+    "Classify boardCategory as exactly one of: news, information, chatter, ai_creation.",
+    "news: timely announcements, changes, industry signals, rumors, or a notable tracked-person use case. information: reusable factual guidance, procedures, measurements, or references. chatter: a light anecdote, casual reaction, or personal opinion without a material industry signal. ai_creation: the AI-created output itself is the main subject.",
+    "A use_case highlighted by an official organization or a tracked high-trust industry figure is usually boardCategory news; an ordinary light personal use case is usually chatter.",
     "A credible insider explicitly saying they used a named capability is usually inference, not rumor. It may be publish even without a public product page when the signal is concrete and useful; use cautious wording and never imply public availability.",
     "Do not demand perfect confirmation in advice when an inference is itself newsworthy. Give a ready-to-post cautious framing instead.",
     "Set importance to low, medium, or high. In advice, tell a Korean editor how to frame the item according to its evidenceTag.",
     "Return JSON only with this exact shape:",
-    '{"translation":{"title":"...","body":"..."},"contextTranslations":[{"index":1,"body":"..."}],"triage":{"decision":"skip|review|publish","confidence":0.0,"importance":"low|medium|high","evidenceTag":"official|confirmed|use_case|inference|rumor|opinion","reason":"...","advice":"...","signals":["..."]}}',
+    '{"translation":{"title":"...","body":"..."},"contextTranslations":[{"index":1,"body":"..."}],"triage":{"decision":"skip|review|publish","confidence":0.0,"importance":"low|medium|high","evidenceTag":"official|confirmed|use_case|inference|rumor|opinion","boardCategory":"news|information|chatter|ai_creation","reason":"...","advice":"...","signals":["..."]}}',
     "Return contextTranslations as an empty array when there is no CONTEXT.",
     `SOURCE TYPE: ${record.source?.type}`,
     `SOURCE ACCOUNT: ${record.source?.account ?? "OpenAI official Discord"}`,

@@ -33,7 +33,7 @@ async function fixture(source, analyze, callback, { codexReviewer = null, source
 const result = (decision) => ({
   translation: { title: "번역 제목", body: "번역 본문" },
   contextTranslations: [],
-  triage: { decision, confidence: 0.9, importance: "medium", evidenceTag: "inference", reason: "판정 이유", advice: "[유추] 게시 권장", signals: [] },
+  triage: { decision, confidence: 0.9, importance: "medium", evidenceTag: "inference", boardCategory: "news", reason: "판정 이유", advice: "[유추] 게시 권장", signals: [] },
 });
 
 test("뉴스 분석기에 추적 실행기와 외부 Python·키 저장소 경계를 함께 전달한다", async () => {
@@ -121,6 +121,7 @@ test("애매한 무료 판정은 Codex 검토 결과를 최종 판정으로 보�
           confidence: 0.88,
           importance: "medium",
           evidenceTag: "inference",
+          boardCategory: "news",
           reason: "부모 글과 결합하면 제품 활용 범위 확장을 시사한다.",
           advice: "사람이 이미지를 확인한 뒤 게시 후보로 검토하세요.",
         },
@@ -185,7 +186,7 @@ test("승인 전 기존 뉴스는 분석 세대를 올려 새 정책으로 다�
     assert.equal(reprocessed.workflow.status, "pending_review");
     assert.equal(reprocessed.workflow.triage.decision, "publish");
     assert.equal(reprocessed.workflow.analysisRevision, 2);
-    assert.equal(reprocessed.workflow.analysisPolicyVersion, 8);
+    assert.equal(reprocessed.workflow.analysisPolicyVersion, 9);
     assert.equal(typeof reprocessed.workflow.reanalysisRequestedAt, "string");
     await store.update(id, (record) => ({
       ...record,

@@ -27,7 +27,7 @@ async function fixture({ approved = true } = {}) {
     workflow: {
       status: approved ? "approved_for_dc" : "pending_review",
       translation: { title: "새 소식", body: "번역 본문" },
-      triage: { decision: "publish", evidenceTag: "official", reason: "공식 소식", advice: "세부 범위는 확인 필요" },
+      triage: { decision: "publish", evidenceTag: "official", boardCategory: "news", reason: "공식 소식", advice: "세부 범위는 확인 필요" },
       analysisNotice: "주의: 아래 해설은 GPT-5.4 mini가 정리한 내용입니다. 원문 번역이 아니며, 최종 판단은 독자에게 있습니다.",
       dcApproval: approved ? { status: "approved", approvedAt: "2026-08-02T00:01:00Z" } : null,
       dcPublication: null,
@@ -49,6 +49,7 @@ test("미리보기는 실제 게시 없이 안전한 공개 원고만 반환한�
       runPublisher: async () => { runs += 1; },
     });
     const preview = await service.preview(ID);
+    assert.equal(preview.headText, "뉴스/소식");
     assert.equal(preview.title, "[공식] 새 소식");
     assert.equal(preview.approvalRequired, true);
     assert.equal(preview.publisherReady, true);
@@ -74,6 +75,7 @@ test("승인된 원고는 게시자를 한 번만 실행하고 게시 영수증�
       async runPublisher({ jobPath }) {
         runs += 1;
         const job = JSON.parse(await readFile(jobPath, "utf8"));
+        assert.equal(job.headTextName, "뉴스/소식");
         await writeFile(job.resultPath, JSON.stringify({
           status: "posted",
           postId: "123456",

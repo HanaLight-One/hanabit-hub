@@ -124,7 +124,9 @@ X Filtered Stream ─> #x-watch ┘                         │
 DC 원고는 `src/modules/news/news-dc-copy.mjs`가 태그·출처·번역·AI 해설·원문 링크를
 결정적으로 조립한다. 그림 이모지와 결합문자를 게시 전에 제거 또는 차단하고, 알려진
 `/sk` 위험 경로 링크는 원고에서 제외한다. 실제 게시 진입점은
-`scripts/publish-news-to-dc.cjs`이며 `chatgpt` 갤러리의 `뉴스/소식` 말머리만 허용한다.
+`scripts/publish-news-to-dc.cjs`이며 `chatgpt` 갤러리의 `뉴스/소식`, `💡 정보`, `잡담`,
+`AI창작` 말머리만 허용한다. 모델은 후보를 제안하고 `news-dc-head-text.mjs`의 결정적
+라우터가 공식 출처·신뢰 인물 규칙을 적용해 최종 말머리를 선택한다.
 최종 제출은 한 번만 수행하고 불명확한 결과는 자동 재시도하지 않는다.
 Codex 검토 실행기와 날짜별 사용 영수증은
 `src/modules/news/codex-news-review.mjs`, `state/news/codex-review/`에 있다.

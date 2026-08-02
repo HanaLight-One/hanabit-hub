@@ -6,6 +6,7 @@ const path = require("node:path");
 const EMOJI_PATTERN = /\p{Extended_Pictographic}|\p{Regional_Indicator}|[\u{FE0F}\u{200D}\u{20E3}]/gu;
 const COMBINING_MARK_PATTERN = /\p{M}/gu;
 const MEDIA_TYPES = new Set(["image/gif", "image/jpeg", "image/png", "image/webp"]);
+const ALLOWED_HEAD_TEXTS = new Set(["뉴스/소식", "💡 정보", "잡담", "AI창작"]);
 
 function argumentValue(name) {
   const index = process.argv.indexOf(name);
@@ -38,7 +39,7 @@ function validateJob(value, jobPath) {
   if (value?.schemaVersion !== 1 || !/^[a-f0-9]{32}$/u.test(String(value.id ?? ""))) {
     throw new Error("INVALID_JOB");
   }
-  if (value.galleryId !== "chatgpt" || value.headTextName !== "뉴스/소식") {
+  if (value.galleryId !== "chatgpt" || !ALLOWED_HEAD_TEXTS.has(value.headTextName)) {
     throw new Error("INVALID_TARGET");
   }
   if (!String(value.title ?? "").trim() || !String(value.bodyText ?? "").trim()) {

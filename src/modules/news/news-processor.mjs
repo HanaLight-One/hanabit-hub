@@ -123,7 +123,12 @@ export function createNewsProcessor({
             translationReview,
             analysisNotice: createNewsAnalysisNotice({ codexReviewed: codexReview?.status === "complete" }),
             freeTriage,
-            triage: { ...finalTriage, decision, evidenceTag: official ? "official" : finalTriage.evidenceTag },
+            triage: {
+              ...finalTriage,
+              decision,
+              evidenceTag: official ? "official" : finalTriage.evidenceTag,
+              boardCategory: official ? "news" : finalTriage.boardCategory,
+            },
             codexReview,
             analysisFailure: null,
             analysisPolicyVersion: NEWS_ANALYSIS_POLICY_VERSION,

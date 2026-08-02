@@ -206,7 +206,6 @@ const newsDcPublication = createNewsDcPublicationService({
     config.allowedActions.includes("publish-news-to-dc"),
   publisherRoot: newsDcPublisherConfig?.publisherRoot,
   galleryId: newsDcPublisherConfig?.galleryId,
-  headTextName: newsDcPublisherConfig?.headTextName,
   publisherScriptPath: path.join(APP_ROOT, "scripts", "publish-news-to-dc.cjs"),
 });
 const pushNotifications = createPushNotificationService({

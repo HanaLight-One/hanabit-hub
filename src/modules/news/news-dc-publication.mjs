@@ -4,6 +4,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { createPendingNewsStore } from "./news-item-store.mjs";
 import { composeNewsDcCopy } from "./news-dc-copy.mjs";
+import { isAllowedNewsDcHeadText } from "./news-dc-head-text.mjs";
 
 const ID_PATTERN = /^[a-f0-9]{32}$/u;
 const POSTED_STATUS = "posted";
@@ -77,7 +78,6 @@ export function createNewsDcPublicationService({
   enabled = false,
   publisherRoot = "",
   galleryId = "chatgpt",
-  headTextName = "뉴스/소식",
   publisherScriptPath,
   runPublisher = defaultRunPublisher,
   now = () => new Date(),
@@ -88,8 +88,8 @@ export function createNewsDcPublicationService({
   if (enabled && !path.isAbsolute(publisherRoot ?? "")) {
     throw new TypeError("DC 게시자 루트는 절대경로여야 합니다.");
   }
-  if (galleryId !== "chatgpt" || headTextName !== "뉴스/소식") {
-    throw new TypeError("뉴스 게시 대상은 chatgpt 갤러리의 뉴스/소식 말머리만 허용합니다.");
+  if (galleryId !== "chatgpt") {
+    throw new TypeError("뉴스 게시 대상은 chatgpt 갤러리만 허용합니다.");
   }
 
   const store = createPendingNewsStore({ root });
@@ -150,6 +150,9 @@ export function createNewsDcPublicationService({
         throw publicationError("RUNTIME_UNAVAILABLE", "DC 게시 실행 환경을 사용할 수 없습니다.");
       }
       const { record, draft } = await draftFor(safeId);
+      if (!isAllowedNewsDcHeadText(draft.headText)) {
+        throw publicationError("HEAD_TEXT_NOT_ALLOWED", "허용되지 않은 DC 말머리입니다.");
+      }
       if (record.workflow?.dcApproval?.status !== "approved") {
         throw publicationError("APPROVAL_REQUIRED", "DC 게시 승인이 먼저 필요합니다.");
       }
@@ -183,7 +186,7 @@ export function createNewsDcPublicationService({
         schemaVersion: 1,
         id: safeId,
         galleryId,
-        headTextName,
+        headTextName: draft.headText,
         title: draft.title,
         bodyText: draft.bodyText,
         contentHash: draft.contentHash,

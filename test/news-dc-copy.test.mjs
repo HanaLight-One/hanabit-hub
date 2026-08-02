@@ -20,6 +20,7 @@ function record() {
         decision: "publish",
         confidence: 0.9,
         evidenceTag: "use_case",
+        boardCategory: "news",
         reason: "반복 작업 자동화 방향을 보여주는 초기 신호입니다.",
         advice: "‘제작 보조’ 쪽으로 조심스럽게 쓰세요. 공개 기능처럼 단정하지 말고 프레이밍하세요.",
       },
@@ -37,6 +38,7 @@ test("DC 뉴스 원고는 태그·번역·AI 해설·출처를 결정적으로 �
     roles: ["사장·공동 창립자"],
     topics: ["엔지니어링", "모델"],
     trustLabel: "핵심 인물",
+    trustLevel: "high",
     verifiedAt: "2026-08-02",
     whyTracked: "OpenAI 핵심 인물이라서 주목해요.",
   }]]);

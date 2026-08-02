@@ -97,7 +97,7 @@ test("Codex 뉴스 검토는 고정 실행 경로와 제한된 일일 상한만 
   }), /일일 상한/);
 });
 
-test("뉴스 DC 게시자는 고정 갤러리·말머리와 절대 실행 루트만 허용한다", () => {
+test("뉴스 DC 게시자는 고정 갤러리와 절대 실행 루트만 허용한다", () => {
   const base = {
     host: "127.0.0.1",
     port: 8790,
@@ -110,7 +110,7 @@ test("뉴스 DC 게시자는 고정 갤러리·말머리와 절대 실행 루트
       ...base,
       integrations: {
         ...base.integrations,
-        news: { dcPublisher: { enabled: true, publisherRoot: "relative", galleryId: "chatgpt", headTextName: "뉴스/소식" } },
+        news: { dcPublisher: { enabled: true, publisherRoot: "relative", galleryId: "chatgpt" } },
       },
     }),
     /publisherRoot 절대경로/u,
@@ -120,7 +120,7 @@ test("뉴스 DC 게시자는 고정 갤러리·말머리와 절대 실행 루트
       ...base,
       integrations: {
         ...base.integrations,
-        news: { dcPublisher: { enabled: true, publisherRoot: "C:\\publisher", galleryId: "other", headTextName: "뉴스/소식" } },
+        news: { dcPublisher: { enabled: true, publisherRoot: "C:\\publisher", galleryId: "other" } },
       },
     }),
     /chatgpt 갤러리/u,

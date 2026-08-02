@@ -18,7 +18,6 @@ const DEFAULT_CONFIG = Object.freeze({
         enabled: false,
         publisherRoot: "",
         galleryId: "chatgpt",
-        headTextName: "뉴스/소식",
       },
     },
   },
@@ -111,8 +110,8 @@ function validateConfig(config) {
     if (!path.isAbsolute(dcPublisher.publisherRoot ?? "")) {
       throw new Error("뉴스 DC 게시자에는 publisherRoot 절대경로가 필요합니다.");
     }
-    if (dcPublisher.galleryId !== "chatgpt" || dcPublisher.headTextName !== "뉴스/소식") {
-      throw new Error("뉴스 DC 게시 대상은 chatgpt 갤러리의 뉴스/소식 말머리만 허용합니다.");
+    if (dcPublisher.galleryId !== "chatgpt") {
+      throw new Error("뉴스 DC 게시 대상은 chatgpt 갤러리만 허용합니다.");
     }
   }
 

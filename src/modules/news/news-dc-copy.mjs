@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { findNewsSourceProfile } from "./news-source-profiles.mjs";
 import { createNewsAnalysisNotice } from "./news-analysis-notice.mjs";
+import { selectNewsDcHeadText } from "./news-dc-head-text.mjs";
 
 const EVIDENCE_LABELS = Object.freeze({
   official: "공식",
@@ -108,6 +109,7 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map() } = {}) {
   const translatedTitle = cleanLine(record.workflow.translation.title || "제목 없음", counter);
   const title = [...`[${evidenceLabel}] ${translatedTitle}`].slice(0, 80).join("").trim();
   const profile = findNewsSourceProfile(record.source, sourceProfiles);
+  const headText = selectNewsDcHeadText(record, profile);
   const sourceName = cleanLine(
     profile?.displayName || record.source?.label || record.source?.account || "출처 확인 필요",
     counter,
@@ -165,7 +167,7 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map() } = {}) {
 
   return Object.freeze({
     schemaVersion: 1,
-    headText: "뉴스/소식",
+    headText,
     title,
     bodyText,
     bodyHtml: textToDcHtml(bodyText),
@@ -185,5 +187,4 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map() } = {}) {
 
 export const newsDcCopyPolicy = Object.freeze({
   evidenceLabels: EVIDENCE_LABELS,
-  headText: "뉴스/소식",
 });

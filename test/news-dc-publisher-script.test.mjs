@@ -25,14 +25,16 @@ function job() {
   };
 }
 
-test("DC 뉴스 게시 스크립트는 고정 대상과 이모지 없는 원고만 허용한다", () => {
+test("DC 뉴스 게시 스크립트는 허용된 말머리와 이모지 없는 원고만 허용한다", () => {
   const sample = job();
   sample.value.contentHash = createHash("sha256")
     .update(`${sample.value.title}\0${sample.value.bodyText}\0${sample.value.media.length}`, "utf8")
     .digest("hex");
   assert.equal(validateJob(sample.value, sample.jobPath).headTextName, "뉴스/소식");
+  assert.equal(validateJob({ ...sample.value, headTextName: "💡 정보" }, sample.jobPath).headTextName, "💡 정보");
   assert.throws(() => validateJob({ ...sample.value, title: "바뀐 제목" }, sample.jobPath), /CONTENT_CHANGED/u);
   assert.throws(() => validateJob({ ...sample.value, galleryId: "other" }, sample.jobPath), /INVALID_TARGET/u);
+  assert.throws(() => validateJob({ ...sample.value, headTextName: "공지" }, sample.jobPath), /INVALID_TARGET/u);
   assert.throws(() => validateJob({ ...sample.value, bodyText: "이모지 🤣" }, sample.jobPath), /UNSUPPORTED_EMOJI/u);
 });
 
