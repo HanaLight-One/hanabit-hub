@@ -220,6 +220,13 @@ const MIGRATIONS = Object.freeze([
         ON image_generation_metadata(job_id);
     `,
   },
+  {
+    version: 6,
+    name: "dc composer mixed content blocks",
+    sql: `
+      ALTER TABLE dc_drafts ADD COLUMN layout_json TEXT;
+    `,
+  },
 ]);
 
 function migrate(database, now) {

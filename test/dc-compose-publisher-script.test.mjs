@@ -7,7 +7,7 @@ import path from "node:path";
 import test from "node:test";
 
 const require = createRequire(import.meta.url);
-const { validateComposeJob } = require("../scripts/publish-dc-compose.cjs");
+const { validateComposeJob, composeInlineContent } = require("../scripts/publish-dc-compose.cjs");
 
 test("일반 DC 게시자는 격리 작업 폴더의 정확한 첨부와 내용 해시만 허용한다", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-dc-job-"));
@@ -31,4 +31,23 @@ test("일반 DC 게시자는 격리 작업 폴더의 정확한 첨부와 내용 
     assert.throws(() => validateComposeJob({ ...value, title: "바뀐 제목" }, jobPath), /CONTENT_CHANGED/u);
     assert.throws(() => validateComposeJob({ ...value, media: [{ ...value.media[0], path: path.join(root, "outside.png") }] }, jobPath), /INVALID_MEDIA/u);
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("혼합 원고는 이미지 표식을 본문 사이에 정확한 순서로 만든다", async () => {
+  const job = {
+    schemaVersion: 2,
+    bodyText: "첫 문단\n\n끝 문단",
+    media: [{}, {}],
+    blocks: [
+      { type: "text", text: "첫 문단" },
+      { type: "image", mediaIndex: 0 },
+      { type: "text", text: "중간 문단" },
+      { type: "image", mediaIndex: 1 },
+      { type: "text", text: "끝 문단" },
+    ],
+  };
+  const composed = composeInlineContent(job);
+  assert.equal(composed.imagePosition, "inline");
+  assert.match(composed.content, /첫 문단[\s\S]*\{\{DC_IMAGE_1\}\}[\s\S]*중간 문단[\s\S]*\{\{DC_IMAGE_2\}\}[\s\S]*끝 문단/u);
+  assert.throws(() => composeInlineContent({ ...job, blocks: [...job.blocks, { type: "image", mediaIndex: 1 }] }), /INVALID_BLOCKS/u);
 });

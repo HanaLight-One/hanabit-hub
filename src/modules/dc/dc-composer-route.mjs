@@ -36,7 +36,7 @@ function statusFor(error) {
   if (["DISABLED", "FINAL_DRAFT"].includes(error.code)) return 403;
   if (["ALREADY_SUBMITTING", "ALREADY_SUBMITTED", "UPLOAD_IN_USE"].includes(error.code)) return 409;
   if (["UPLOAD_TOO_LARGE", "BODY_TOO_LARGE"].includes(error.code)) return 413;
-  if (["INVALID_ID", "INVALID_MEDIA", "EMPTY_UPLOAD", "INVALID_IMAGES", "INVALID_JSON", "PREFLIGHT_FAILED"].includes(error.code)) return 400;
+  if (["INVALID_ID", "INVALID_MEDIA", "EMPTY_UPLOAD", "INVALID_IMAGES", "INVALID_BLOCKS", "INVALID_JSON", "PREFLIGHT_FAILED"].includes(error.code)) return 400;
   if (error.code === "RUNTIME_UNAVAILABLE") return 503;
   return null;
 }

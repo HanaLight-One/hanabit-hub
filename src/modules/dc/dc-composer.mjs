@@ -14,6 +14,8 @@ const EMOJI_PATTERN = /\p{Extended_Pictographic}|\p{Regional_Indicator}|[\u{FE0F
 const MARK_PATTERN = /\p{M}/gu;
 const FINAL_STATUSES = new Set(["posted", "ambiguous"]);
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+const MAX_TEXT_LENGTH = 20_000;
+const MAX_BLOCKS = 25;
 
 function dcError(code, message) { return Object.assign(new Error(message), { code }); }
 function safeId(value) {
@@ -173,6 +175,35 @@ export function createDcComposer({
     return result;
   }
 
+  async function normalizedLayout(input = {}) {
+    if (!Array.isArray(input.blocks)) {
+      const images = await normalizedImages(input.images ?? []);
+      return [
+        ...images.map((image) => ({ type: "image", ...image })),
+        { type: "text", text: String(input.bodyText ?? "") },
+      ];
+    }
+    if (input.blocks.length === 0 || input.blocks.length > MAX_BLOCKS) {
+      throw dcError("INVALID_BLOCKS", `본문 블록은 1개 이상 ${MAX_BLOCKS}개 이하로 구성해 주세요.`);
+    }
+    const imageInputs = input.blocks
+      .filter((block) => block?.type === "image")
+      .map(({ sourceType, sourceId }) => ({ sourceType, sourceId }));
+    const images = await normalizedImages(imageInputs);
+    if (images.length !== imageInputs.length) throw dcError("INVALID_BLOCKS", "같은 이미지는 원고에 한 번만 넣을 수 있어요.");
+    let imageIndex = 0;
+    let textLength = 0;
+    const blocks = input.blocks.map((block) => {
+      if (block?.type === "image") return { type: "image", ...images[imageIndex++] };
+      if (block?.type !== "text") throw dcError("INVALID_BLOCKS", "텍스트 또는 이미지 블록만 사용할 수 있어요.");
+      const text = String(block.text ?? "");
+      textLength += text.length;
+      return { type: "text", text };
+    });
+    if (textLength > MAX_TEXT_LENGTH) throw dcError("INVALID_BLOCKS", "본문은 20,000자 이하로 작성해 주세요.");
+    return blocks;
+  }
+
   async function saveDraft(input = {}) {
     if (!enabled) throw dcError("DISABLED", "DC 편집실 저장이 허용되지 않았습니다.");
     const id = input.id ? safeId(input.id) : crypto.randomUUID().replaceAll("-", "");
@@ -180,16 +211,17 @@ export function createDcComposer({
     if (FINAL_STATUSES.has(current?.status)) throw dcError("FINAL_DRAFT", "이미 게시 요청이 끝난 초안은 수정할 수 없습니다.");
     const headText = String(input.headText ?? "잡담");
     const title = String(input.title ?? "").trim();
-    const bodyText = String(input.bodyText ?? "").trim();
-    const images = await normalizedImages(input.images ?? []);
+    const blocks = await normalizedLayout(input);
+    const bodyText = blocks.filter((block) => block.type === "text").map((block) => block.text).join("\n\n").trim();
+    const images = blocks.filter((block) => block.type === "image").map(({ sourceType, sourceId }) => ({ sourceType, sourceId }));
     const checked = preflight({ headText, title, bodyText, images });
     const timestamp = now().toISOString();
     database.exec("BEGIN IMMEDIATE");
     try {
-      database.prepare(`INSERT INTO dc_drafts (id, gallery_id, head_text, title, body_text, status, created_at, updated_at)
-        VALUES (?, 'chatgpt', ?, ?, ?, 'draft', ?, ?)
-        ON CONFLICT(id) DO UPDATE SET head_text=excluded.head_text, title=excluded.title, body_text=excluded.body_text, status='draft', content_hash=NULL, updated_at=excluded.updated_at`)
-        .run(id, headText, title, bodyText, current?.created_at ?? timestamp, timestamp);
+      database.prepare(`INSERT INTO dc_drafts (id, gallery_id, head_text, title, body_text, layout_json, status, created_at, updated_at)
+        VALUES (?, 'chatgpt', ?, ?, ?, ?, 'draft', ?, ?)
+        ON CONFLICT(id) DO UPDATE SET head_text=excluded.head_text, title=excluded.title, body_text=excluded.body_text, layout_json=excluded.layout_json, status='draft', content_hash=NULL, updated_at=excluded.updated_at`)
+        .run(id, headText, title, bodyText, JSON.stringify(blocks), current?.created_at ?? timestamp, timestamp);
       database.prepare("DELETE FROM dc_draft_images WHERE draft_id = ?").run(id);
       const insert = database.prepare("INSERT INTO dc_draft_images (draft_id, position, source_type, source_id) VALUES (?, ?, ?, ?)");
       images.forEach((image, position) => insert.run(id, position, image.sourceType, image.sourceId));
@@ -213,7 +245,17 @@ export function createDcComposer({
     if (!row) throw dcError("NOT_FOUND", "DC 초안을 찾을 수 없습니다.");
     const refs = database.prepare("SELECT source_type, source_id FROM dc_draft_images WHERE draft_id = ? ORDER BY position").all(id);
     const images = (await Promise.all(refs.map((item) => imagePublic(item.source_type, item.source_id)))).filter(Boolean);
-    return Object.freeze({ id, galleryId: row.gallery_id, headText: row.head_text, title: row.title, bodyText: row.body_text, status: row.status, images: Object.freeze(images), createdAt: row.created_at, updatedAt: row.updated_at, publication: row.status === "posted" || row.status === "ambiguous" ? { status: row.status, submittedAt: row.submitted_at, postId: row.post_id, url: row.post_url } : null });
+    const imageMap = new Map(images.map((image) => [`${image.sourceType}:${image.sourceId}`, image]));
+    let storedBlocks;
+    try { storedBlocks = row.layout_json ? JSON.parse(row.layout_json) : null; } catch { storedBlocks = null; }
+    const layout = Array.isArray(storedBlocks) ? storedBlocks : [
+      ...refs.map((item) => ({ type: "image", sourceType: item.source_type, sourceId: item.source_id })),
+      { type: "text", text: row.body_text },
+    ];
+    const blocks = layout.map((block) => block?.type === "text"
+      ? { type: "text", text: String(block.text ?? "") }
+      : { type: "image", ...imageMap.get(`${block?.sourceType}:${block?.sourceId}`) }).filter((block) => block.type === "text" || block.sourceId);
+    return Object.freeze({ id, galleryId: row.gallery_id, headText: row.head_text, title: row.title, bodyText: row.body_text, blocks: Object.freeze(blocks), status: row.status, images: Object.freeze(images), createdAt: row.created_at, updatedAt: row.updated_at, publication: row.status === "posted" || row.status === "ambiguous" ? { status: row.status, submittedAt: row.submitted_at, postId: row.post_id, url: row.post_url } : null });
   }
 
   async function latestDraft() {
@@ -264,10 +306,14 @@ export function createDcComposer({
         const contentType = source.extension === ".jpg" || source.extension === ".jpeg" ? "image/jpeg" : `image/${source.extension.slice(1)}`;
         media.push({ path: target, filename, contentType, sha256 });
       }
-      const contentHash = crypto.createHash("sha256").update(JSON.stringify({ headText: ready.draft.headText, title: ready.draft.title, bodyText: ready.draft.bodyText, media: media.map(({ filename, sha256 }) => ({ filename, sha256 })) })).digest("hex");
+      const mediaIndex = new Map(refs.map((reference, index) => [`${reference.sourceType}:${reference.sourceId}`, index]));
+      const blocks = ready.draft.blocks.map((block) => block.type === "text"
+        ? { type: "text", text: block.text }
+        : { type: "image", mediaIndex: mediaIndex.get(`${block.sourceType}:${block.sourceId}`) });
+      const contentHash = crypto.createHash("sha256").update(JSON.stringify({ headText: ready.draft.headText, title: ready.draft.title, bodyText: ready.draft.bodyText, blocks, media: media.map(({ filename, sha256 }) => ({ filename, sha256 })) })).digest("hex");
       const jobPath = path.join(targetRoot, "job.json");
       const resultPath = path.join(targetRoot, "result.json");
-      await writeJsonAtomic(jobPath, { schemaVersion: 1, id, galleryId, headTextName: ready.draft.headText, title: ready.draft.title, bodyText: ready.draft.bodyText, media, contentHash, resultPath });
+      await writeJsonAtomic(jobPath, { schemaVersion: 2, id, galleryId, headTextName: ready.draft.headText, title: ready.draft.title, bodyText: ready.draft.bodyText, blocks, media, contentHash, resultPath });
       const submittedAt = now().toISOString();
       database.prepare("UPDATE dc_drafts SET status='submitting', content_hash=?, submitted_at=?, updated_at=? WHERE id=?").run(contentHash, submittedAt, submittedAt, id);
       await runPublisher({ publisherRoot, scriptPath: publisherScriptPath, jobPath }).catch(() => {});

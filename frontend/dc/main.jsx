@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 
-const EMPTY = { id: null, headText: "잡담", title: "", bodyText: "", images: [] };
+function emptyDraft() { return { id: null, headText: "잡담", title: "", bodyText: "", images: [], blocks: [{ type: "text", text: "" }] }; }
 
 async function jsonFetch(url, options = {}) {
   const response = await fetch(url, options);
@@ -11,13 +11,18 @@ async function jsonFetch(url, options = {}) {
 }
 
 function sourceKey(image) { return `${image.sourceType}:${image.sourceId}`; }
+function imageBlocks(draft) { return (draft.blocks ?? []).filter((block) => block.type === "image"); }
+function textBody(draft) { return (draft.blocks ?? []).filter((block) => block.type === "text").map((block) => block.text).join("\n\n"); }
+function restoreDraft(value) {
+  if (Array.isArray(value?.blocks) && value.blocks.length) return value;
+  return { ...value, blocks: [...(value?.images ?? []).map((image) => ({ type: "image", ...image })), { type: "text", text: value?.bodyText ?? "" }] };
+}
 
 function draftSignature(draft) {
   return JSON.stringify({
     headText: draft.headText,
     title: draft.title,
-    bodyText: draft.bodyText,
-    images: draft.images.map(({ sourceType, sourceId }) => ({ sourceType, sourceId })),
+    blocks: draft.blocks.map((block) => block.type === "text" ? { type: "text", text: block.text } : { type: "image", sourceType: block.sourceType, sourceId: block.sourceId }),
   });
 }
 
@@ -30,8 +35,8 @@ async function saveDraft(draft) {
       id: draft.id,
       headText: draft.headText,
       title: draft.title,
-      bodyText: draft.bodyText,
-      images: draft.images.map(({ sourceType, sourceId }) => ({ sourceType, sourceId })),
+      bodyText: textBody(draft),
+      blocks: draft.blocks.map((block) => block.type === "text" ? { type: "text", text: block.text } : { type: "image", sourceType: block.sourceType, sourceId: block.sourceId }),
     }),
   });
 }
@@ -43,14 +48,14 @@ function App() {
   const [headTexts, setHeadTexts] = useState([]);
   const [archive, setArchive] = useState([]);
   const [uploads, setUploads] = useState([]);
-  const [draft, setDraft] = useState(EMPTY);
+  const [draft, setDraft] = useState(emptyDraft);
   const [preview, setPreview] = useState(null);
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("편집실을 준비하는 중이에요.");
   const [saveState, setSaveState] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const lastSaved = useRef("");
-  const selectedKeys = useMemo(() => new Set(draft.images.map(sourceKey)), [draft.images]);
+  const selectedKeys = useMemo(() => new Set(imageBlocks(draft).map(sourceKey)), [draft.blocks]);
 
   async function load() {
     try {
@@ -64,7 +69,7 @@ function App() {
       setUploads(composer.uploads ?? []);
       setArchive((images.images ?? []).map((image) => ({ sourceType: "archive", sourceId: image.id, name: image.name, contentUrl: image.thumbnailUrl, meta: `${image.date ?? "날짜 없음"} · ${image.category}` })));
       if (composer.draft) {
-        const restored = { ...composer.draft, images: composer.draft.images ?? [] };
+        const restored = restoreDraft({ ...composer.draft, images: composer.draft.images ?? [] });
         setDraft(restored);
         lastSaved.current = draftSignature(restored);
         setSaveState("저장된 초안을 복구했어요.");
@@ -79,7 +84,7 @@ function App() {
     if (!hydrated || !enabled || busy || draft.publication) return undefined;
     const signature = draftSignature(draft);
     if (signature === lastSaved.current) return undefined;
-    if (!draft.title.trim() && !draft.bodyText.trim() && draft.images.length === 0) {
+    if (!draft.title.trim() && !textBody(draft).trim() && imageBlocks(draft).length === 0) {
       setSaveState("");
       return undefined;
     }
@@ -103,19 +108,37 @@ function App() {
     const key = sourceKey(image);
     setPreview(null);
     setDraft((current) => {
-      if (current.images.some((item) => sourceKey(item) === key)) return { ...current, images: current.images.filter((item) => sourceKey(item) !== key) };
-      if (current.images.length >= 10) { setMessage("이미지는 최대 10장까지 선택할 수 있어요."); return current; }
-      return { ...current, images: [...current.images, image] };
+      if (imageBlocks(current).some((item) => sourceKey(item) === key)) return { ...current, blocks: current.blocks.filter((item) => item.type !== "image" || sourceKey(item) !== key) };
+      if (imageBlocks(current).length >= 10) { setMessage("이미지는 최대 10장까지 선택할 수 있어요."); return current; }
+      return { ...current, blocks: [...current.blocks, { type: "image", ...image }] };
     });
   }
 
-  function move(index, direction) {
+  function moveBlock(index, direction) {
     setDraft((current) => {
       const target = index + direction;
-      if (target < 0 || target >= current.images.length) return current;
-      const images = [...current.images];
-      [images[index], images[target]] = [images[target], images[index]];
-      return { ...current, images };
+      if (target < 0 || target >= current.blocks.length) return current;
+      const blocks = [...current.blocks];
+      [blocks[index], blocks[target]] = [blocks[target], blocks[index]];
+      return { ...current, blocks };
+    });
+    setPreview(null);
+  }
+
+  function addTextBlock() {
+    setDraft((current) => current.blocks.length >= 25 ? current : { ...current, blocks: [...current.blocks, { type: "text", text: "" }] });
+    setPreview(null);
+  }
+
+  function updateTextBlock(index, text) {
+    setDraft((current) => ({ ...current, blocks: current.blocks.map((block, blockIndex) => blockIndex === index ? { ...block, text } : block) }));
+    setPreview(null);
+  }
+
+  function removeBlock(index) {
+    setDraft((current) => {
+      const blocks = current.blocks.filter((_, blockIndex) => blockIndex !== index);
+      return { ...current, blocks: blocks.length ? blocks : [{ type: "text", text: "" }] };
     });
     setPreview(null);
   }
@@ -161,7 +184,7 @@ function App() {
   }
 
   function startNewDraft() {
-    setDraft(EMPTY);
+    setDraft(emptyDraft());
     lastSaved.current = "";
     setSaveState("");
     setPreview(null);
@@ -173,7 +196,7 @@ function App() {
     try {
       const saved = await saveDraft(draft);
       lastSaved.current = draftSignature(saved);
-      setDraft(saved);
+      setDraft(restoreDraft(saved));
       const checked = await jsonFetch(`/api/dc/drafts/${saved.id}/preview`, { cache: "no-store" });
       setPreview(checked);
       setPublisherReady(checked.publisherReady);
@@ -212,7 +235,11 @@ function App() {
           <p className="section-label">01 · WRITE</p><h2>원고 작성</h2>
           <label>말머리<select value={draft.headText} disabled={!enabled || busy} onChange={(event) => { setDraft({ ...draft, headText: event.target.value }); setPreview(null); }}>{headTexts.map((item) => <option key={item}>{item}</option>)}</select></label>
           <label>제목 <span>{[...draft.title].length}/80</span><input value={draft.title} maxLength={80} disabled={!enabled || busy} onChange={(event) => { setDraft({ ...draft, title: event.target.value }); setPreview(null); }} placeholder="제목을 입력해 주세요" /></label>
-          <label>본문 <span>{draft.bodyText.length.toLocaleString()}/20,000</span><textarea value={draft.bodyText} maxLength={20000} disabled={!enabled || busy} onChange={(event) => { setDraft({ ...draft, bodyText: event.target.value }); setPreview(null); }} placeholder="본문을 입력해 주세요" /></label>
+          <div className="block-heading"><span>본문·이미지 블록</span><span>{textBody(draft).length.toLocaleString()}/20,000</span></div>
+          <div className="content-block-editor">{draft.blocks.map((block, index) => block.type === "text"
+            ? <article className="content-block text-block" key={`text-${index}`}><header><strong>텍스트 {String(index + 1).padStart(2, "0")}</strong><BlockControls index={index} length={draft.blocks.length} busy={busy} move={moveBlock} remove={removeBlock}/></header><textarea value={block.text} maxLength={20000} disabled={!enabled || busy} onChange={(event) => updateTextBlock(index, event.target.value)} placeholder="이 위치에 들어갈 글을 작성해 주세요" /></article>
+            : <article className="content-block image-block" key={sourceKey(block)}><img src={block.contentUrl} alt=""/><div><strong>이미지 {String(index + 1).padStart(2, "0")}</strong><span>{block.name}</span></div><BlockControls index={index} length={draft.blocks.length} busy={busy} move={moveBlock} remove={removeBlock}/></article>)}</div>
+          <button className="add-text-button" type="button" disabled={!enabled || busy || draft.blocks.length >= 25} onClick={addTextBlock}>＋ 텍스트 블록 추가</button>
           <p className={`autosave-state ${saveState.includes("실패") ? "failed" : ""}`} aria-live="polite">{saveState || "내용을 입력하면 서버 초안에 자동 저장해요."}</p>
         </section>
         <section className="library panel">
@@ -221,16 +248,20 @@ function App() {
           <h3>허브 이미지</h3><ImageGrid images={archive} selectedKeys={selectedKeys} toggle={toggle} empty={ready ? "허브 이미지가 없어요." : "불러오는 중…"} />
         </section>
         <aside className="preview panel">
-          <p className="section-label">03 · PREVIEW</p><h2>첨부 순서</h2>
-          <div className="selected-list">{draft.images.length ? draft.images.map((image, index) => <article key={sourceKey(image)}><img src={image.contentUrl} alt=""/><div><strong>{String(index + 1).padStart(2, "0")} · {image.name}</strong><span>{image.sourceType === "upload" ? "업로드" : "허브"}</span></div><nav><button onClick={() => move(index, -1)} disabled={index === 0 || busy}>↑</button><button onClick={() => move(index, 1)} disabled={index === draft.images.length - 1 || busy}>↓</button><button onClick={() => toggle(image)} disabled={busy}>×</button></nav></article>) : <p className="empty">첨부 없이 글만 게시할 수도 있어요.</p>}</div>
+          <p className="section-label">03 · PREVIEW</p><h2>게시 순서</h2>
+          <div className="layout-summary">{draft.blocks.map((block, index) => block.type === "text" ? <article key={`summary-text-${index}`}><b>{String(index + 1).padStart(2, "0")} · TEXT</b><span>{block.text.trim().slice(0, 54) || "빈 텍스트 블록"}</span></article> : <article key={`summary-${sourceKey(block)}`}><img src={block.contentUrl} alt=""/><div><b>{String(index + 1).padStart(2, "0")} · IMAGE</b><span>{block.name}</span></div></article>)}</div>
           <button className="preview-button" disabled={!enabled || busy} onClick={saveAndPreview}>{busy === "save" ? "검사 중…" : "초안 저장 · 게시 미리보기"}</button>
-          {preview && <section className="copy-preview"><span>{preview.draft.headText}</span><h3>{preview.draft.title || "제목 없음"}</h3><pre>{preview.draft.bodyText || "본문 없음"}</pre><p>이미지 {preview.draft.images.length}장 · 게시 직전 상단 첨부</p>{preview.preflight.errors.length > 0 && <ul>{preview.preflight.errors.map((error) => <li key={error}>{error}</li>)}</ul>}<button className="publish-button" disabled={!preview.canPublish || busy} onClick={publish}>{busy === "publish" ? "실제 게시 중…" : "DC에 실제 게시"}</button></section>}
+          {preview && <section className="copy-preview"><span>{preview.draft.headText}</span><h3>{preview.draft.title || "제목 없음"}</h3><div className="copy-layout">{preview.draft.blocks.map((block, index) => block.type === "text" ? <pre key={`preview-text-${index}`}>{block.text || "(빈 텍스트)"}</pre> : <figure key={`preview-${sourceKey(block)}`}><img src={block.contentUrl} alt=""/><figcaption>{block.name}</figcaption></figure>)}</div><p>텍스트와 이미지가 위 순서 그대로 들어가요 · 이미지 {preview.draft.images.length}장</p>{preview.preflight.errors.length > 0 && <ul>{preview.preflight.errors.map((error) => <li key={error}>{error}</li>)}</ul>}<button className="publish-button" disabled={!preview.canPublish || busy} onClick={publish}>{busy === "publish" ? "실제 게시 중…" : "DC에 실제 게시"}</button></section>}
           {draft.publication?.status === "posted" && <a className="receipt" href={draft.publication.url} target="_blank" rel="noreferrer">게시글 확인 ↗</a>}
           {draft.publication && <button className="new-draft-button" type="button" onClick={startNewDraft}>새 글 작성</button>}
         </aside>
       </div>
     </main>
   </>;
+}
+
+function BlockControls({ index, length, busy, move, remove }) {
+  return <nav><button type="button" aria-label="블록 위로" onClick={() => move(index, -1)} disabled={index === 0 || busy}>↑</button><button type="button" aria-label="블록 아래로" onClick={() => move(index, 1)} disabled={index === length - 1 || busy}>↓</button><button type="button" aria-label="블록 삭제" onClick={() => remove(index)} disabled={busy}>×</button></nav>;
 }
 
 function ImageGrid({ images, selectedKeys, toggle, onDelete = null, empty }) {

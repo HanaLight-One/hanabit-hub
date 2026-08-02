@@ -17,8 +17,32 @@ function writeResult(target, value) {
 }
 function fileHash(target) { return createHash("sha256").update(fs.readFileSync(target)).digest("hex"); }
 
+function validateBlocks(blocks, mediaLength) {
+  if (!Array.isArray(blocks) || blocks.length === 0 || blocks.length > 25) throw new Error("INVALID_BLOCKS");
+  const used = new Set();
+  for (const block of blocks) {
+    if (block?.type === "text") {
+      if (typeof block.text !== "string") throw new Error("INVALID_BLOCKS");
+      continue;
+    }
+    if (block?.type !== "image" || !Number.isInteger(block.mediaIndex) || block.mediaIndex < 0 || block.mediaIndex >= mediaLength || used.has(block.mediaIndex)) throw new Error("INVALID_BLOCKS");
+    used.add(block.mediaIndex);
+  }
+  if (used.size !== mediaLength) throw new Error("INVALID_BLOCKS");
+  return blocks;
+}
+
+function composeInlineContent(job) {
+  if (job.schemaVersion === 1) return { content: textToHtml(job.bodyText), imagePosition: "start" };
+  const blocks = validateBlocks(job.blocks, job.media.length);
+  return {
+    content: blocks.map((block) => block.type === "text" ? textToHtml(block.text) : `{{DC_IMAGE_${block.mediaIndex + 1}}}`).join(""),
+    imagePosition: "inline",
+  };
+}
+
 function validateComposeJob(value, jobPath) {
-  if (value?.schemaVersion !== 1 || !/^[a-f0-9]{32}$/u.test(String(value.id ?? ""))) throw new Error("INVALID_JOB");
+  if (![1, 2].includes(value?.schemaVersion) || !/^[a-f0-9]{32}$/u.test(String(value.id ?? ""))) throw new Error("INVALID_JOB");
   if (value.galleryId !== "chatgpt" || !HEAD_TEXTS.has(value.headTextName)) throw new Error("INVALID_TARGET");
   if (!String(value.title ?? "").trim() || !String(value.bodyText ?? "").trim()) throw new Error("EMPTY_COPY");
   if ([...String(value.title)].length > 80 || String(value.bodyText).length > 20_000) throw new Error("COPY_TOO_LARGE");
@@ -36,7 +60,11 @@ function validateComposeJob(value, jobPath) {
     const info = fs.statSync(target);
     if (!info.isFile() || info.size <= 0 || info.size > 20 * 1024 * 1024 || fileHash(target) !== media.sha256) throw new Error("INVALID_MEDIA");
   }
-  const expectedHash = createHash("sha256").update(JSON.stringify({ headText: value.headTextName, title: value.title, bodyText: value.bodyText, media: value.media.map(({ filename, sha256 }) => ({ filename, sha256 })) })).digest("hex");
+  if (value.schemaVersion === 2) validateBlocks(value.blocks, value.media.length);
+  const hashInput = { headText: value.headTextName, title: value.title, bodyText: value.bodyText };
+  if (value.schemaVersion === 2) hashInput.blocks = value.blocks;
+  hashInput.media = value.media.map(({ filename, sha256 }) => ({ filename, sha256 }));
+  const expectedHash = createHash("sha256").update(JSON.stringify(hashInput)).digest("hex");
   if (value.contentHash !== expectedHash) throw new Error("CONTENT_CHANGED");
   return value;
 }
@@ -80,12 +108,13 @@ async function publish({ jobPath, publisherRoot }) {
   writeResult(job.resultPath, { status: "submitting", submittedAt: new Date().toISOString(), contentHash: job.contentHash });
   let result;
   try {
+    const inline = composeInlineContent(job);
     result = await withoutWatermark(FormDataCtor, () => dc.createPost({
       galleryId: job.galleryId,
       subject: job.title,
-      content: textToHtml(job.bodyText),
+      content: inline.content,
       images: job.media.map((media) => ({ data: fs.readFileSync(media.path), filename: media.filename, contentType: media.contentType })),
-      imagePosition: "start",
+      imagePosition: inline.imagePosition,
       headText: String(head.id),
       useGallNickname: process.env.DC_USE_GALL_NICKNAME !== "false",
       jar: login.jar,
@@ -118,4 +147,4 @@ async function main() {
 }
 
 if (require.main === module) main();
-module.exports = { validateComposeJob, safeDcUrl, withoutWatermark };
+module.exports = { validateComposeJob, composeInlineContent, safeDcUrl, withoutWatermark };

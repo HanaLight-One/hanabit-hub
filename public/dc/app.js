@@ -8018,13 +8018,20 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	e.Fragment = n, e.jsx = r, e.jsxs = r;
 })), v = /* @__PURE__ */ o(((e, t) => {
 	t.exports = _();
-})), y = /* @__PURE__ */ c(u(), 1), b = g(), x = v(), ee = {
-	id: null,
-	headText: "잡담",
-	title: "",
-	bodyText: "",
-	images: []
-};
+})), y = /* @__PURE__ */ c(u(), 1), b = g(), x = v();
+function ee() {
+	return {
+		id: null,
+		headText: "잡담",
+		title: "",
+		bodyText: "",
+		images: [],
+		blocks: [{
+			type: "text",
+			text: ""
+		}]
+	};
+}
 async function S(e, t = {}) {
 	let n = await fetch(e, t), r = await n.json().catch(() => ({}));
 	if (!n.ok) throw Error(r.error ?? "요청을 완료하지 못했어요.");
@@ -8034,17 +8041,38 @@ function C(e) {
 	return `${e.sourceType}:${e.sourceId}`;
 }
 function te(e) {
+	return (e.blocks ?? []).filter((e) => e.type === "image");
+}
+function ne(e) {
+	return (e.blocks ?? []).filter((e) => e.type === "text").map((e) => e.text).join("\n\n");
+}
+function re(e) {
+	return Array.isArray(e?.blocks) && e.blocks.length ? e : {
+		...e,
+		blocks: [...(e?.images ?? []).map((e) => ({
+			type: "image",
+			...e
+		})), {
+			type: "text",
+			text: e?.bodyText ?? ""
+		}]
+	};
+}
+function w(e) {
 	return JSON.stringify({
 		headText: e.headText,
 		title: e.title,
-		bodyText: e.bodyText,
-		images: e.images.map(({ sourceType: e, sourceId: t }) => ({
-			sourceType: e,
-			sourceId: t
-		}))
+		blocks: e.blocks.map((e) => e.type === "text" ? {
+			type: "text",
+			text: e.text
+		} : {
+			type: "image",
+			sourceType: e.sourceType,
+			sourceId: e.sourceId
+		})
 	});
 }
-async function ne(e) {
+async function ie(e) {
 	return S("/api/dc/drafts", {
 		method: "POST",
 		headers: { "content-type": "application/json" },
@@ -8053,17 +8081,21 @@ async function ne(e) {
 			id: e.id,
 			headText: e.headText,
 			title: e.title,
-			bodyText: e.bodyText,
-			images: e.images.map(({ sourceType: e, sourceId: t }) => ({
-				sourceType: e,
-				sourceId: t
-			}))
+			bodyText: ne(e),
+			blocks: e.blocks.map((e) => e.type === "text" ? {
+				type: "text",
+				text: e.text
+			} : {
+				type: "image",
+				sourceType: e.sourceType,
+				sourceId: e.sourceId
+			})
 		})
 	});
 }
-function re() {
-	let [e, t] = (0, y.useState)(!1), [n, r] = (0, y.useState)(!1), [i, a] = (0, y.useState)(!1), [o, s] = (0, y.useState)([]), [c, l] = (0, y.useState)([]), [u, d] = (0, y.useState)([]), [f, p] = (0, y.useState)(ee), [m, h] = (0, y.useState)(null), [g, _] = (0, y.useState)(""), [v, b] = (0, y.useState)("편집실을 준비하는 중이에요."), [re, ie] = (0, y.useState)(""), [ae, oe] = (0, y.useState)(!1), se = (0, y.useRef)(""), ce = (0, y.useMemo)(() => new Set(f.images.map(C)), [f.images]);
-	async function le() {
+function ae() {
+	let [e, t] = (0, y.useState)(!1), [n, r] = (0, y.useState)(!1), [i, a] = (0, y.useState)(!1), [o, s] = (0, y.useState)([]), [c, l] = (0, y.useState)([]), [u, d] = (0, y.useState)([]), [f, p] = (0, y.useState)(ee), [m, h] = (0, y.useState)(null), [g, _] = (0, y.useState)(""), [v, b] = (0, y.useState)("편집실을 준비하는 중이에요."), [ae, ce] = (0, y.useState)(""), [le, ue] = (0, y.useState)(!1), T = (0, y.useRef)(""), E = (0, y.useMemo)(() => new Set(te(f).map(C)), [f.blocks]);
+	async function de() {
 		try {
 			let [e, t] = await Promise.all([S("/api/dc/composer", { cache: "no-store" }), S("/api/images", { cache: "no-store" })]);
 			if (r(e.enabled), a(e.publisherReady), s(e.headTexts ?? []), d(e.uploads ?? []), l((t.images ?? []).map((e) => ({
@@ -8073,38 +8105,38 @@ function re() {
 				contentUrl: e.thumbnailUrl,
 				meta: `${e.date ?? "날짜 없음"} · ${e.category}`
 			}))), e.draft) {
-				let t = {
+				let t = re({
 					...e.draft,
 					images: e.draft.images ?? []
-				};
-				p(t), se.current = te(t), ie("저장된 초안을 복구했어요.");
+				});
+				p(t), T.current = w(t), ce("저장된 초안을 복구했어요.");
 			}
 			b(e.enabled ? "이미지를 고르고 원고를 작성해 주세요." : "DC 편집실 쓰기 권한이 꺼져 있어요.");
 		} catch (e) {
 			b(e.message);
 		} finally {
-			t(!0), oe(!0);
+			t(!0), ue(!0);
 		}
 	}
 	(0, y.useEffect)(() => {
-		le();
+		de();
 	}, []), (0, y.useEffect)(() => {
-		if (!ae || !n || g || f.publication || te(f) === se.current) return;
-		if (!f.title.trim() && !f.bodyText.trim() && f.images.length === 0) {
-			ie("");
+		if (!le || !n || g || f.publication || w(f) === T.current) return;
+		if (!f.title.trim() && !ne(f).trim() && te(f).length === 0) {
+			ce("");
 			return;
 		}
-		ie("자동 저장 대기 중…");
+		ce("자동 저장 대기 중…");
 		let e = setTimeout(async () => {
-			ie("자동 저장 중…");
+			ce("자동 저장 중…");
 			try {
-				let e = await ne(f);
-				se.current = te(e), p((t) => t.id ? t : {
+				let e = await ie(f);
+				T.current = w(e), p((t) => t.id ? t : {
 					...t,
 					id: e.id
-				}), ie("자동 저장됨");
+				}), ce("자동 저장됨");
 			} catch {
-				ie("자동 저장 실패 · 미리보기 버튼으로 다시 저장해 주세요.");
+				ce("자동 저장 실패 · 미리보기 버튼으로 다시 저장해 주세요.");
 			}
 		}, 900);
 		return () => clearTimeout(e);
@@ -8112,31 +8144,64 @@ function re() {
 		g,
 		f,
 		n,
-		ae
+		le
 	]);
-	function ue(e) {
+	function fe(e) {
 		if (!n || g) return;
 		let t = C(e);
-		h(null), p((n) => n.images.some((e) => C(e) === t) ? {
+		h(null), p((n) => te(n).some((e) => C(e) === t) ? {
 			...n,
-			images: n.images.filter((e) => C(e) !== t)
-		} : n.images.length >= 10 ? (b("이미지는 최대 10장까지 선택할 수 있어요."), n) : {
+			blocks: n.blocks.filter((e) => e.type !== "image" || C(e) !== t)
+		} : te(n).length >= 10 ? (b("이미지는 최대 10장까지 선택할 수 있어요."), n) : {
 			...n,
-			images: [...n.images, e]
+			blocks: [...n.blocks, {
+				type: "image",
+				...e
+			}]
 		});
 	}
-	function T(e, t) {
+	function pe(e, t) {
 		p((n) => {
 			let r = e + t;
-			if (r < 0 || r >= n.images.length) return n;
-			let i = [...n.images];
+			if (r < 0 || r >= n.blocks.length) return n;
+			let i = [...n.blocks];
 			return [i[e], i[r]] = [i[r], i[e]], {
 				...n,
-				images: i
+				blocks: i
 			};
 		}), h(null);
 	}
-	async function E(e) {
+	function me() {
+		p((e) => e.blocks.length >= 25 ? e : {
+			...e,
+			blocks: [...e.blocks, {
+				type: "text",
+				text: ""
+			}]
+		}), h(null);
+	}
+	function D(e, t) {
+		p((n) => ({
+			...n,
+			blocks: n.blocks.map((n, r) => r === e ? {
+				...n,
+				text: t
+			} : n)
+		})), h(null);
+	}
+	function O(e) {
+		p((t) => {
+			let n = t.blocks.filter((t, n) => n !== e);
+			return {
+				...t,
+				blocks: n.length ? n : [{
+					type: "text",
+					text: ""
+				}]
+			};
+		}), h(null);
+	}
+	async function he(e) {
 		let t = [...e.target.files].slice(0, 10);
 		if (t.length) {
 			_("upload");
@@ -8161,9 +8226,9 @@ function re() {
 			}
 		}
 	}
-	async function de(e) {
+	async function ge(e) {
 		if (e) {
-			if (ce.has(`upload:${e.id}`)) {
+			if (E.has(`upload:${e.id}`)) {
 				b("선택 중인 업로드 이미지는 첨부에서 먼저 빼주세요.");
 				return;
 			}
@@ -8183,14 +8248,14 @@ function re() {
 			}
 		}
 	}
-	function fe() {
-		p(ee), se.current = "", ie(""), h(null), b("새 원고를 시작했어요.");
+	function _e() {
+		p(ee()), T.current = "", ce(""), h(null), b("새 원고를 시작했어요.");
 	}
-	async function pe() {
+	async function ve() {
 		_("save");
 		try {
-			let e = await ne(f);
-			se.current = te(e), p(e);
+			let e = await ie(f);
+			T.current = w(e), p(re(e));
 			let t = await S(`/api/dc/drafts/${e.id}/preview`, { cache: "no-store" });
 			h(t), a(t.publisherReady), b(t.preflight.ready ? "게시 직전 모습을 확인해 주세요." : "게시 전 고칠 항목이 있어요.");
 		} catch (e) {
@@ -8199,7 +8264,7 @@ function re() {
 			_("");
 		}
 	}
-	async function me() {
+	async function ye() {
 		if (!(!m?.canPublish || !f.id) && confirm("이 원고를 챗GPT 갤러리에 실제로 게시할까요?\n제출 후 결과가 애매하면 자동으로 다시 시도하지 않아요.")) {
 			_("publish");
 			try {
@@ -8219,7 +8284,7 @@ function re() {
 			}
 		}
 	}
-	let D = u.map((e) => ({
+	let be = u.map((e) => ({
 		sourceType: "upload",
 		sourceId: e.id,
 		name: e.name,
@@ -8291,26 +8356,56 @@ function re() {
 							placeholder: "제목을 입력해 주세요"
 						})
 					] }),
-					/* @__PURE__ */ (0, x.jsxs)("label", { children: [
-						"본문 ",
-						/* @__PURE__ */ (0, x.jsxs)("span", { children: [f.bodyText.length.toLocaleString(), "/20,000"] }),
-						/* @__PURE__ */ (0, x.jsx)("textarea", {
-							value: f.bodyText,
-							maxLength: 2e4,
-							disabled: !n || g,
-							onChange: (e) => {
-								p({
-									...f,
-									bodyText: e.target.value
-								}), h(null);
-							},
-							placeholder: "본문을 입력해 주세요"
-						})
-					] }),
+					/* @__PURE__ */ (0, x.jsxs)("div", {
+						className: "block-heading",
+						children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "본문·이미지 블록" }), /* @__PURE__ */ (0, x.jsxs)("span", { children: [ne(f).length.toLocaleString(), "/20,000"] })]
+					}),
+					/* @__PURE__ */ (0, x.jsx)("div", {
+						className: "content-block-editor",
+						children: f.blocks.map((e, t) => e.type === "text" ? /* @__PURE__ */ (0, x.jsxs)("article", {
+							className: "content-block text-block",
+							children: [/* @__PURE__ */ (0, x.jsxs)("header", { children: [/* @__PURE__ */ (0, x.jsxs)("strong", { children: ["텍스트 ", String(t + 1).padStart(2, "0")] }), /* @__PURE__ */ (0, x.jsx)(oe, {
+								index: t,
+								length: f.blocks.length,
+								busy: g,
+								move: pe,
+								remove: O
+							})] }), /* @__PURE__ */ (0, x.jsx)("textarea", {
+								value: e.text,
+								maxLength: 2e4,
+								disabled: !n || g,
+								onChange: (e) => D(t, e.target.value),
+								placeholder: "이 위치에 들어갈 글을 작성해 주세요"
+							})]
+						}, `text-${t}`) : /* @__PURE__ */ (0, x.jsxs)("article", {
+							className: "content-block image-block",
+							children: [
+								/* @__PURE__ */ (0, x.jsx)("img", {
+									src: e.contentUrl,
+									alt: ""
+								}),
+								/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsxs)("strong", { children: ["이미지 ", String(t + 1).padStart(2, "0")] }), /* @__PURE__ */ (0, x.jsx)("span", { children: e.name })] }),
+								/* @__PURE__ */ (0, x.jsx)(oe, {
+									index: t,
+									length: f.blocks.length,
+									busy: g,
+									move: pe,
+									remove: O
+								})
+							]
+						}, C(e)))
+					}),
+					/* @__PURE__ */ (0, x.jsx)("button", {
+						className: "add-text-button",
+						type: "button",
+						disabled: !n || g || f.blocks.length >= 25,
+						onClick: me,
+						children: "＋ 텍스트 블록 추가"
+					}),
 					/* @__PURE__ */ (0, x.jsx)("p", {
-						className: `autosave-state ${re.includes("실패") ? "failed" : ""}`,
+						className: `autosave-state ${ae.includes("실패") ? "failed" : ""}`,
 						"aria-live": "polite",
-						children: re || "내용을 입력하면 서버 초안에 자동 저장해요."
+						children: ae || "내용을 입력하면 서버 초안에 자동 저장해요."
 					})
 				]
 			}),
@@ -8329,23 +8424,23 @@ function re() {
 								accept: "image/png,image/jpeg,image/webp,image/gif",
 								multiple: !0,
 								disabled: !n || g,
-								onChange: E
+								onChange: he
 							})]
 						})]
 					}),
 					/* @__PURE__ */ (0, x.jsx)("h3", { children: "업로드 이미지" }),
-					/* @__PURE__ */ (0, x.jsx)(w, {
-						images: D,
-						selectedKeys: ce,
-						toggle: ue,
-						onDelete: (e) => de(u.find((t) => t.id === e.sourceId)),
+					/* @__PURE__ */ (0, x.jsx)(se, {
+						images: be,
+						selectedKeys: E,
+						toggle: fe,
+						onDelete: (e) => ge(u.find((t) => t.id === e.sourceId)),
 						empty: "아직 업로드한 이미지가 없어요."
 					}),
 					/* @__PURE__ */ (0, x.jsx)("h3", { children: "허브 이미지" }),
-					/* @__PURE__ */ (0, x.jsx)(w, {
+					/* @__PURE__ */ (0, x.jsx)(se, {
 						images: c,
-						selectedKeys: ce,
-						toggle: ue,
+						selectedKeys: E,
+						toggle: fe,
 						empty: e ? "허브 이미지가 없어요." : "불러오는 중…"
 					})
 				]
@@ -8357,45 +8452,18 @@ function re() {
 						className: "section-label",
 						children: "03 · PREVIEW"
 					}),
-					/* @__PURE__ */ (0, x.jsx)("h2", { children: "첨부 순서" }),
+					/* @__PURE__ */ (0, x.jsx)("h2", { children: "게시 순서" }),
 					/* @__PURE__ */ (0, x.jsx)("div", {
-						className: "selected-list",
-						children: f.images.length ? f.images.map((e, t) => /* @__PURE__ */ (0, x.jsxs)("article", { children: [
-							/* @__PURE__ */ (0, x.jsx)("img", {
-								src: e.contentUrl,
-								alt: ""
-							}),
-							/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsxs)("strong", { children: [
-								String(t + 1).padStart(2, "0"),
-								" · ",
-								e.name
-							] }), /* @__PURE__ */ (0, x.jsx)("span", { children: e.sourceType === "upload" ? "업로드" : "허브" })] }),
-							/* @__PURE__ */ (0, x.jsxs)("nav", { children: [
-								/* @__PURE__ */ (0, x.jsx)("button", {
-									onClick: () => T(t, -1),
-									disabled: t === 0 || g,
-									children: "↑"
-								}),
-								/* @__PURE__ */ (0, x.jsx)("button", {
-									onClick: () => T(t, 1),
-									disabled: t === f.images.length - 1 || g,
-									children: "↓"
-								}),
-								/* @__PURE__ */ (0, x.jsx)("button", {
-									onClick: () => ue(e),
-									disabled: g,
-									children: "×"
-								})
-							] })
-						] }, C(e))) : /* @__PURE__ */ (0, x.jsx)("p", {
-							className: "empty",
-							children: "첨부 없이 글만 게시할 수도 있어요."
-						})
+						className: "layout-summary",
+						children: f.blocks.map((e, t) => e.type === "text" ? /* @__PURE__ */ (0, x.jsxs)("article", { children: [/* @__PURE__ */ (0, x.jsxs)("b", { children: [String(t + 1).padStart(2, "0"), " · TEXT"] }), /* @__PURE__ */ (0, x.jsx)("span", { children: e.text.trim().slice(0, 54) || "빈 텍스트 블록" })] }, `summary-text-${t}`) : /* @__PURE__ */ (0, x.jsxs)("article", { children: [/* @__PURE__ */ (0, x.jsx)("img", {
+							src: e.contentUrl,
+							alt: ""
+						}), /* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsxs)("b", { children: [String(t + 1).padStart(2, "0"), " · IMAGE"] }), /* @__PURE__ */ (0, x.jsx)("span", { children: e.name })] })] }, `summary-${C(e)}`))
 					}),
 					/* @__PURE__ */ (0, x.jsx)("button", {
 						className: "preview-button",
 						disabled: !n || g,
-						onClick: pe,
+						onClick: ve,
 						children: g === "save" ? "검사 중…" : "초안 저장 · 게시 미리보기"
 					}),
 					m && /* @__PURE__ */ (0, x.jsxs)("section", {
@@ -8403,17 +8471,23 @@ function re() {
 						children: [
 							/* @__PURE__ */ (0, x.jsx)("span", { children: m.draft.headText }),
 							/* @__PURE__ */ (0, x.jsx)("h3", { children: m.draft.title || "제목 없음" }),
-							/* @__PURE__ */ (0, x.jsx)("pre", { children: m.draft.bodyText || "본문 없음" }),
+							/* @__PURE__ */ (0, x.jsx)("div", {
+								className: "copy-layout",
+								children: m.draft.blocks.map((e, t) => e.type === "text" ? /* @__PURE__ */ (0, x.jsx)("pre", { children: e.text || "(빈 텍스트)" }, `preview-text-${t}`) : /* @__PURE__ */ (0, x.jsxs)("figure", { children: [/* @__PURE__ */ (0, x.jsx)("img", {
+									src: e.contentUrl,
+									alt: ""
+								}), /* @__PURE__ */ (0, x.jsx)("figcaption", { children: e.name })] }, `preview-${C(e)}`))
+							}),
 							/* @__PURE__ */ (0, x.jsxs)("p", { children: [
-								"이미지 ",
+								"텍스트와 이미지가 위 순서 그대로 들어가요 · 이미지 ",
 								m.draft.images.length,
-								"장 · 게시 직전 상단 첨부"
+								"장"
 							] }),
 							m.preflight.errors.length > 0 && /* @__PURE__ */ (0, x.jsx)("ul", { children: m.preflight.errors.map((e) => /* @__PURE__ */ (0, x.jsx)("li", { children: e }, e)) }),
 							/* @__PURE__ */ (0, x.jsx)("button", {
 								className: "publish-button",
 								disabled: !m.canPublish || g,
-								onClick: me,
+								onClick: ye,
 								children: g === "publish" ? "실제 게시 중…" : "DC에 실제 게시"
 							})
 						]
@@ -8428,7 +8502,7 @@ function re() {
 					f.publication && /* @__PURE__ */ (0, x.jsx)("button", {
 						className: "new-draft-button",
 						type: "button",
-						onClick: fe,
+						onClick: _e,
 						children: "새 글 작성"
 					})
 				]
@@ -8436,7 +8510,32 @@ function re() {
 		]
 	})] })] });
 }
-function w({ images: e, selectedKeys: t, toggle: n, onDelete: r = null, empty: i }) {
+function oe({ index: e, length: t, busy: n, move: r, remove: i }) {
+	return /* @__PURE__ */ (0, x.jsxs)("nav", { children: [
+		/* @__PURE__ */ (0, x.jsx)("button", {
+			type: "button",
+			"aria-label": "블록 위로",
+			onClick: () => r(e, -1),
+			disabled: e === 0 || n,
+			children: "↑"
+		}),
+		/* @__PURE__ */ (0, x.jsx)("button", {
+			type: "button",
+			"aria-label": "블록 아래로",
+			onClick: () => r(e, 1),
+			disabled: e === t - 1 || n,
+			children: "↓"
+		}),
+		/* @__PURE__ */ (0, x.jsx)("button", {
+			type: "button",
+			"aria-label": "블록 삭제",
+			onClick: () => i(e),
+			disabled: n,
+			children: "×"
+		})
+	] });
+}
+function se({ images: e, selectedKeys: t, toggle: n, onDelete: r = null, empty: i }) {
 	return e.length ? /* @__PURE__ */ (0, x.jsx)("div", {
 		className: "image-grid",
 		children: e.map((e) => /* @__PURE__ */ (0, x.jsxs)("article", {
@@ -8467,5 +8566,5 @@ function w({ images: e, selectedKeys: t, toggle: n, onDelete: r = null, empty: i
 		children: i
 	});
 }
-(0, b.createRoot)(document.querySelector("#dc-root")).render(/* @__PURE__ */ (0, x.jsx)(re, {}));
+(0, b.createRoot)(document.querySelector("#dc-root")).render(/* @__PURE__ */ (0, x.jsx)(ae, {}));
 //#endregion

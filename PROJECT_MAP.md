@@ -71,7 +71,7 @@ HTTP 라우트는 검증과 응답만 맡고 실제 동작은 같은 기능 폴�
 | 이미지 | `src/modules/images/` | 아카이브, 테마, 제작 기록, 화풍, 생성 초안과 1장 실행 |
 | 운세 | `src/modules/fortune/` | 날짜별 운세와 안전한 게시 상태 읽기 |
 | 뉴스 | `src/modules/news/` | Discord/X 수집, 번역·판정, Codex 심층검토, DC 원고 미리보기·수동 단건 게시와 영수증 |
-| DC 편집실 | `src/modules/dc/` | 전용 업로드, SQLite 초안, 첨부 순서, 일반 글 미리보기·단건 게시 영수증 |
+| DC 편집실 | `src/modules/dc/` | 전용 업로드, SQLite 블록 초안, 텍스트·이미지 혼합 순서, 일반 글 미리보기·단건 게시 영수증 |
 | 모바일 알림 | `src/modules/notifications/` | Web Push 구독과 제한된 알림 전송 |
 | 시스템 | `src/modules/system/` | allowlist 기반 Codex 상태·긴급 재기동 |
 
@@ -83,7 +83,7 @@ HTTP 라우트는 검증과 응답만 맡고 실제 동작은 같은 기능 폴�
 | 저장 대상 | 위치 | 현재 역할 | Git |
 | --- | --- | --- | --- |
 | 뉴스 운영 대기함 | `state/news/` | 현재 수집·번역·검토의 원본 저장소 | 제외 |
-| Hub SQLite | `state/hanabit-hub.sqlite` | 뉴스 원장, 이미지 제작 기록과 직접 업로드 출처(v5), DC 편집실 상태 | 제외 |
+| Hub SQLite | `state/hanabit-hub.sqlite` | 뉴스 원장, 이미지 제작 기록과 직접 업로드 출처, DC 혼합 블록 초안(v6) | 제외 |
 | Push 구독·키 | `state/notifications/` | 모바일 Web Push 상태 | 제외 |
 | 이미지 생성 초안·작업 | `state/image-generation-*` | Hub가 만든 초안과 1장 작업 상태 | 제외 |
 | 직접 업로드 생성 소스 | `state/image-source-uploads/YYYY-MM-DD/` | 사용자가 올린 PNG·JPG·WebP를 오테와 분리해 Responses 주 참조로 보관 | 제외 |
@@ -179,7 +179,7 @@ Responses API 공용 텍스트 실행기의 복구 가능한 정본은 `tools/op
 
 ```text
 허브 이미지 ID ─┐
-                ├─> SQLite 초안·첨부 순서 ─> 미리보기·금지문자 검사
+                ├─> SQLite 텍스트·이미지 블록 순서 ─> 미리보기·금지문자 검사
 전용 업로드 폴더 ┘                                  │
                                                     v
                           명시적 실제 게시 확인 ─> 격리 작업 폴더로 사본 생성
@@ -189,13 +189,17 @@ Responses API 공용 텍스트 실행기의 복구 가능한 정본은 `tools/op
 ```
 
 `src/modules/dc/`는 원고·업로드·초안·게시 상태를 관리한다. 기존 이미지 원본과
-업로드 원본은 게시 과정에서 이동하지 않으며, 선택 순서대로 `state/dc-compose/
+업로드 원본은 게시 과정에서 이동하지 않으며, 이미지 블록 순서대로 `state/dc-compose/
 publication-jobs/` 아래에 격리 사본을 만든 뒤 `scripts/publish-dc-compose.cjs`만
 실행한다. 게시자는 `chatgpt` 갤러리, 허용된 말머리, 최대 10장, 이미지 해시,
 그림 이모지·결합문자 부재와 워터마크 필드 제외를 다시 검증한다. 성공 영수증 또는
 모호함 영수증이 생기면 같은 초안을 자동 재제출하지 않는다.
 
-작성 중인 제목·본문·첨부 순서는 약 0.9초 뒤 SQLite 초안에 자동 저장한다. 따라서
+본문은 최대 25개의 텍스트·이미지 블록으로 구성한다. 게시 작업에는 이미지마다
+고정 표식을 정확히 한 번만 넣고, 외부 DC 게시자의 재설치용 호환 패치가 업로드 후
+받은 이미지 주소를 해당 표식 위치에 치환한다. 표식 누락·중복이면 게시 전에 실패한다.
+
+작성 중인 제목·블록 내용·혼합 순서는 약 0.9초 뒤 SQLite 초안에 자동 저장한다. 따라서
 새로고침하거나 다른 기기로 이동해도 마지막 미게시 초안을 복구하며, 원고를
 `localStorage`나 `sessionStorage`에는 보관하지 않는다.
 

@@ -79,6 +79,34 @@ test("실제 게시 요청은 격리된 첨부 사본과 영수증을 한 번만
   assert.equal(jobs.length, 1);
 });
 
+test("텍스트와 이미지를 섞은 순서를 초안과 게시 작업에 그대로 보존한다", async (context) => {
+  const { png, archive, composer, jobs } = await fixture(context);
+  const uploaded = await composer.upload({ filename: "middle.png", contentType: "image/png", buffer: png });
+  const hub = (await archive.list()).images[0];
+  const draft = await composer.saveDraft({
+    headText: "AI창작",
+    title: "혼합 배치",
+    blocks: [
+      { type: "text", text: "첫 문단" },
+      { type: "image", sourceType: "archive", sourceId: hub.id },
+      { type: "text", text: "중간 문단" },
+      { type: "image", sourceType: "upload", sourceId: uploaded.id },
+      { type: "text", text: "마지막 문단" },
+    ],
+  });
+  assert.deepEqual(draft.blocks.map((block) => block.type), ["text", "image", "text", "image", "text"]);
+  assert.equal(draft.bodyText, "첫 문단\n\n중간 문단\n\n마지막 문단");
+  await composer.publish(draft.id);
+  assert.equal(jobs[0].schemaVersion, 2);
+  assert.deepEqual(jobs[0].blocks, [
+    { type: "text", text: "첫 문단" },
+    { type: "image", mediaIndex: 0 },
+    { type: "text", text: "중간 문단" },
+    { type: "image", mediaIndex: 1 },
+    { type: "text", text: "마지막 문단" },
+  ]);
+});
+
 test("그림 이모지와 결합 문자는 미리보기에서 게시 불가로 차단한다", async (context) => {
   const { composer } = await fixture(context);
   const draft = await composer.saveDraft({ headText: "잡담", title: "제목🤣", bodyText: "본문", images: [] });
@@ -99,7 +127,7 @@ test("업로드 파일은 초안 사용 중에는 보호하고 선택 해제 후
   const uploaded = await composer.upload({ filename: "remove.png", contentType: "image/png", buffer: png });
   const draft = await composer.saveDraft({ headText: "잡담", title: "임시", bodyText: "본문", images: [{ sourceType: "upload", sourceId: uploaded.id }] });
   await assert.rejects(() => composer.deleteUpload(uploaded.id), { code: "UPLOAD_IN_USE" });
-  await composer.saveDraft({ ...draft, images: [] });
+  await composer.saveDraft({ ...draft, blocks: [{ type: "text", text: "본문" }] });
   assert.deepEqual(await composer.deleteUpload(uploaded.id), { deleted: true });
   assert.deepEqual(await composer.listUploads(), []);
 });
