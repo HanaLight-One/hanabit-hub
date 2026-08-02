@@ -83,7 +83,7 @@ HTTP 라우트는 검증과 응답만 맡고 실제 동작은 같은 기능 폴�
 | 저장 대상 | 위치 | 현재 역할 | Git |
 | --- | --- | --- | --- |
 | 뉴스 운영 대기함 | `state/news/` | 현재 수집·번역·검토의 원본 저장소 | 제외 |
-| Hub SQLite | `state/hanabit-hub.sqlite` | 뉴스 원장 v1은 미연결, 이미지 제작 기록 v2는 운영 색인·조회 | 제외 |
+| Hub SQLite | `state/hanabit-hub.sqlite` | 뉴스 원장, 이미지 제작 기록과 직접 업로드 출처(v5), DC 편집실 상태 | 제외 |
 | Push 구독·키 | `state/notifications/` | 모바일 Web Push 상태 | 제외 |
 | 이미지 생성 초안·작업 | `state/image-generation-*` | Hub가 만든 초안과 1장 작업 상태 | 제외 |
 | 직접 업로드 생성 소스 | `state/image-source-uploads/YYYY-MM-DD/` | 사용자가 올린 PNG·JPG·WebP를 오테와 분리해 Responses 주 참조로 보관 | 제외 |

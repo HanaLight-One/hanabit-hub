@@ -45,3 +45,14 @@ JSON을 이미지 폴더와 대조해 자동 색인하며, 아카이브 밖의 �
 `image_generation_metadata.metadata_source`에 `daily-manifest`를 추가했다. 완료된 운영
 manifest만 읽기 전용으로 색인하며 외부 이미지, Python 및 Windows 예약 작업은 수정하지
 않는다. 상세 경계는 `docs/codex-usage-and-daily-manifests.md`를 참고한다.
+
+## 스키마 버전 4 — DC 편집실
+
+DC 편집실의 전용 업로드, 초안, 첨부 순서와 게시 상태를 저장한다. 이미지 바이너리는
+DB가 아니라 Git 제외 상태 폴더에 두고 DB에는 안전한 저장 이름과 해시만 기록한다.
+
+## 스키마 버전 5 — 직접 업로드 이미지 출처
+
+`image_assets.source`에 `upload`를 추가한다. 직접 업로드 파일도 절대경로 없이 상대 저장
+키만 색인하며, 기존 `daily`·`pilot` 자산과 제작 메타데이터를 보존한 채 테이블을
+마이그레이션한다. 이 출처는 소스 선택과 복원 가능한 휴지통 작업에만 사용한다.

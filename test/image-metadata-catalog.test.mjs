@@ -145,3 +145,24 @@ test("아카이브 밖 결과 경로와 완료되지 않은 작업은 색인하�
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("직접 업로드 소스를 이미지 자산 DB에 안전하게 색인한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-upload-image-db-"));
+  const uploadRoot = path.join(root, "uploads");
+  const jobRoot = path.join(root, "jobs");
+  await mkdir(path.join(uploadRoot, "2026-08-02"), { recursive: true });
+  await mkdir(jobRoot, { recursive: true });
+  await writeFile(path.join(uploadRoot, "2026-08-02", "reference.png"), "image", "utf8");
+  const database = openHubDatabase({ filePath: path.join(root, "hub.sqlite") });
+  const archive = createImageArchive({ sourceUploadsRoot: uploadRoot });
+  try {
+    const catalog = createImageMetadataCatalog({ database, archive, jobRoot });
+    assert.deepEqual(await catalog.synchronize(), { assets: 1, metadata: 0 });
+    const stored = database.prepare("SELECT source, storage_key FROM image_assets").get();
+    assert.equal(stored.source, "upload");
+    assert.equal(stored.storage_key, "2026-08-02/reference.png");
+  } finally {
+    database.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});

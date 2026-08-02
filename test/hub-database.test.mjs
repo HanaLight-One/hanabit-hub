@@ -11,14 +11,23 @@ test("허브 DB는 뉴스와 이미지 스키마를 반복 실행해도 한 번�
   try {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const database = openHubDatabase({ filePath, now: () => new Date("2026-08-01T00:00:00Z") });
-      assert.equal(databaseSchemaVersion(database), 4);
+      assert.equal(databaseSchemaVersion(database), 5);
       const migrations = database.prepare("SELECT version, name FROM schema_migrations").all();
-      assert.equal(migrations.length, 4);
+      assert.equal(migrations.length, 5);
       const tables = database.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row) => row.name);
       for (const expected of ["news_stories", "news_sources", "news_analysis", "news_approvals", "news_publications", "image_assets", "image_generation_metadata", "dc_uploads", "dc_drafts", "dc_draft_images"]) {
         assert.equal(tables.includes(expected), true);
       }
       assert.equal(database.prepare("PRAGMA foreign_keys").get().foreign_keys, 1);
+      database.prepare(`
+        INSERT INTO image_assets (id, source, storage_key, file_name, indexed_at)
+        VALUES (?, 'upload', ?, ?, ?)
+        ON CONFLICT(id) DO NOTHING
+      `).run("u".repeat(64), "2026-08-02/upload.png", "upload.png", "2026-08-02T00:00:00Z");
+      assert.equal(
+        database.prepare("SELECT source FROM image_assets WHERE id = ?").get("u".repeat(64)).source,
+        "upload",
+      );
       database.close();
     }
   } finally { await rm(root, { recursive: true, force: true }); }

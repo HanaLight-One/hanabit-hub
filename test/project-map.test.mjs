@@ -23,6 +23,6 @@ test("프로젝트 지도는 현재 백엔드 모듈과 React 진입점을 빠�
   for (const moduleName of reactModules) {
     assert.match(map, new RegExp(`frontend/${moduleName}/main\\.jsx`, "u"));
   }
-  assert.match(map, /state\/hanabit-hub\.sqlite.*뉴스 원장 v1은 미연결.*이미지 제작 기록 v2는 운영 색인·조회/u);
+  assert.match(map, /state\/hanabit-hub\.sqlite.*직접 업로드 출처\(v5\).*DC 편집실 상태/u);
   assert.doesNotMatch(map, /[A-Z]:\\Users\\/u);
 });
