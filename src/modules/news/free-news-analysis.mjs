@@ -188,13 +188,18 @@ function validateResult(value, contextCount, sourceText) {
   if (!EVIDENCE_TAGS.has(evidenceTag)) {
     throw new Error("뉴스 정보 성격 형식이 올바르지 않습니다.");
   }
-  const title = limited(value?.translation?.title, 120, "번역 제목");
+  const translatedTitle = cleanTranslatedText(value?.translation?.title);
   const translatedBody = cleanTranslatedText(value?.translation?.body);
   const body = preserveSourceStructure(
     sourceText,
-    limited(translatedBody || title, 4_000, "번역 본문"),
+    limited(translatedBody || translatedTitle, 4_000, "번역 본문"),
   );
   validateTranslationFidelity(sourceText, body);
+  const title = limited(
+    translatedTitle || [...body.replace(/[：:]$/u, "")].slice(0, 120).join(""),
+    120,
+    "번역 제목",
+  );
   return Object.freeze({
     translation: Object.freeze({
       title,
