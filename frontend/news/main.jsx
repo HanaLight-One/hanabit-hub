@@ -248,9 +248,18 @@ function DcPublicationPanel({ item, preview, busy, error, onPreview, onPublish }
         <span>DC POST PREVIEW</span>
         <strong>{preview.headText}</strong>
       </div>
+      {preview.fallbackCover?.used && (
+        <figure className="dc-cover-preview">
+          <img src={preview.fallbackCover.url} alt={`${preview.headText} 기본 커버`} />
+          <figcaption>원문 이미지가 없어 말머리 기본 커버를 첫 이미지로 첨부해요.</figcaption>
+        </figure>
+      )}
       <dl>
         <div><dt>제목</dt><dd>{preview.title}</dd></div>
-        <div><dt>이미지</dt><dd>{preview.imageCount}장 · 본문 최상단 첨부</dd></div>
+        <div>
+          <dt>이미지</dt>
+          <dd>{preview.imageCount}장 · 본문 최상단 첨부{preview.fallbackCover?.used ? " · 기본 커버 자동 추가" : ""}</dd>
+        </div>
       </dl>
       <div className="dc-copy-preview">
         <span>본문</span>

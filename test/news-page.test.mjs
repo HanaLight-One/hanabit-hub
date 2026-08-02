@@ -32,6 +32,7 @@ test("React 뉴스 검수실 화면과 승인 스크립트를 제공한다", asy
     assert.equal(script.includes("DC 원고 미리보기"), true);
     assert.equal(script.includes("publish-news-to-dc-now"), true);
     assert.equal(script.includes("수동 DC 게시"), true);
+    assert.equal(script.includes("기본 커버 자동 추가"), true);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

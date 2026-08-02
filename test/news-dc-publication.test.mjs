@@ -7,18 +7,21 @@ import { createNewsDcPublicationService } from "../src/modules/news/news-dc-publ
 
 const ID = "b".repeat(32);
 
-async function fixture({ approved = true } = {}) {
+async function fixture({ approved = true, withMedia = true } = {}) {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-dc-"));
   const publisherRoot = path.join(root, "publisher");
+  const coverRoot = path.join(root, "covers");
   const itemRoot = path.join(root, "news", "pending", ID);
   const scriptPath = path.join(root, "publish.cjs");
   await mkdir(path.join(itemRoot, "media"), { recursive: true });
   await mkdir(publisherRoot, { recursive: true });
+  await mkdir(coverRoot, { recursive: true });
   await Promise.all([
     writeFile(path.join(publisherRoot, "package.json"), "{}", "utf8"),
     writeFile(path.join(publisherRoot, ".env"), "PUBLISH_DRY_RUN=false", "utf8"),
     writeFile(scriptPath, "test", "utf8"),
-    writeFile(path.join(itemRoot, "media", "01.png"), "image", "utf8"),
+    writeFile(path.join(coverRoot, "news.png"), "cover", "utf8"),
+    ...(withMedia ? [writeFile(path.join(itemRoot, "media", "01.png"), "image", "utf8")] : []),
   ]);
   await writeFile(path.join(itemRoot, "item.json"), JSON.stringify({
     id: ID,
@@ -32,9 +35,9 @@ async function fixture({ approved = true } = {}) {
       dcApproval: approved ? { status: "approved", approvedAt: "2026-08-02T00:01:00Z" } : null,
       dcPublication: null,
     },
-    media: [{ file: "media/01.png", contentType: "image/png" }],
+    media: withMedia ? [{ file: "media/01.png", contentType: "image/png" }] : [],
   }), "utf8");
-  return { root, newsRoot: path.join(root, "news"), publisherRoot, scriptPath, itemRoot };
+  return { root, newsRoot: path.join(root, "news"), publisherRoot, scriptPath, itemRoot, coverRoot };
 }
 
 test("미리보기는 실제 게시 없이 안전한 공개 원고만 반환한다", async () => {
@@ -45,6 +48,7 @@ test("미리보기는 실제 게시 없이 안전한 공개 원고만 반환한�
       root: sample.newsRoot,
       enabled: true,
       publisherRoot: sample.publisherRoot,
+      coverRoot: sample.coverRoot,
       publisherScriptPath: sample.scriptPath,
       runPublisher: async () => { runs += 1; },
     });
@@ -62,6 +66,44 @@ test("미리보기는 실제 게시 없이 안전한 공개 원고만 반환한�
   }
 });
 
+test("원문 이미지가 없으면 말머리 기본 커버를 미리보기와 게시 작업에만 추가한다", async () => {
+  const sample = await fixture({ withMedia: false });
+  try {
+    let publishedMedia;
+    const service = createNewsDcPublicationService({
+      root: sample.newsRoot,
+      enabled: true,
+      publisherRoot: sample.publisherRoot,
+      coverRoot: sample.coverRoot,
+      publisherScriptPath: sample.scriptPath,
+      async runPublisher({ jobPath }) {
+        const job = JSON.parse(await readFile(jobPath, "utf8"));
+        publishedMedia = job.media;
+        await writeFile(job.resultPath, JSON.stringify({
+          status: "posted",
+          postId: "123457",
+          url: "https://gall.dcinside.com/mgallery/board/view/?id=chatgpt&no=123457",
+        }), "utf8");
+      },
+    });
+    const preview = await service.preview(ID);
+    assert.deepEqual(preview.fallbackCover, {
+      used: true,
+      id: "news",
+      url: "/api/news/dc-covers/news",
+    });
+    assert.equal(preview.imageCount, 1);
+    await service.publish(ID);
+    assert.equal(publishedMedia.length, 1);
+    assert.equal(publishedMedia[0].filename, "news.png");
+    assert.equal(publishedMedia[0].contentType, "image/png");
+    const saved = JSON.parse(await readFile(path.join(sample.itemRoot, "item.json"), "utf8"));
+    assert.deepEqual(saved.media, []);
+  } finally {
+    await rm(sample.root, { recursive: true, force: true });
+  }
+});
+
 test("승인된 원고는 게시자를 한 번만 실행하고 게시 영수증을 저장한다", async () => {
   const sample = await fixture();
   try {
@@ -70,6 +112,7 @@ test("승인된 원고는 게시자를 한 번만 실행하고 게시 영수증�
       root: sample.newsRoot,
       enabled: true,
       publisherRoot: sample.publisherRoot,
+      coverRoot: sample.coverRoot,
       publisherScriptPath: sample.scriptPath,
       now: () => new Date("2026-08-02T03:00:00.000Z"),
       async runPublisher({ jobPath }) {
@@ -104,12 +147,14 @@ test("승인 없는 뉴스와 비활성 게시자는 실제 실행을 거부한�
       root: sample.newsRoot,
       enabled: true,
       publisherRoot: sample.publisherRoot,
+      coverRoot: sample.coverRoot,
       publisherScriptPath: sample.scriptPath,
     });
     await assert.rejects(() => active.publish(ID), { code: "APPROVAL_REQUIRED" });
     const disabled = createNewsDcPublicationService({
       root: sample.newsRoot,
       enabled: false,
+      coverRoot: sample.coverRoot,
       publisherScriptPath: sample.scriptPath,
     });
     await assert.rejects(() => disabled.publish(ID), { code: "RUNTIME_UNAVAILABLE" });

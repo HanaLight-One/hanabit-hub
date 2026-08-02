@@ -71,3 +71,15 @@ test("DC 뉴스 원고는 결합문자가 남으면 실제 게시 준비를 막�
   assert.equal(draft.preflight.ready, false);
   assert.equal(draft.preflight.combiningMarkCount, 1);
 });
+
+test("원문 이미지가 없을 때만 기본 커버를 이미지 수에 포함한다", () => {
+  const sample = record();
+  sample.media = [];
+  const withCover = composeNewsDcCopy(sample, { fallbackCover: true });
+  const withoutCover = composeNewsDcCopy(sample);
+  assert.equal(withCover.imageCount, 1);
+  assert.equal(withCover.sourceImageCount, 0);
+  assert.equal(withCover.usesFallbackCover, true);
+  assert.equal(withoutCover.imageCount, 0);
+  assert.equal(withoutCover.usesFallbackCover, false);
+});

@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 import { createServer } from "../src/server.mjs";
 
@@ -61,4 +64,28 @@ test("실제 DC 게시 API는 같은 출처와 정확한 확인값을 모두 요
     assert.equal(response.status, 200);
     assert.equal(publications, 1);
   });
+});
+
+test("DC 기본 커버 API는 고정된 커버만 읽기 전용으로 제공한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-cover-route-"));
+  const target = path.join(root, "news.png");
+  await writeFile(target, "png-cover", "utf8");
+  try {
+    await withServer({
+      async findCover(id) {
+        return id === "news"
+          ? { target, size: 9, contentType: "image/png" }
+          : null;
+      },
+    }, async (baseUrl) => {
+      const found = await fetch(`${baseUrl}/api/news/dc-covers/news`);
+      assert.equal(found.status, 200);
+      assert.equal(found.headers.get("content-type"), "image/png");
+      assert.equal(await found.text(), "png-cover");
+      assert.equal((await fetch(`${baseUrl}/api/news/dc-covers/unknown`)).status, 404);
+      assert.equal((await fetch(`${baseUrl}/api/news/dc-covers/news`, { method: "POST" })).status, 405);
+    });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

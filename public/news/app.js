@@ -8265,7 +8265,18 @@ function fe({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 				className: "dc-preview-heading",
 				children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "DC POST PREVIEW" }), /* @__PURE__ */ (0, x.jsx)("strong", { children: t.headText })]
 			}),
-			/* @__PURE__ */ (0, x.jsxs)("dl", { children: [/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "제목" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: t.title })] }), /* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "이미지" }), /* @__PURE__ */ (0, x.jsxs)("dd", { children: [t.imageCount, "장 · 본문 최상단 첨부"] })] })] }),
+			t.fallbackCover?.used && /* @__PURE__ */ (0, x.jsxs)("figure", {
+				className: "dc-cover-preview",
+				children: [/* @__PURE__ */ (0, x.jsx)("img", {
+					src: t.fallbackCover.url,
+					alt: `${t.headText} 기본 커버`
+				}), /* @__PURE__ */ (0, x.jsx)("figcaption", { children: "원문 이미지가 없어 말머리 기본 커버를 첫 이미지로 첨부해요." })]
+			}),
+			/* @__PURE__ */ (0, x.jsxs)("dl", { children: [/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "제목" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: t.title })] }), /* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "이미지" }), /* @__PURE__ */ (0, x.jsxs)("dd", { children: [
+				t.imageCount,
+				"장 · 본문 최상단 첨부",
+				t.fallbackCover?.used ? " · 기본 커버 자동 추가" : ""
+			] })] })] }),
 			/* @__PURE__ */ (0, x.jsxs)("div", {
 				className: "dc-copy-preview",
 				children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "본문" }), /* @__PURE__ */ (0, x.jsx)("pre", { children: t.bodyText })]

@@ -7,6 +7,12 @@ const EMOJI_PATTERN = /\p{Extended_Pictographic}|\p{Regional_Indicator}|[\u{FE0F
 const COMBINING_MARK_PATTERN = /\p{M}/gu;
 const MEDIA_TYPES = new Set(["image/gif", "image/jpeg", "image/png", "image/webp"]);
 const ALLOWED_HEAD_TEXTS = new Set(["뉴스/소식", "💡 정보", "잡담", "AI창작"]);
+const COVER_FOR_HEAD_TEXT = new Map([
+  ["뉴스/소식", "news.png"],
+  ["💡 정보", "information.png"],
+  ["잡담", "chatter.png"],
+  ["AI창작", "ai-creation.png"],
+]);
 
 function argumentValue(name) {
   const index = process.argv.indexOf(name);
@@ -61,10 +67,15 @@ function validateJob(value, jobPath) {
   if (value.contentHash !== expectedHash) throw new Error("CONTENT_CHANGED");
   const newsRoot = path.dirname(path.dirname(path.dirname(jobPath)));
   const mediaRoot = path.resolve(newsRoot, "pending", value.id, "media");
+  const coverRoot = path.resolve(path.dirname(path.dirname(newsRoot)), "assets", "news", "dc-covers");
   for (const media of value.media) {
     const mediaPath = path.resolve(media.path ?? "");
+    const sourceMedia = mediaPath.startsWith(`${mediaRoot}${path.sep}`);
+    const coverMedia = path.dirname(mediaPath) === coverRoot &&
+      COVER_FOR_HEAD_TEXT.get(value.headTextName) === path.basename(mediaPath) &&
+      path.basename(mediaPath) === String(media.filename ?? "");
     if (!path.isAbsolute(media.path ?? "") ||
-        !mediaPath.startsWith(`${mediaRoot}${path.sep}`) ||
+        (!sourceMedia && !coverMedia) ||
         !/^[a-zA-Z0-9_-]+\.(gif|jpe?g|png|webp)$/u.test(String(media.filename ?? "")) ||
         !MEDIA_TYPES.has(media.contentType)) {
       throw new Error("INVALID_MEDIA");

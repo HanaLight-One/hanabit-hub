@@ -127,6 +127,9 @@ DC 원고는 `src/modules/news/news-dc-copy.mjs`가 태그·출처·번역·AI �
 `scripts/publish-news-to-dc.cjs`이며 `chatgpt` 갤러리의 `뉴스/소식`, `💡 정보`, `잡담`,
 `AI창작` 말머리만 허용한다. 모델은 후보를 제안하고 `news-dc-head-text.mjs`의 결정적
 라우터가 공식 출처·신뢰 인물 규칙을 적용해 최종 말머리를 선택한다.
+원문 이미지가 없는 게시물에는 `assets/news/dc-covers/`의 해당 말머리 PNG 한 장만
+게시 단계에서 추가하며, 원문 미디어 기록은 변경하지 않는다. 커버 조회와 미리보기는
+`news-dc-covers.mjs`, `news-dc-cover-route.mjs`가 고정 파일 allowlist로 제공한다.
 최종 제출은 한 번만 수행하고 불명확한 결과는 자동 재시도하지 않는다.
 Codex 검토 실행기와 날짜별 사용 영수증은
 `src/modules/news/codex-news-review.mjs`, `state/news/codex-review/`에 있다.

@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { createPendingNewsStore } from "./news-item-store.mjs";
 import { composeNewsDcCopy } from "./news-dc-copy.mjs";
 import { isAllowedNewsDcHeadText } from "./news-dc-head-text.mjs";
+import { createNewsDcCoverCatalog } from "./news-dc-covers.mjs";
 
 const ID_PATTERN = /^[a-f0-9]{32}$/u;
 const POSTED_STATUS = "posted";
@@ -78,11 +79,12 @@ export function createNewsDcPublicationService({
   enabled = false,
   publisherRoot = "",
   galleryId = "chatgpt",
+  coverRoot,
   publisherScriptPath,
   runPublisher = defaultRunPublisher,
   now = () => new Date(),
 } = {}) {
-  if (!path.isAbsolute(root ?? "") || !path.isAbsolute(publisherScriptPath ?? "")) {
+  if (!path.isAbsolute(root ?? "") || !path.isAbsolute(publisherScriptPath ?? "") || !path.isAbsolute(coverRoot ?? "")) {
     throw new TypeError("뉴스 상태와 게시 스크립트는 절대경로여야 합니다.");
   }
   if (enabled && !path.isAbsolute(publisherRoot ?? "")) {
@@ -93,6 +95,7 @@ export function createNewsDcPublicationService({
   }
 
   const store = createPendingNewsStore({ root });
+  const covers = createNewsDcCoverCatalog({ root: coverRoot });
   const jobRoot = path.join(root, "dc-publication-jobs");
   const active = new Set();
 
@@ -108,12 +111,18 @@ export function createNewsDcPublicationService({
   async function draftFor(id) {
     const safeId = validateId(id);
     const record = await store.read(safeId);
-    return { safeId, record, draft: composeNewsDcCopy(record, { sourceProfiles }) };
+    const hasSourceMedia = Array.isArray(record.media) && record.media.length > 0;
+    const draft = composeNewsDcCopy(record, { sourceProfiles, fallbackCover: !hasSourceMedia });
+    const cover = draft.usesFallbackCover ? await covers.forHeadText(draft.headText) : null;
+    if (draft.usesFallbackCover && !cover) {
+      throw publicationError("COVER_MISSING", "선택된 말머리의 기본 커버를 찾을 수 없습니다.");
+    }
+    return { safeId, record, draft, cover };
   }
 
   async function preview(id) {
     try {
-      const { safeId, record, draft } = await draftFor(id);
+      const { safeId, record, draft, cover } = await draftFor(id);
       const publication = safePublication(record.workflow?.dcPublication);
       const approved = record.workflow?.dcApproval?.status === "approved";
       const ready = await runtimeReady();
@@ -124,6 +133,7 @@ export function createNewsDcPublicationService({
         bodyText: draft.bodyText,
         imageCount: draft.imageCount,
         imagePlacement: draft.imagePlacement,
+        fallbackCover: cover ? { used: true, id: cover.id, url: cover.url } : { used: false },
         preflight: draft.preflight,
         publisherReady: ready,
         approvalRequired: !approved,
@@ -149,7 +159,7 @@ export function createNewsDcPublicationService({
       if (!(await runtimeReady())) {
         throw publicationError("RUNTIME_UNAVAILABLE", "DC 게시 실행 환경을 사용할 수 없습니다.");
       }
-      const { record, draft } = await draftFor(safeId);
+      const { record, draft, cover } = await draftFor(safeId);
       if (!isAllowedNewsDcHeadText(draft.headText)) {
         throw publicationError("HEAD_TEXT_NOT_ALLOWED", "허용되지 않은 DC 말머리입니다.");
       }
@@ -164,7 +174,9 @@ export function createNewsDcPublicationService({
         throw publicationError("ALREADY_SUBMITTED", "이미 게시 요청 또는 최종 영수증이 있습니다.");
       }
 
-      const mediaFiles = await store.mediaFiles(safeId);
+      const mediaFiles = cover
+        ? [{ target: cover.target, filename: cover.filename, contentType: cover.contentType }]
+        : await store.mediaFiles(safeId);
       const mediaByName = new Map((record.media ?? []).map((entry) => [path.basename(entry.file), entry]));
       for (const media of mediaFiles) {
         if (!(await isFile(media.target))) {
@@ -194,7 +206,7 @@ export function createNewsDcPublicationService({
         media: mediaFiles.map((media) => ({
           path: media.target,
           filename: media.filename,
-          contentType: String(mediaByName.get(media.filename)?.contentType ?? ""),
+          contentType: String(media.contentType ?? mediaByName.get(media.filename)?.contentType ?? ""),
         })),
       });
 
@@ -261,5 +273,5 @@ export function createNewsDcPublicationService({
     }
   }
 
-  return Object.freeze({ preview, publish });
+  return Object.freeze({ preview, publish, findCover: covers.find });
 }

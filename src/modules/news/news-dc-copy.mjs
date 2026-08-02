@@ -92,7 +92,7 @@ export function textToDcHtml(value) {
     .join("");
 }
 
-export function composeNewsDcCopy(record, { sourceProfiles = new Map() } = {}) {
+export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallbackCover = false } = {}) {
   if (!record?.workflow?.translation || !record?.workflow?.triage) {
     throw Object.assign(new Error("번역과 판정이 끝난 뉴스만 원고를 만들 수 있습니다."), {
       code: "NOT_REVIEWABLE",
@@ -154,7 +154,9 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map() } = {}) {
   const bodyText = bodyParts.join("\n").replace(/\n{3,}/gu, "\n\n").trim();
   const combiningMarkCount = (bodyText.match(COMBINING_MARK_PATTERN) ?? []).length +
     (title.match(COMBINING_MARK_PATTERN) ?? []).length;
-  const imageCount = Array.isArray(record.media) ? record.media.length : 0;
+  const sourceImageCount = Array.isArray(record.media) ? record.media.length : 0;
+  const usesFallbackCover = sourceImageCount === 0 && fallbackCover === true;
+  const imageCount = sourceImageCount + (usesFallbackCover ? 1 : 0);
   const warnings = [
     ...(counter.removed ? [`DC 비지원 이모지 ${counter.removed}개를 원고에서 제거했어요.`] : []),
     ...(links.omitted ? [`DC 필터 위험 경로가 포함된 링크 ${links.omitted}개를 원고에서 제외했어요.`] : []),
@@ -173,6 +175,8 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map() } = {}) {
     bodyHtml: textToDcHtml(bodyText),
     sections: Object.freeze(sections),
     imageCount,
+    sourceImageCount,
+    usesFallbackCover,
     imagePlacement: "start",
     preflight: Object.freeze({
       ready: combiningMarkCount === 0 && imageCount <= 10,
