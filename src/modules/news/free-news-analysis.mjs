@@ -128,6 +128,20 @@ function parseJson(value) {
   return JSON.parse(clean);
 }
 
+function retryCorrection(error) {
+  const message = String(error?.message ?? "");
+  if (message.includes("자립·가능 의미")) {
+    return "The previous translation flattened empower into generic assistance. Explicitly preserve that the person can do the action themselves.";
+  }
+  if (message.includes("관련 글 번역")) {
+    return "The previous response omitted or malformed contextTranslations. Return exactly one indexed translation for every supplied CONTEXT.";
+  }
+  if (message.includes("정보 성격")) {
+    return "The previous evidenceTag was invalid. Use only official, confirmed, inference, rumor, or opinion.";
+  }
+  return "The previous response failed local format validation. Return every required field with the exact JSON shape and allowed enum values, while keeping all translations non-empty.";
+}
+
 function validateContextTranslations(value, contextCount) {
   if (!Array.isArray(value) || value.length !== contextCount) {
     throw new Error("관련 글 번역 개수가 올바르지 않습니다.");
@@ -316,8 +330,9 @@ export async function invokeFreeNewsAnalysis(
   await mkdir(workRoot, { recursive: true });
   try {
     const contextCount = Array.isArray(record.original?.contexts) ? Math.min(3, record.original.contexts.length) : 0;
+    const basePrompt = buildPrompt(record);
     await Promise.all([
-      writeFile(promptPath, `${buildPrompt(record)}\n`, "utf8"),
+      writeFile(promptPath, `${basePrompt}\n`, "utf8"),
       writeFile(schemaPath, `${JSON.stringify(analysisSchema(contextCount), null, 2)}\n`, "utf8"),
       ...(contextCount > 0 ? [
         writeFile(contextPromptPath, `${buildContextTranslationPrompt(record)}\n`, "utf8"),
@@ -378,7 +393,14 @@ export async function invokeFreeNewsAnalysis(
         return validateResult(parsed, contextCount, record.original?.content);
       } catch (error) {
         lastError = error;
-        if (attempt < 3) await wait(5_000);
+        if (attempt < 3) {
+          await writeFile(
+            promptPath,
+            `${basePrompt}\n\nRETRY CORRECTION:\n${retryCorrection(error)}\n`,
+            "utf8",
+          );
+          await wait(5_000);
+        }
       }
     }
     throw lastError;

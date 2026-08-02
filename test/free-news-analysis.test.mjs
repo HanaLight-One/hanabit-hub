@@ -89,7 +89,11 @@ test("empowering의 자립 의미와 링크 소개 구조가 빠진 번역은 �
       async wait() {},
       async runProcess(command, args) {
         attempts += 1;
+        const promptPath = args[args.indexOf("-PromptFile") + 1];
         const outputPath = args[args.indexOf("-Output") + 1];
+        if (attempts === 2) {
+          assert.match(await readFile(promptPath, "utf8"), /previous translation flattened empower/u);
+        }
         const body = attempts === 1
           ? "ChatGPT로 아빠가 무언가를 만들도록 돕기"
           : "아빠가 직접 무언가를 만들 수 있도록 지원하는 ChatGPT.";
