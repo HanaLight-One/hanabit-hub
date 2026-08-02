@@ -48,6 +48,7 @@
 | 이미지 아카이브 | `/images` | `public/images/` | 정적 JavaScript |
 | 이미지 생성실 | `/images/create` | `public/images/create/` | 정적 JavaScript |
 | 화풍 관리 | `/images/styles` | `public/images/styles/` | 정적 JavaScript |
+| 오테 썸네일 관리 | `/images/theme-thumbnails` | `public/images/theme-thumbnails/` | 정적 JavaScript + 외부 배치 상태 JSON |
 | 이미지 휴지통 | `/images/trash` | `public/images/trash/` | 정적 JavaScript |
 | 오늘의 운세 | `/fortune` | `public/fortune/` | 정적 JavaScript |
 | 뉴스 검수실 | `/news` | `frontend/news/main.jsx` | React, 빌드 결과는 `public/news/app.js` |
@@ -87,7 +88,9 @@ HTTP 라우트는 검증과 응답만 맡고 실제 동작은 같은 기능 폴�
 | 이미지 생성 초안·작업 | `state/image-generation-*` | Hub가 만든 초안과 1장 작업 상태 | 제외 |
 | 이미지·테마·제작 기록 | 외부 설정 루트 | 기존 저장소를 이동 없이 연결 | 외부 |
 | 이미지 휴지통 | 외부 `stateRoot/trash/hub-v1/` | 추가 생성 파일의 복원 영수증과 격리 파일 | 외부 |
-| 오테 게시 썸네일 | 외부 `daily-image-pipeline-v2/assets/daily-theme-thumbnails/` | 10장 공용 자산과 최근 회피 가중 선택 | 외부 |
+| 오테 게시 썸네일 | 외부 `daily-image-pipeline-v2/assets/daily-theme-thumbnails/` | 숫자 이름 PNG 공용 자산, 최근 회피 가중 선택, 날짜별 강제 선택 | 외부 |
+
+세부 선택 규칙과 상태 파일 계약은 `docs/daily-theme-thumbnails.md`에 기록한다.
 | DC 편집실 | `state/dc-compose/` | 업로드 이미지와 게시 직전 격리 사본·영수증 | 제외 |
 | 운세 결과·게시 상태 | 외부 설정 루트 | 읽기 전용 연결 | 외부 |
 

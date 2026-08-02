@@ -30,6 +30,13 @@
         "codexExecutablePath": ""
       }
     },
+    "themeThumbnails": {
+      "enabled": false,
+      "assetRoot": "",
+      "historyPath": "",
+      "catalogPath": "",
+      "forcedPath": ""
+    },
     "fortune": {
       "enabled": false,
       "outputRoot": "",
@@ -57,5 +64,5 @@
     "timezone": "Asia/Seoul",
     "dayStartsAtHour": 2
   },
-  "allowedActions": ["restart-codex", "manage-image-trash", "publish-dc-compose"]
+  "allowedActions": ["restart-codex", "manage-image-trash", "publish-dc-compose", "manage-theme-thumbnails"]
 }

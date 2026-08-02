@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#090c10" />
+    <meta name="description" content="오늘의 테마 대표 썸네일 관리" />
+    <title>오테 썸네일 · Hanabit Hub</title>
+    <link rel="stylesheet" href="/images/styles.css" />
+    <link rel="stylesheet" href="/images/theme-thumbnails/page.css" />
+    <link rel="stylesheet" href="/codex-usage-indicator.css" />
+    <script src="/codex-usage-indicator.js" type="module"></script>
+    <script src="/images/theme-thumbnails/app.js" type="module"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/images" aria-label="이미지 홈으로 돌아가기">
+        <span class="brand-mark">H</span><span>HANABIT <b>THUMBNAILS</b></span>
+      </a>
+      <p id="connection" class="connection"><span></span> 썸네일 확인 중</p>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <p class="eyebrow">DAILY THEME COVER</p>
+          <h1>오늘의 테마<br /><em>첫인상 관리실.</em></h1>
+          <p class="intro">평소에는 최근 선택을 피해 가중 랜덤으로, 기념일에는 원하는 한 장을 날짜에 고정해요.</p>
+        </div>
+        <a class="back-link" href="/images">← 이미지 홈</a>
+      </section>
+
+      <section class="status-grid">
+        <article class="today-panel">
+          <p class="section-label">TODAY</p>
+          <h2 id="today-date">오늘</h2>
+          <div id="today-selection" class="today-selection">선택 기록을 불러오는 중이에요.</div>
+        </article>
+        <article class="force-panel">
+          <p class="section-label">DATE OVERRIDE</p>
+          <h2>날짜별 강제 선택</h2>
+          <form id="force-form">
+            <label>날짜<input id="force-date" type="date" required /></label>
+            <label>썸네일<select id="force-thumbnail" required></select></label>
+            <div class="button-row">
+              <button type="submit">이 날짜에 고정</button>
+              <button id="clear-force" class="secondary" type="button">이 날짜 예약 해제</button>
+            </div>
+          </form>
+          <p id="force-result" class="result" aria-live="polite"></p>
+        </article>
+      </section>
+
+      <section class="upload-panel">
+        <div>
+          <p class="section-label">ADD COVER</p>
+          <h2>새 썸네일 업로드</h2>
+          <p>PNG를 올리면 다음 번호로 저장돼요. 평소에 쓰지 않을 기념일 이미지는 업로드 뒤 가중치를 0으로 바꿔 주세요.</p>
+        </div>
+        <form id="upload-form">
+          <label>표시 이름<input id="upload-label" maxlength="60" placeholder="예: 크리스마스" /></label>
+          <label>PNG 파일<input id="upload-file" type="file" accept="image/png,.png" required /></label>
+          <button type="submit">썸네일 업로드</button>
+        </form>
+        <p id="upload-result" class="result" aria-live="polite"></p>
+      </section>
+
+      <section class="catalog-section">
+        <div class="section-heading">
+          <div><p class="section-label">COVER CATALOG</p><h2>썸네일 목록</h2></div>
+          <p>가중치 0 = 랜덤 제외 · 1 = 기본 · 최대 10</p>
+        </div>
+        <div id="thumbnail-list" class="thumbnail-list" aria-live="polite"></div>
+      </section>
+
+      <section class="history-grid">
+        <article><p class="section-label">RECENT</p><h2>최근 선택</h2><div id="recent-list" class="compact-list"></div></article>
+        <article><p class="section-label">SCHEDULE</p><h2>강제 선택 일정</h2><div id="forced-list" class="compact-list"></div></article>
+      </section>
+    </main>
+  </body>
+</html>
+

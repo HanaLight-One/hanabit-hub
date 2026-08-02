@@ -11,6 +11,7 @@ const DEFAULT_CONFIG = Object.freeze({
   port: 8790,
   integrations: {
     imageStudio: { enabled: false },
+    themeThumbnails: { enabled: false },
     fortune: { enabled: false },
     news: {
       codexReview: { enabled: false, executablePath: "", dailyLimit: 4 },
@@ -64,6 +65,7 @@ function validateConfig(config) {
     "publish-news-to-dc",
     "manage-image-trash",
     "publish-dc-compose",
+    "manage-theme-thumbnails",
   ]);
   const invalidAction = config.allowedActions.find(
     (action) => typeof action !== "string" || !knownActions.has(action),
@@ -99,6 +101,15 @@ function validateConfig(config) {
     }
     if (!path.isAbsolute(fortune.publisherStateRoot ?? "")) {
       throw new Error("운세 연동에는 publisherStateRoot 절대경로가 필요합니다.");
+    }
+  }
+
+  const themeThumbnails = config.integrations?.themeThumbnails;
+  if (themeThumbnails?.enabled) {
+    for (const key of ["assetRoot", "historyPath", "catalogPath", "forcedPath"]) {
+      if (!path.isAbsolute(themeThumbnails[key] ?? "")) {
+        throw new Error(`오늘의 테마 썸네일 ${key}는 절대경로여야 합니다.`);
+      }
     }
   }
 

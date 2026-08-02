@@ -52,6 +52,8 @@ import { handleProductionRecordRoute } from "./modules/images/production-record-
 import { createProductionRecordStore } from "./modules/images/production-records.mjs";
 import { createThemeHistory } from "./modules/images/theme-history.mjs";
 import { handleThemeRoute } from "./modules/images/theme-route.mjs";
+import { createThemeThumbnailManager } from "./modules/images/theme-thumbnails.mjs";
+import { handleThemeThumbnailsRoute } from "./modules/images/theme-thumbnails-route.mjs";
 import { createThemeService } from "./modules/images/theme-service.mjs";
 import { createTopicThemeSource } from "./modules/images/topic-theme-source.mjs";
 import { openHubDatabase } from "./modules/database/hub-database.mjs";
@@ -158,6 +160,15 @@ const themes =
         history: themeHistory,
         source: topicThemeSource,
         ...config.operations,
+      })
+    : null;
+const themeThumbnailConfig = config.integrations?.themeThumbnails;
+const themeThumbnails =
+  themeThumbnailConfig?.enabled
+    ? createThemeThumbnailManager({
+        ...themeThumbnailConfig,
+        enabled: config.allowedActions.includes("manage-theme-thumbnails"),
+        timeZone: config.operations.timezone,
       })
     : null;
 const codexControl = createCodexControl({
@@ -289,6 +300,8 @@ const PAGE_ROUTES = Object.freeze({
   "/images/create/": "images/create/index.html",
   "/images/styles": "images/styles/index.html",
   "/images/styles/": "images/styles/index.html",
+  "/images/theme-thumbnails": "images/theme-thumbnails/index.html",
+  "/images/theme-thumbnails/": "images/theme-thumbnails/index.html",
   "/images/trash": "images/trash/index.html",
   "/images/trash/": "images/trash/index.html",
   "/setup/discord": "setup/discord/index.html",
@@ -340,7 +353,7 @@ async function serveStatic(response, pathname) {
     response.writeHead(200, {
       "content-type": CONTENT_TYPES[path.extname(target)] ?? "application/octet-stream",
       "cache-control": "no-cache",
-      ...(pathname.startsWith("/setup/discord") || pathname.startsWith("/images/styles") || pathname.startsWith("/images/trash") || pathname.startsWith("/news") || pathname.startsWith("/notifications") || pathname.startsWith("/dc")
+      ...(pathname.startsWith("/setup/discord") || pathname.startsWith("/images/styles") || pathname.startsWith("/images/theme-thumbnails") || pathname.startsWith("/images/trash") || pathname.startsWith("/news") || pathname.startsWith("/notifications") || pathname.startsWith("/dc")
         ? {
             "content-security-policy":
               "default-src 'self'; img-src 'self' data:; style-src 'self'; " +
@@ -379,6 +392,7 @@ export function createServer({
   drafts = generationDrafts,
   generationExecutor = promptOnlyExecutor,
   styleAssetManager = styleAssets,
+  themeThumbnailManager = themeThumbnails,
   imageTrash = runtimeImageTrash,
   dcComposer = runtimeDcComposer,
 } = {}) {
@@ -589,6 +603,18 @@ export function createServer({
           response,
           url,
           manager: styleAssetManager,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
+        await handleThemeThumbnailsRoute({
+          request,
+          response,
+          url,
+          manager: themeThumbnailManager,
           sendJson,
         })
       ) {

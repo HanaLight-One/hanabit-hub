@@ -55,6 +55,7 @@ API 계약을 유지하면서 프런트엔드를 React로 전환하고, 백엔�
 /images            이미지 아카이브
 /images/create     추가 생성과 대기열
 /images/styles     화풍 파일 관리와 색인 상태
+/images/theme-thumbnails  오늘의 테마 대표 썸네일, 가중치와 날짜별 강제 선택 관리
 /images/trash      이미지 휴지통
 /dc                개인 DC 원고 편집실
 /fortune           오늘의 운세
