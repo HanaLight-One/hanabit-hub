@@ -181,3 +181,5 @@ Responses API 공용 텍스트 실행기의 복구 가능한 정본은 `tools/op
 - 무료 뉴스 분석기 무비용 준비 상태: `src/modules/system/free-text-runtime-status.mjs`
 - API: `GET /api/system/free-text-runtime` (경로·키·원문 오류는 반환하지 않음)
 - 홈 상태 표시: `public/index.html`, `public/app.js`
+- Discord/X 감시 로그의 최근 갱신 상태: `src/modules/system/news-watcher-status.mjs`
+- API: `GET /api/system/news-watcher` (로그 본문과 내부 경로는 반환하지 않음)

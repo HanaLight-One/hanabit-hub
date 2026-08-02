@@ -8,6 +8,8 @@ import { createCodexUsageService } from "./modules/system/codex-usage.mjs";
 import { handleCodexUsageRoute } from "./modules/system/codex-usage-route.mjs";
 import { createFreeTextRuntimeStatus } from "./modules/system/free-text-runtime-status.mjs";
 import { handleFreeTextRuntimeStatusRoute } from "./modules/system/free-text-runtime-status-route.mjs";
+import { createNewsWatcherStatus } from "./modules/system/news-watcher-status.mjs";
+import { handleNewsWatcherStatusRoute } from "./modules/system/news-watcher-status-route.mjs";
 import { createDiscordTokenSetup } from "./modules/news/discord-token-setup.mjs";
 import { handleDiscordTokenSetupRoute } from "./modules/news/discord-token-setup-route.mjs";
 import { createNewsReader } from "./modules/news/news-reader.mjs";
@@ -161,6 +163,9 @@ const freeTextRuntimeStatus = createFreeTextRuntimeStatus({
   pythonExecutablePath: generationConfig?.freeTextPythonExecutablePath,
   keyStorePath: generationConfig?.freeTextKeyStorePath,
 });
+const newsWatcherStatus = createNewsWatcherStatus({
+  signalPath: path.join(APP_ROOT, "state", "news", "logs", "discord-watcher.log"),
+});
 const discordTokenSetup = createDiscordTokenSetup({
   envPath: path.join(APP_ROOT, ".env"),
 });
@@ -312,6 +317,7 @@ export function createServer({
   systemControl = codexControl,
   systemUsage = codexUsage,
   systemFreeTextRuntime = freeTextRuntimeStatus,
+  systemNewsWatcher = newsWatcherStatus,
   discordSetup = discordTokenSetup,
   news = newsReader,
   newsAnalysisProcessor = newsProcessor,
@@ -367,6 +373,18 @@ export function createServer({
           response,
           pathname: url.pathname,
           runtimeStatus: systemFreeTextRuntime,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
+        await handleNewsWatcherStatusRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          watcherStatus: systemNewsWatcher,
           sendJson,
         })
       ) {

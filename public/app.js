@@ -1,6 +1,7 @@
 const statusElement = document.querySelector("#server-status");
 const serverStatusCopy = document.querySelector("#server-status-copy");
 const freeTextRuntimeStatus = document.querySelector("#free-text-runtime-status");
+const newsWatcherStatus = document.querySelector("#news-watcher-status");
 const codexStatusElement = document.querySelector("#codex-control-status");
 const restartCodexButton = document.querySelector("#restart-codex");
 
@@ -34,6 +35,25 @@ async function loadFreeTextRuntimeStatus() {
   } catch {
     freeTextRuntimeStatus.textContent = "무료 뉴스 분석기 · 상태 확인 필요";
     freeTextRuntimeStatus.classList.remove("ready");
+  }
+}
+
+async function loadNewsWatcherStatus() {
+  try {
+    const response = await fetch("/api/system/news-watcher", { cache: "no-store" });
+    const status = await response.json();
+    if (!response.ok) throw new Error("Unavailable");
+
+    const copy = status.ready
+      ? "Discord/X 뉴스 감시기 · 최근 신호 정상"
+      : status.state === "stale"
+        ? "Discord/X 뉴스 감시기 · 최근 신호 지연"
+        : "Discord/X 뉴스 감시기 · 상태 확인 필요";
+    newsWatcherStatus.textContent = copy;
+    newsWatcherStatus.classList.toggle("ready", Boolean(status.ready));
+  } catch {
+    newsWatcherStatus.textContent = "Discord/X 뉴스 감시기 · 상태 확인 필요";
+    newsWatcherStatus.classList.remove("ready");
   }
 }
 
@@ -84,3 +104,4 @@ restartCodexButton.addEventListener("click", async () => {
 
 await loadCodexControl();
 await loadFreeTextRuntimeStatus();
+await loadNewsWatcherStatus();
