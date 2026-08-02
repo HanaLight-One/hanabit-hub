@@ -227,6 +227,7 @@ const CONTENT_TYPES = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml; charset=utf-8",
   ".webmanifest": "application/manifest+json; charset=utf-8",
 };
 const PAGE_ROUTES = Object.freeze({
@@ -257,7 +258,11 @@ function sendJson(response, statusCode, payload) {
 
 function resolvePublicFile(pathname) {
   const relative =
-    pathname === "/" ? "index.html" : PAGE_ROUTES[pathname] ?? pathname.slice(1);
+    pathname === "/"
+      ? "index.html"
+      : pathname === "/favicon.ico"
+        ? "favicon.svg"
+        : PAGE_ROUTES[pathname] ?? pathname.slice(1);
   if (!relative || relative.includes("\0")) return null;
 
   const target = path.resolve(PUBLIC_ROOT, relative);

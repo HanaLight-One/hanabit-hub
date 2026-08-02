@@ -48,3 +48,22 @@ test("이미지 화면은 오늘 이미지 부재를 경로 오류와 구분한�
     );
   });
 });
+
+test("공용 파비콘과 기존 favicon.ico 요청을 모두 제공한다", async () => {
+  await withServer(async (baseUrl) => {
+    const [homeResponse, svgResponse, legacyResponse] = await Promise.all([
+      fetch(baseUrl),
+      fetch(`${baseUrl}/favicon.svg`),
+      fetch(`${baseUrl}/favicon.ico`),
+    ]);
+    const homeBody = await homeResponse.text();
+    const svgBody = await svgResponse.text();
+
+    assert.equal(homeBody.includes('rel="icon" href="/favicon.svg"'), true);
+    assert.equal(svgResponse.status, 200);
+    assert.match(svgResponse.headers.get("content-type"), /^image\/svg\+xml/u);
+    assert.equal(svgBody.includes("하나빛 H"), true);
+    assert.equal(legacyResponse.status, 200);
+    assert.match(legacyResponse.headers.get("content-type"), /^image\/svg\+xml/u);
+  });
+});
