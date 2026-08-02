@@ -19,13 +19,16 @@ function limited(value, maximum, label) {
   return text;
 }
 
-function translatedText(value, maximum, label) {
-  const cleaned = String(value ?? "")
+function cleanTranslatedText(value) {
+  return String(value ?? "")
     .replace(/https?:\/\/\S+/giu, " ")
     .replace(/\b(?:pic\.)?twitter\.com\/\S+/giu, " ")
     .replace(/\s+/gu, " ")
     .trim();
-  return limited(cleaned, maximum, label);
+}
+
+function translatedText(value, maximum, label) {
+  return limited(cleanTranslatedText(value), maximum, label);
 }
 
 function parseJson(value) {
@@ -63,10 +66,12 @@ function validateResult(value, contextCount) {
   if (!EVIDENCE_TAGS.has(evidenceTag)) {
     throw new Error("뉴스 정보 성격 형식이 올바르지 않습니다.");
   }
+  const title = limited(value?.translation?.title, 120, "번역 제목");
+  const translatedBody = cleanTranslatedText(value?.translation?.body);
   return Object.freeze({
     translation: Object.freeze({
-      title: limited(value?.translation?.title, 120, "번역 제목"),
-      body: translatedText(value?.translation?.body, 4_000, "번역 본문"),
+      title,
+      body: limited(translatedBody || title, 4_000, "번역 본문"),
     }),
     contextTranslations: validateContextTranslations(value?.contextTranslations, contextCount),
     triage: Object.freeze({

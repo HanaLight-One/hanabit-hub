@@ -117,6 +117,8 @@ export function createNewsProcessor({ stateRoot, runnerPath, analyze = invokeFre
           workflow: {
             ...current.workflow,
             status: "translation_failed",
+            translation: null,
+            contextTranslations: null,
             analysisFailure: {
               code: failureCode(error),
               failedAt: now().toISOString(),
@@ -170,6 +172,7 @@ export function createNewsProcessor({ stateRoot, runnerPath, analyze = invokeFre
         ...record.workflow,
         status: "pending_translation",
         translation: null,
+        contextTranslations: null,
         freeTriage: null,
         triage: null,
         codexReview: null,

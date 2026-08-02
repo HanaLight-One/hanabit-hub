@@ -52,12 +52,12 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
   }
 });
 
-test("URL만 남긴 원문 번역 본문은 거부한다", async () => {
+test("URL만 남긴 짧은 원문 번역 본문은 원문 전용 제목 번역으로 복구한다", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-url-only-"));
   const runnerPath = path.join(root, "runner.ps1");
   await writeFile(runnerPath, "test", "utf8");
   try {
-    await assert.rejects(() => invokeFreeNewsAnalysis({
+    const result = await invokeFreeNewsAnalysis({
       id: "4".repeat(32),
       source: { type: "x-post", account: "gdb" },
       original: { content: "Ask ChatGPT Work to do any recurring task https://example.com/post", contexts: [] },
@@ -73,7 +73,8 @@ test("URL만 남긴 원문 번역 본문은 거부한다", async () => {
           triage: { decision: "publish", confidence: 0.9, importance: "high", evidenceTag: "inference", reason: "반복 작업", advice: "유추로 게시", signals: [] },
         }), "utf8");
       },
-    }), /번역 본문 형식/);
+    });
+    assert.equal(result.translation.body, "반복 작업");
   } finally {
     await rm(root, { recursive: true, force: true });
   }
