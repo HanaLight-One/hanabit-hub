@@ -30,7 +30,8 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
         assert.match(prompt, /One more day/);
         assert.match(prompt, /CONTEXT 1 RELATION: linked-post/);
         assert.match(prompt, /A new model is available today/);
-        assert.match(prompt, /Translate only SOURCE TEXT/);
+        assert.match(prompt, /translation object must contain only SOURCE TEXT/);
+        assert.match(prompt, /Do not omit CONTEXT translations/);
         assert.match(prompt, /credible insider explicitly saying they used a named capability is usually inference/);
         assert.match(prompt, /newsworthiness separately from certainty/);
         await mkdir(path.dirname(outputPath), { recursive: true });
