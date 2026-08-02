@@ -178,3 +178,6 @@ Responses API 공용 텍스트 실행기의 복구 가능한 정본은 `tools/op
 - 안전 경계와 상세 계약: `docs/codex-usage-and-daily-manifests.md`
 - 전 화면 공용 Codex 잔량 표시: `public/codex-usage-indicator.js`,
   `public/codex-usage-indicator.css` (각 화면 상단 헤더 또는 홈 우측 상단에 장착)
+- 무료 뉴스 분석기 무비용 준비 상태: `src/modules/system/free-text-runtime-status.mjs`
+- API: `GET /api/system/free-text-runtime` (경로·키·원문 오류는 반환하지 않음)
+- 홈 상태 표시: `public/index.html`, `public/app.js`

@@ -1,5 +1,6 @@
 const statusElement = document.querySelector("#server-status");
 const serverStatusCopy = document.querySelector("#server-status-copy");
+const freeTextRuntimeStatus = document.querySelector("#free-text-runtime-status");
 const codexStatusElement = document.querySelector("#codex-control-status");
 const restartCodexButton = document.querySelector("#restart-codex");
 
@@ -13,6 +14,27 @@ try {
   serverStatusCopy.textContent = "연결됨";
 } catch {
   serverStatusCopy.textContent = "연결 확인 필요";
+}
+
+async function loadFreeTextRuntimeStatus() {
+  try {
+    const response = await fetch("/api/system/free-text-runtime", { cache: "no-store" });
+    const status = await response.json();
+    if (!response.ok) throw new Error("Unavailable");
+
+    const labels = [
+      status.components?.runner?.ready && status.components.runner.tracked
+        ? "Git 정본"
+        : "실행기 확인 필요",
+      status.components?.python?.ready ? "Python" : "Python 확인 필요",
+      status.components?.keyStore?.ready ? "암호화 키" : "암호화 키 확인 필요",
+    ];
+    freeTextRuntimeStatus.textContent = `무료 뉴스 분석기 · ${labels.join(" · ")}`;
+    freeTextRuntimeStatus.classList.toggle("ready", Boolean(status.ready));
+  } catch {
+    freeTextRuntimeStatus.textContent = "무료 뉴스 분석기 · 상태 확인 필요";
+    freeTextRuntimeStatus.classList.remove("ready");
+  }
 }
 
 async function loadCodexControl() {
@@ -61,3 +83,4 @@ restartCodexButton.addEventListener("click", async () => {
 });
 
 await loadCodexControl();
+await loadFreeTextRuntimeStatus();

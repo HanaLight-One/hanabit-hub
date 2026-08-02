@@ -183,6 +183,24 @@ h1 em {
   color: var(--muted);
 }
 
+.status-stack {
+  display: grid;
+  justify-items: end;
+  gap: 9px;
+}
+
+.runtime-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: right;
+}
+
+.runtime-status.ready {
+  color: var(--accent);
+}
+
 .status-dot {
   width: 9px;
   height: 9px;
@@ -255,6 +273,14 @@ h1 em {
   .status-card {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .status-stack {
+    justify-items: start;
+  }
+
+  .runtime-status {
+    text-align: left;
   }
 
   .emergency-control summary {
