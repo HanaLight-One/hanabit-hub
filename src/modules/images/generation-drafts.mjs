@@ -9,7 +9,7 @@ const MODES = new Set(["new", "same-combination", "same-characters", "same-style
 const SOURCE_MODES = new Set(["same-combination", "same-characters", "same-style"]);
 const CHARACTER_MODES = new Set(["auto", "none", "custom"]);
 const STYLE_MODES = new Set(["auto", "none", "selected", "prompt", "rendering"]);
-const NO_CHARACTER_STYLE_MODES = new Set(["none", "selected", "prompt", "rendering"]);
+const NO_CHARACTER_STYLE_MODES = new Set(["auto", "none", "selected", "prompt", "rendering"]);
 const PURPOSES = new Set(["theme-followup", "free-play"]);
 const MAX_CUSTOM_CHARACTERS = 6;
 const MAX_SELECTED_STYLES = 3;
@@ -198,9 +198,14 @@ export function classifyDraftExecution(draft) {
   ) return "prompt-only";
   if (
     draft.route === "guided" &&
-    draft.characters?.mode === "custom" &&
-    draft.characters.ids?.length >= 1 &&
-    draft.characters.ids.length <= MAX_CUSTOM_CHARACTERS
+    (
+      draft.characters?.mode === "auto" ||
+      (
+        draft.characters?.mode === "custom" &&
+        draft.characters.ids?.length >= 1 &&
+        draft.characters.ids.length <= MAX_CUSTOM_CHARACTERS
+      )
+    )
   ) return "guided-cast";
   return null;
 }

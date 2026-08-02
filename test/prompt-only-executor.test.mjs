@@ -41,6 +41,12 @@ async function fixture(callback, { now } = {}) {
           image_anchor_path: path.join(root, "haila.png"),
         },
       },
+      relationship_groups: [{
+        id: "haila-solo",
+        label: "헤일라",
+        note: "quiet daily life",
+        members: ["헤일라"],
+      }],
       pink_bridge: { appearance_prompt: "adult Pink-Bridge identity anchor" },
     }), "utf8"),
     writeFile(pythonExecutablePath, "test", "utf8"),
@@ -294,6 +300,50 @@ test("등장인물 없이 고른 두 화풍을 혼합해 같은 worker 계약으
   });
 });
 
+test("자동 인물과 자동 화풍은 실행 전에 실제 선택값으로 작업 기록에 확정한다", async () => {
+  await fixture(async ({ drafts, executor, jobRoot }) => {
+    const draft = await drafts.create({
+      prompt: "새벽 시장에서 간식을 고른다",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "auto", ids: [] },
+      style: { mode: "auto", id: null },
+    });
+    const started = await executor.start(draft.id);
+    const job = JSON.parse(await readFile(path.join(jobRoot, `${draft.id}.json`), "utf8"));
+    const context = JSON.parse(
+      (await readFile(path.join(jobRoot, `${draft.id}.worker-context.json`), "utf8")).replace(/^\uFEFF/u, ""),
+    );
+    assert.equal(started.executionMode, "guided-cast");
+    assert.deepEqual(job.characters, { mode: "custom", ids: ["헤일라"] });
+    assert.equal(job.style.mode, "selected");
+    assert.equal(["calm", "vivid"].includes(job.style.id), true);
+    assert.deepEqual(job.style.ids, [job.style.id]);
+    assert.equal(context.guided_selection.style_id, job.style.id);
+    assert.equal(job.relationGroup, "haila-solo");
+  });
+});
+
+test("인물 없음과 자동 화풍은 외부 대상을 유지하고 실제 화풍만 확정한다", async () => {
+  await fixture(async ({ drafts, executor, jobRoot }) => {
+    const draft = await drafts.create({
+      prompt: "목록 밖의 탐험 로봇이 빙하 동굴을 조사한다",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "none", ids: [] },
+      style: { mode: "auto", id: null },
+    });
+    const started = await executor.start(draft.id);
+    const job = JSON.parse(await readFile(path.join(jobRoot, `${draft.id}.json`), "utf8"));
+    assert.equal(started.executionMode, "prompt-only");
+    assert.deepEqual(job.characters, { mode: "none", ids: [] });
+    assert.equal(job.style.mode, "selected");
+    assert.equal(["calm", "vivid"].includes(job.style.id), true);
+  });
+});
+
 test("20분 넘게 갱신되지 않은 작업은 오류·내부 경로 없이 확인 필요로 표시한다", async () => {
   const current = new Date("2026-08-01T03:00:00.000Z");
   await fixture(async ({ drafts, executor, jobRoot }) => {
@@ -323,7 +373,7 @@ test("20분 넘게 갱신되지 않은 작업은 오류·내부 경로 없이 �
   }, { now: () => current });
 });
 
-test("자동 선택 안내 생성 초안은 실제 worker 실행을 거부한다", async () => {
+test("오테 추가에서도 자동 선택 초안은 worker를 정확히 한 번 시작한다", async () => {
   await fixture(async ({ drafts, executor, launches }) => {
     const draft = await drafts.create({
       prompt: "자동으로 선택하는 장면",
@@ -333,8 +383,9 @@ test("자동 선택 안내 생성 초안은 실제 worker 실행을 거부한다
       characters: { mode: "auto", ids: [] },
       style: { mode: "auto", id: null },
     });
-    await assert.rejects(() => executor.start(draft.id), /아직 실제 생성/);
-    assert.equal(launches.length, 0);
+    const started = await executor.start(draft.id);
+    assert.equal(started.executionMode, "guided-cast");
+    assert.equal(launches.length, 1);
   });
 });
 

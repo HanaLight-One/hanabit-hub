@@ -202,6 +202,28 @@ test("저장 화풍 여러 개는 worker가 이해하는 단일 혼합 화풍으
   assert.match(context.selected_style.content, /one coherent visual language/);
 });
 
+test("자동 인물과 자동 화풍은 실제 자산 ID로 결정되어 worker 문맥에 남는다", async () => {
+  const { assetIndexPath, outputRoot } = await fixture();
+  const context = await buildImageStudioQueueContext(
+    {
+      id: "automatic-cast-style",
+      prompt: "새벽 시장에서 간식을 고른다",
+      count: 1,
+      mode: "guided-cast",
+      purpose: "free-play",
+      characters: { mode: "auto", ids: [] },
+      style: { mode: "auto", id: null },
+      useImageAnchors: false,
+    },
+    { assetIndexPath, outputRoot },
+  );
+  assert.equal(context.job.mode, "cast");
+  assert.deepEqual(context.guided_selection.character_ids, ["노아"]);
+  assert.equal(["calm", "vivid"].includes(context.guided_selection.style_id), true);
+  assert.deepEqual(context.guided_selection.style_ids, [context.guided_selection.style_id]);
+  assert.equal(context.selected_style.id, context.guided_selection.style_id);
+});
+
 test("인물 없는 고정 렌더링도 locked style worker 문맥을 사용한다", async () => {
   const { assetIndexPath, outputRoot } = await fixture();
   const context = await buildImageStudioQueueContext(

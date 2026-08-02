@@ -666,7 +666,7 @@ elements.form.addEventListener("submit", (event) => {
   const sourceImageId = source;
   const useImageAnchors = data.has("use-image-anchors");
   const route =
-    data.get("mode") === "new" && characterSelection.mode === "none" && ["selected", "prompt", "rendering"].includes(styleSelection.mode)
+    data.get("mode") === "new" && characterSelection.mode === "none" && ["auto", "selected", "prompt", "rendering"].includes(styleSelection.mode)
       ? "prompt-only"
       : "guided";
 
@@ -716,8 +716,8 @@ elements.draftButton.addEventListener("click", async () => {
     if (!response.ok) throw new Error(result.error || "초안을 저장하지 못했습니다.");
     elements.previewMessage.textContent =
       result.route === "prompt-only"
-        ? result.styleMode === "selected"
-          ? "선택 화풍과 프롬프트 초안을 저장했어요. 아래 버튼에서 실제 1장 생성을 확인할 수 있어요."
+        ? ["auto", "selected"].includes(result.styleMode)
+          ? "화풍 선택과 프롬프트 초안을 저장했어요. 자동 선택은 실행 시 확정되어 제작 기록에 남아요."
           : "프롬프트 자유 생성 초안을 저장했어요. Python과 무료 API는 실행하지 않았습니다."
         : result.executionMode === "guided-cast"
           ? "선택한 인물 안내 생성 초안을 저장했어요. 아래 버튼에서 실제 1장 생성을 확인할 수 있어요."
@@ -728,8 +728,10 @@ elements.draftButton.addEventListener("click", async () => {
     elements.executeButton.hidden = false;
     elements.executeButton.disabled = !result.executionMode;
     elements.executeButton.textContent = result.executionMode === "prompt-only"
-      ? result.styleMode === "selected"
-        ? "⚡ 선택 화풍으로 1장 실제 생성"
+      ? ["auto", "selected"].includes(result.styleMode)
+        ? result.styleMode === "auto"
+          ? "⚡ 자동 화풍으로 1장 실제 생성"
+          : "⚡ 선택 화풍으로 1장 실제 생성"
         : "⚡ 프롬프트로 1장 실제 생성"
       : result.executionMode === "guided-cast"
         ? "⚡ 선택 인물로 1장 실제 생성"

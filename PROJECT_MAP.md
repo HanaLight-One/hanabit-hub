@@ -232,6 +232,8 @@ publication-jobs/` 아래에 격리 사본을 만든 뒤 `scripts/publish-dc-com
 - 오테 완료 manifest -> 이미지 SQLite 제작 기록: `src/modules/images/image-metadata-catalog.mjs`
 - 추가 생성 작업 카드 -> 안전한 프롬프트·선택 인물·최대 3개 저장 화풍 혼합·결과 이미지와 후속 생성 링크:
   `src/modules/images/prompt-only-executor.mjs`, `public/images/create/app.js`
+- 추가 생성 자동 선택은 초안 ID로 결정적으로 인물 관계 그룹과 저장 화풍을 고르고,
+  worker 시작 전에 실제 인물·화풍 ID를 작업 JSON과 이미지 제작 기록에 확정한다.
 - 직접 업로드 소스 -> `POST /api/images/source-uploads`가 최대 20MB PNG·JPG·WebP를
   Hub 상태 폴더에 저장하고, 새 장면 초안의 `sourceImageId`와 worker의
   `user_reference_image`로만 전달한다. 제작 기록이 없는 업로드는 이어 만들기가 아니라

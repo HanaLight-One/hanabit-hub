@@ -141,6 +141,30 @@ test("저장 화풍은 중복 없이 최대 3개를 혼합 선택으로 보존�
   });
 });
 
+test("자동 인물·자동 화풍과 인물 없음·자동 화풍을 실제 실행 대상으로 분류한다", async () => {
+  await fixture(async ({ store }) => {
+    const automatic = await store.create({
+      prompt: "누군가 새벽 시장에서 따뜻한 음료를 고른다",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "auto", ids: [] },
+      style: { mode: "auto", id: null },
+    });
+    const externalSubject = await store.create({
+      prompt: "목록 밖의 탐험 로봇이 빙하 동굴을 조사한다",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "none", ids: [] },
+      style: { mode: "auto", id: null },
+    });
+    assert.equal(automatic.executionMode, "guided-cast");
+    assert.equal(externalSubject.route, "prompt-only");
+    assert.equal(externalSubject.executionMode, "prompt-only");
+  });
+});
+
 test("초안은 현재 옵션과 존재하는 원본만 허용한다", async () => {
   await fixture(async ({ store }) => {
     await assert.rejects(

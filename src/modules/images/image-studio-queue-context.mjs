@@ -199,6 +199,19 @@ function selectRelationshipPackages(job, index) {
   return selected;
 }
 
+function selectAutomaticCharacterIds(job, index) {
+  const [relationshipPackage] = selectRelationshipPackages(job, index);
+  if (relationshipPackage?.characters?.length) {
+    return relationshipPackage.characters.map((character) => character.name).slice(0, 3);
+  }
+  const candidates = Object.entries(index.characters || {})
+    .filter(([, character]) => character?.source !== "special_guest")
+    .map(([id]) => id)
+    .sort((left, right) => left.localeCompare(right, "ko"));
+  if (!candidates.length) return [];
+  return [candidates[stableIndex(`${job.id}:automatic-character`, candidates.length)]];
+}
+
 export async function buildImageStudioQueueContext(
   job,
   {
@@ -260,6 +273,8 @@ export async function buildImageStudioQueueContext(
     const index = JSON.parse(await readFile(assetIndexPath, "utf8"));
     const characterIds = job.mode === "pink-bridge"
       ? ["pink-bridge"]
+      : job.characters?.mode === "auto"
+        ? selectAutomaticCharacterIds(job, index)
       : Array.isArray(job.characters?.ids)
         ? job.characters.ids
         : [];
@@ -280,6 +295,9 @@ export async function buildImageStudioQueueContext(
     context.guided_selection = {
       character_ids: characterIds,
       style_id: hasDraftStyle ? context.selected_style.id : null,
+      style_ids: hasDraftStyle
+        ? context.selected_style.component_ids ?? [context.selected_style.id]
+        : [],
       image_anchors_enabled: imageAnchorsEnabled,
     };
     return context;

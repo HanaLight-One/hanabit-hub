@@ -181,7 +181,7 @@ export function createPromptOnlyExecutor({
       count: 1,
       mode: executionMode === "guided-cast"
         ? "guided-cast"
-        : draft.style?.mode === "selected"
+        : ["auto", "selected"].includes(draft.style?.mode)
           ? "selected-style"
           : ["prompt", "rendering"].includes(draft.style?.mode)
             ? "prompt-style"
@@ -200,7 +200,25 @@ export function createPromptOnlyExecutor({
 
     try {
       const context = await buildContext(job, { assetIndexPath, outputRoot });
-      await writeJsonAtomic(target.job, job);
+      const resolvedCharacterIds = Array.isArray(context.guided_selection?.character_ids)
+        ? context.guided_selection.character_ids.map(String).slice(0, 6)
+        : [];
+      const resolvedStyleIds = Array.isArray(context.guided_selection?.style_ids)
+        ? context.guided_selection.style_ids.map(String).filter(Boolean).slice(0, 3)
+        : draft.style?.mode === "auto" && context.selected_style?.id
+          ? [String(context.selected_style.id)]
+          : [];
+      const resolvedJob = {
+        ...job,
+        characters: draft.characters?.mode === "auto" && resolvedCharacterIds.length
+          ? { mode: "custom", ids: resolvedCharacterIds }
+          : job.characters,
+        style: draft.style?.mode === "auto" && resolvedStyleIds.length
+          ? { mode: "selected", id: resolvedStyleIds[0], ids: resolvedStyleIds }
+          : job.style,
+        relationGroup: context.cast_packages?.[0]?.relationship?.id ?? null,
+      };
+      await writeJsonAtomic(target.job, resolvedJob);
       await writeContext(target.context, context);
       await receiptHandle.writeFile(JSON.stringify({ id: safeId, status: "started", startedAt }), "utf8");
       await receiptHandle.close();
