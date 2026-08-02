@@ -126,6 +126,11 @@ Codex 검토 실행기와 날짜별 사용 영수증은
 `src/modules/news/news-source-profiles.mjs`에서 만들며, 이후 게시 문구도 이 공개
 프로필을 재사용할 수 있다.
 
+Responses API 공용 텍스트 실행기의 복구 가능한 정본은 `tools/openai-free/`에 있다.
+운영 경로는 `config.local.json`으로 계속 외부 주입하며, 정본 동기화는
+`scripts/sync-openai-free-runner.ps1`의 고정 allowlist와 명시적 확인 문구를 거친다.
+키·DPAPI 암호문·가상환경·실행 결과는 정본과 Git에 포함하지 않는다.
+
 ## 이미지와 운세 연결 경계
 
 - 이미지 파일, Python 파이프라인, 생성 자산과 기존 8787은 이동하지 않는다.
