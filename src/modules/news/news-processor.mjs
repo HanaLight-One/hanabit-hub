@@ -117,5 +117,35 @@ export function createNewsProcessor({ stateRoot, runnerPath, analyze = invokeFre
     return process(id);
   }
 
-  return Object.freeze({ process, retry });
+  async function reprocess(id) {
+    const current = await store.read(id);
+    const workflow = current.workflow ?? {};
+    if (
+      !["pending_review", "ignored"].includes(workflow.status) ||
+      workflow.dcApproval ||
+      workflow.dcPublication
+    ) {
+      const error = new Error("승인·게시 전의 판정 완료 뉴스만 새 정책으로 다시 판정할 수 있습니다.");
+      error.code = "NOT_REPROCESSABLE";
+      throw error;
+    }
+    const nextRevision = Math.max(1, Number(workflow.analysisRevision) || 1) + 1;
+    await store.update(id, (record) => ({
+      ...record,
+      workflow: {
+        ...record.workflow,
+        status: "pending_translation",
+        translation: null,
+        freeTriage: null,
+        triage: null,
+        codexReview: null,
+        analysisFailure: null,
+        analysisRevision: nextRevision,
+        reanalysisRequestedAt: now().toISOString(),
+      },
+    }));
+    return process(id);
+  }
+
+  return Object.freeze({ process, retry, reprocess });
 }

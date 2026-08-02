@@ -26,6 +26,8 @@ test("React 뉴스 검수실 화면과 승인 스크립트를 제공한다", asy
     assert.equal(script.includes("누구예요?"), true);
     assert.equal(script.includes("정보 성격"), true);
     assert.equal(script.includes("inference: \"유추\""), true);
+    assert.equal(script.includes("AUTO PUBLISH GATE"), true);
+    assert.equal(script.includes("새 정책으로 다시 판정"), true);
     assert.equal(script.includes("approve-dc-publication"), true);
   } finally {
     await new Promise((resolve) => server.close(resolve));

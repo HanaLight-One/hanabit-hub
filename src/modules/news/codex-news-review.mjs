@@ -187,7 +187,11 @@ export function createCodexNewsReviewer({
     if (!shouldEscalateToCodex(record, freeResult)) return Object.freeze({ status: "not_needed" });
     const date = seoulDate(now());
     const dateRoot = path.join(receiptsRoot, date);
-    const receiptPath = path.join(dateRoot, `${record.id}.json`);
+    const revision = Number.isInteger(record.workflow?.analysisRevision) && record.workflow.analysisRevision > 1
+      ? record.workflow.analysisRevision
+      : 1;
+    const receiptName = revision === 1 ? record.id : `${record.id}-r${revision}`;
+    const receiptPath = path.join(dateRoot, `${receiptName}.json`);
     try {
       const receipt = JSON.parse(await readFile(receiptPath, "utf8"));
       return Object.freeze({ ...receipt, reused: true });
@@ -196,14 +200,14 @@ export function createCodexNewsReviewer({
     }
     await mkdir(dateRoot, { recursive: true });
     const entries = await readdir(dateRoot, { withFileTypes: true });
-    const used = entries.filter((entry) => entry.isFile() && /^[a-f0-9]{32}\.json$/u.test(entry.name)).length;
+    const used = entries.filter((entry) => entry.isFile() && /^[a-f0-9]{32}(?:-r\d+)?\.json$/u.test(entry.name)).length;
     if (used >= dailyLimit) return Object.freeze({ status: "daily_limit" });
 
     let receipt;
     try {
       const result = await invoke(record, freeResult, {
         executablePath,
-        workRoot: path.join(runtimeRoot, record.id),
+        workRoot: path.join(runtimeRoot, receiptName),
       });
       receipt = { status: "complete", reviewedAt: now().toISOString(), result };
     } catch {

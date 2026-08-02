@@ -79,7 +79,7 @@ test("Codex 심층검토는 날짜별 상한과 항목별 영수증으로 반복
   const reviewer = createCodexNewsReviewer({
     stateRoot: root,
     executablePath: path.join(root, "codex.js"),
-    dailyLimit: 1,
+    dailyLimit: 2,
     now: () => new Date("2026-08-02T01:00:00Z"),
     async invoke() {
       calls += 1;
@@ -89,11 +89,16 @@ test("Codex 심층검토는 날짜별 상한과 항목별 영수증으로 반복
   try {
     const first = await reviewer.review(record(), free());
     const reused = await reviewer.review(record(), free());
+    const revisedRecord = { ...record(), workflow: { analysisRevision: 2 } };
+    const revised = await reviewer.review(revisedRecord, free());
+    const revisedReused = await reviewer.review(revisedRecord, free());
     const limited = await reviewer.review(record("b".repeat(32)), free());
     assert.equal(first.status, "complete");
     assert.equal(reused.reused, true);
+    assert.equal(revised.status, "complete");
+    assert.equal(revisedReused.reused, true);
     assert.equal(limited.status, "daily_limit");
-    assert.equal(calls, 1);
+    assert.equal(calls, 2);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

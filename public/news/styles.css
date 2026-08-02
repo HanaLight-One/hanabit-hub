@@ -67,6 +67,17 @@ h1 em { color: var(--accent); font-style: normal; }
 .codex-triage { border-color: rgb(118 171 255 / 42%); background: rgb(118 171 255 / 6%); }
 .codex-triage dt { color: #9bc0ff; }
 .codex-review-note { margin: 14px 0 0; padding: 13px 15px; border: 1px solid rgb(118 171 255 / 30%); border-radius: 12px; background: rgb(118 171 255 / 6%); color: #b8cff6; line-height: 1.55; }
+.auto-gate { margin-top: 16px; padding: 15px 17px; border: 1px solid var(--line); border-radius: 14px; background: #0b1014; }
+.auto-gate > div { display: flex; justify-content: space-between; gap: 12px; }
+.auto-gate span, .auto-gate small { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .1em; }
+.auto-gate p { margin: 9px 0 0; line-height: 1.55; }
+.auto-gate small { display: block; margin-top: 8px; letter-spacing: 0; }
+.auto-gate-eligible { border-color: rgb(216 255 82 / 38%); background: rgb(216 255 82 / 6%); }
+.auto-gate-eligible strong { color: var(--accent); }
+.auto-gate-human_review { border-color: rgb(255 220 129 / 34%); }
+.auto-gate-human_review strong { color: #ffdc81; }
+.reanalysis-button { margin-top: 12px; min-height: 42px; padding: 0 14px; border: 1px solid rgb(118 171 255 / 44%); border-radius: 11px; background: rgb(118 171 255 / 8%); color: #aecdff; font: inherit; font-weight: 800; cursor: pointer; }
+.reanalysis-button:disabled { cursor: wait; opacity: .55; }
 .original-box { margin-top: 20px; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .original-box summary { cursor: pointer; color: #cbd2d8; font-weight: 700; }
 .original-box[open] summary { margin-bottom: 16px; color: var(--accent); }

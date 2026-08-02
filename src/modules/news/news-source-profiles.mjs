@@ -56,6 +56,7 @@ function publicProfile(source) {
     roles: Object.freeze(source.roles.map((role) => ROLE_LABELS[role] ?? role)),
     topics: Object.freeze(source.topics.map((topic) => TOPIC_LABELS[topic] ?? topic)),
     trustLabel: TRUST_LABELS[source.trustLevel] ?? "확인 필요",
+    trustLevel: source.trustLevel,
     verifiedAt: source.verifiedAt,
     whyTracked: whyTracked(source),
   });

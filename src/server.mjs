@@ -16,6 +16,7 @@ import { handleNewsApprovalRoute } from "./modules/news/news-approval-route.mjs"
 import { createNewsProcessor } from "./modules/news/news-processor.mjs";
 import { createCodexNewsReviewer } from "./modules/news/codex-news-review.mjs";
 import { handleNewsAnalysisRetryRoute } from "./modules/news/news-analysis-retry-route.mjs";
+import { handleNewsReanalysisRoute } from "./modules/news/news-reanalysis-route.mjs";
 import { createPushNotificationService } from "./modules/notifications/push-notifications.mjs";
 import { handlePushNotificationRoute } from "./modules/notifications/push-notification-route.mjs";
 import { handleNewsListRoute } from "./modules/news/news-list-route.mjs";
@@ -392,6 +393,18 @@ export function createServer({
 
       if (
         await handleNewsAnalysisRetryRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          processor: newsAnalysisProcessor,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
+        await handleNewsReanalysisRoute({
           request,
           response,
           pathname: url.pathname,

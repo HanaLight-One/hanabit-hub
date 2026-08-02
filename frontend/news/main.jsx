@@ -25,6 +25,11 @@ const EVIDENCE_LABELS = {
   rumor: "루머",
   opinion: "의견",
 };
+const AUTO_GATE_LABELS = {
+  eligible: "자동 게시 가능",
+  human_review: "사람 확인 필요",
+  blocked: "자동 게시 제외",
+};
 const FAILURE_LABELS = {
   timeout: "응답 시간이 초과됐어요.",
   invalid_response: "응답 형식이 깨져 번역을 저장하지 못했어요.",
@@ -157,6 +162,20 @@ function SourceProfile({ profile }) {
   );
 }
 
+function AutoPublishGate({ gate }) {
+  if (!gate) return null;
+  return (
+    <section className={`auto-gate auto-gate-${gate.decision}`}>
+      <div>
+        <span>AUTO PUBLISH GATE</span>
+        <strong>{AUTO_GATE_LABELS[gate.decision]}</strong>
+      </div>
+      <p>{gate.reason}</p>
+      {gate.decision === "eligible" && <small>현재는 판정만 표시하며 실제 DC 자동 게시는 꺼져 있어요.</small>}
+    </section>
+  );
+}
+
 function ApprovalPanel({ item, confirming, busy, error, onBegin, onCancel, onApprove }) {
   if (item.workflow.publishedToDc) {
     return <div className="approval approved">DC 게시 완료 영수증이 확인됐어요.</div>;
@@ -195,7 +214,7 @@ function ApprovalPanel({ item, confirming, busy, error, onBegin, onCancel, onApp
   );
 }
 
-function NewsCard({ item, confirming, busy, error, onBegin, onCancel, onApprove, onRetry }) {
+function NewsCard({ item, confirming, busy, error, onBegin, onCancel, onApprove, onRetry, onReanalyze }) {
   const triage = item.workflow.triage;
   const freeTriage = item.workflow.freeTriage;
   const codexReview = item.workflow.codexReview;
@@ -273,6 +292,14 @@ function NewsCard({ item, confirming, busy, error, onBegin, onCancel, onApprove,
       )}
       {codexReview?.status === "failed" && (
         <p className="codex-review-note">Codex 심층검토를 완료하지 못해 무료 API 판정을 보존했어요.</p>
+      )}
+
+      <AutoPublishGate gate={item.workflow.autoPublishGate} />
+
+      {item.workflow.canReanalyze && (
+        <button type="button" className="reanalysis-button" disabled={busy} onClick={onReanalyze}>
+          {busy ? "새 정책으로 판정 중…" : "↻ 새 정책으로 다시 판정"}
+        </button>
       )}
 
       {item.media.length > 0 && (
@@ -377,6 +404,28 @@ function App() {
     }
   }
 
+  async function reanalyze(item) {
+    if (!window.confirm("번역과 판정을 새 정책으로 다시 실행할까요? 무료 API와 필요한 경우 Codex 토큰을 사용합니다.")) return;
+    setBusyId(item.id);
+    setActionError("");
+    setActionErrorId(null);
+    try {
+      const response = await fetch(`/api/news/${item.id}/reanalysis`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ confirmation: "reclassify-news-item" }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "새 정책으로 다시 판정하지 못했어요.");
+      await load();
+    } catch (error) {
+      setActionError(error.message);
+      setActionErrorId(item.id);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <>
       <header>
@@ -427,6 +476,7 @@ function App() {
               onCancel={() => { setActionError(""); setActionErrorId(null); setConfirmingId(null); }}
               onApprove={() => approve(item)}
               onRetry={() => retry(item)}
+              onReanalyze={() => reanalyze(item)}
             />
           ))}
         </section>

@@ -112,6 +112,9 @@ X Filtered Stream ─> #x-watch ┘                         │
 `config/news-x-sources.json`이고 비밀 토큰은 코드나 지도에 기록하지 않는다.
 뉴스 재분석은 `POST /api/news/:id/analysis-retry`에서 명시적 확인값을 받은
 `translation_failed` 항목에만 허용하며 이미지 분석 API는 호출하지 않는다.
+판정 완료 항목의 새 정책 재판정은 `POST /api/news/:id/reanalysis`, 결정론적 자동 게시
+가능성 표시는 `src/modules/news/news-auto-publish-policy.mjs`가 담당한다. 게이트는
+아직 실제 DC 게시자를 호출하지 않는다.
 Codex 검토 실행기와 날짜별 사용 영수증은
 `src/modules/news/codex-news-review.mjs`, `state/news/codex-review/`에 있다.
 뉴스 카드의 `누구예요?` 설명은 같은 X 인물 명부를 읽는
