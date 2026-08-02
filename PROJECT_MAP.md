@@ -121,6 +121,9 @@ X Filtered Stream ─> #x-watch ┘                         │
 않으며 자동 게시자를 호출하지 않는다. 사람의 미리보기 확인 뒤 수동 단건 게시만
 `src/modules/news/news-dc-publication.mjs`가 허용한다. 해설 주의 문구의 단일 원본은
 `src/modules/news/news-analysis-notice.mjs`다.
+`src/modules/news/news-editorial-governor.mjs`는 최근 뉴스의 직접 링크와 번역 핵심어로
+사건을 묶고 대표 원고·연속 게시 대기를 계산하는 읽기 전용 그림자 편집장이다. 결과는
+`news-reader.mjs`가 API에만 노출하며 승인·게시 상태 파일을 변경하지 않는다.
 DC 원고는 `src/modules/news/news-dc-copy.mjs`가 태그·출처·번역·AI 해설·원문 링크를
 결정적으로 조립한다. 그림 이모지와 결합문자를 게시 전에 제거 또는 차단하고, 알려진
 `/sk` 위험 경로 링크는 원고에서 제외한다. 실제 게시 진입점은

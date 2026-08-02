@@ -3,6 +3,7 @@ import path from "node:path";
 import { findNewsSourceProfile } from "./news-source-profiles.mjs";
 import { evaluateNewsAutoPublish, NEWS_ANALYSIS_POLICY_VERSION } from "./news-auto-publish-policy.mjs";
 import { createNewsAnalysisNotice } from "./news-analysis-notice.mjs";
+import { applyNewsEditorialShadow } from "./news-editorial-governor.mjs";
 
 const ID_PATTERN = /^[a-f0-9]{32}$/u;
 const MEDIA_NAME_PATTERN = /^[a-zA-Z0-9_-]+\.(gif|jpe?g|png|webp)$/u;
@@ -223,7 +224,7 @@ export function createNewsReader({ root, sourceProfiles = new Map() }) {
     items.sort((left, right) =>
       String(right.source.publishedAt).localeCompare(String(left.source.publishedAt)),
     );
-    return { items: items.slice(0, 100), total: items.length, skipped };
+    return { items: applyNewsEditorialShadow(items.slice(0, 100)), total: items.length, skipped };
   }
 
   async function findMedia(id, filename) {

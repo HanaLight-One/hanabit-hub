@@ -8051,19 +8051,24 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	human_review: "사람 확인 필요",
 	blocked: "자동 게시 제외"
 }, w = {
+	ready: "자동 게시 후보",
+	merge: "같은 사건에 합치기",
+	hold: "자동 대기",
+	hub_only: "허브에만 보관"
+}, ie = {
 	timeout: "응답 시간이 초과됐어요.",
 	invalid_response: "응답 형식이 깨져 번역을 저장하지 못했어요.",
 	provider_error: "무료 텍스트 API 요청이 완료되지 않았어요.",
 	unknown: "분석 도중 안전하게 복구하지 못한 오류가 있었어요."
 };
-function ie(e) {
+function ae(e) {
 	return e.workflow.status === "ignored" && e.media.length > 0;
 }
-var ae = [
+var oe = [
 	{
 		id: "action",
 		label: "확인 필요",
-		matches: (e) => ["pending_review", "translation_failed"].includes(e.workflow.status) || ie(e)
+		matches: (e) => ["pending_review", "translation_failed"].includes(e.workflow.status) || ae(e)
 	},
 	{
 		id: "publish",
@@ -8083,7 +8088,7 @@ var ae = [
 	{
 		id: "media",
 		label: "이미지 확인",
-		matches: ie
+		matches: ae
 	},
 	{
 		id: "failed",
@@ -8101,14 +8106,14 @@ var ae = [
 		matches: () => !0
 	}
 ];
-function oe(e) {
+function se(e) {
 	let t = new Date(e);
 	return Number.isNaN(t.getTime()) ? "시각 미상" : new Intl.DateTimeFormat("ko-KR", {
 		dateStyle: "medium",
 		timeStyle: "short"
 	}).format(t);
 }
-function se({ item: e }) {
+function ce({ item: e }) {
 	let t = new Map(e.original.links.map((e) => [e, "원문 링크"]));
 	return e.source.url && t.set(e.source.url, e.source.type === "x-post" ? "X 원문" : "Discord 원문"), t.size ? /* @__PURE__ */ (0, x.jsx)("div", {
 		className: "link-row",
@@ -8120,7 +8125,7 @@ function se({ item: e }) {
 		}, e))
 	}) : null;
 }
-function ce({ item: e }) {
+function le({ item: e }) {
 	return /* @__PURE__ */ (0, x.jsxs)("details", {
 		className: "original-box",
 		children: [
@@ -8157,15 +8162,15 @@ function ce({ item: e }) {
 					}, `${e.name}-${t}`))
 				]
 			}, `${e.url ?? "embed"}-${t}`)),
-			/* @__PURE__ */ (0, x.jsx)(se, { item: e })
+			/* @__PURE__ */ (0, x.jsx)(ce, { item: e })
 		]
 	});
 }
-function le(e) {
+function ue(e) {
 	let t = e.workflow.triage;
-	return t ? ie(e) ? "모델은 이미지 픽셀을 보지 않았어요. 텍스트만으로 내린 보류를 확정하지 말고 이미지와 원문 관계를 사람이 확인하세요." : t.decision === "publish" ? "구체적인 변화가 있는 게시 후보예요. 원문과 이미지를 확인한 뒤 승인하세요." : t.decision === "review" ? "의미 있는 신호일 수 있지만 단정하기 어려워요. 부모 글과 작성자 맥락을 사람이 확인하는 편이 좋아요." : "현재 정보만으로는 뉴스 가치가 낮아 보류를 권해요. 이미지에 핵심 정보가 보일 때만 다시 검토하세요." : "번역과 판정이 끝난 뒤 게시 조언을 확인할 수 있어요.";
+	return t ? ae(e) ? "모델은 이미지 픽셀을 보지 않았어요. 텍스트만으로 내린 보류를 확정하지 말고 이미지와 원문 관계를 사람이 확인하세요." : t.decision === "publish" ? "구체적인 변화가 있는 게시 후보예요. 원문과 이미지를 확인한 뒤 승인하세요." : t.decision === "review" ? "의미 있는 신호일 수 있지만 단정하기 어려워요. 부모 글과 작성자 맥락을 사람이 확인하는 편이 좋아요." : "현재 정보만으로는 뉴스 가치가 낮아 보류를 권해요. 이미지에 핵심 정보가 보일 때만 다시 검토하세요." : "번역과 판정이 끝난 뒤 게시 조언을 확인할 수 있어요.";
 }
-function ue({ triage: e, label: t, advice: n, className: r = "" }) {
+function T({ triage: e, label: t, advice: n, className: r = "" }) {
 	return /* @__PURE__ */ (0, x.jsxs)("section", {
 		className: `triage-box ${r}`.trim(),
 		children: [
@@ -8182,7 +8187,7 @@ function ue({ triage: e, label: t, advice: n, className: r = "" }) {
 		]
 	});
 }
-function T({ profile: e }) {
+function E({ profile: e }) {
 	return e ? /* @__PURE__ */ (0, x.jsxs)("details", {
 		className: "source-profile",
 		children: [/* @__PURE__ */ (0, x.jsx)("summary", { children: "누구예요?" }), /* @__PURE__ */ (0, x.jsxs)("div", {
@@ -8204,7 +8209,7 @@ function T({ profile: e }) {
 		})]
 	}) : null;
 }
-function E({ item: e }) {
+function de({ item: e }) {
 	let t = e.workflow.contextTranslations ?? [];
 	return t.length ? /* @__PURE__ */ (0, x.jsxs)("section", {
 		className: "context-translations",
@@ -8230,7 +8235,7 @@ function E({ item: e }) {
 		]
 	}) : null;
 }
-function de({ gate: e }) {
+function fe({ gate: e }) {
 	return e ? /* @__PURE__ */ (0, x.jsxs)("section", {
 		className: `auto-gate auto-gate-${e.decision}`,
 		children: [
@@ -8240,7 +8245,22 @@ function de({ gate: e }) {
 		]
 	}) : null;
 }
-function fe({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a }) {
+function pe({ shadow: e }) {
+	return e ? /* @__PURE__ */ (0, x.jsxs)("section", {
+		className: `editorial-shadow editorial-shadow-${e.decision}`,
+		children: [
+			/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "AUTONOMOUS EDITOR · SHADOW" }), /* @__PURE__ */ (0, x.jsx)("strong", { children: w[e.decision] })] }),
+			/* @__PURE__ */ (0, x.jsx)("p", { children: e.reason }),
+			e.storySize > 1 && /* @__PURE__ */ (0, x.jsxs)("small", { children: [
+				"같은 사건으로 감지한 출처 ",
+				e.storySize,
+				"개"
+			] }),
+			/* @__PURE__ */ (0, x.jsx)("small", { children: "현재는 그림자 판정만 기록하며 실제 자동 게시는 실행하지 않아요." })
+		]
+	}) : null;
+}
+function me({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a }) {
 	return e.workflow.publishedToDc ? /* @__PURE__ */ (0, x.jsxs)("div", {
 		className: "approval approved",
 		children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: "DC 게시 완료" }), e.workflow.dcPublication?.url && /* @__PURE__ */ (0, x.jsx)("a", {
@@ -8327,7 +8347,7 @@ function fe({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 		]
 	});
 }
-function pe({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a, onRetry: o, onReanalyze: s }) {
+function D({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a, onRetry: o, onReanalyze: s }) {
 	let c = e.workflow.triage, l = e.workflow.freeTriage, u = e.workflow.codexReview;
 	return /* @__PURE__ */ (0, x.jsxs)("article", {
 		className: "news-card",
@@ -8358,7 +8378,7 @@ function pe({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 							children: "Codex 검토 완료"
 						})
 					]
-				}), /* @__PURE__ */ (0, x.jsx)("time", { children: oe(e.source.publishedAt) })]
+				}), /* @__PURE__ */ (0, x.jsx)("time", { children: se(e.source.publishedAt) })]
 			}),
 			(e.source.label || e.source.account) && /* @__PURE__ */ (0, x.jsxs)("div", {
 				className: "source-heading",
@@ -8369,7 +8389,7 @@ function pe({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 						" · ",
 						e.source.type === "x-post" ? "X" : "Discord"
 					]
-				}), /* @__PURE__ */ (0, x.jsx)(T, { profile: e.source.profile })]
+				}), /* @__PURE__ */ (0, x.jsx)(E, { profile: e.source.profile })]
 			}),
 			e.workflow.translation ? /* @__PURE__ */ (0, x.jsxs)("section", {
 				className: "translation-box",
@@ -8401,7 +8421,7 @@ function pe({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 					e.workflow.analysisFailure && /* @__PURE__ */ (0, x.jsxs)("div", {
 						className: "analysis-failure",
 						children: [
-							/* @__PURE__ */ (0, x.jsx)("span", { children: w[e.workflow.analysisFailure.code] ?? w.unknown }),
+							/* @__PURE__ */ (0, x.jsx)("span", { children: ie[e.workflow.analysisFailure.code] ?? ie.unknown }),
 							r && /* @__PURE__ */ (0, x.jsx)("span", {
 								className: "action-error",
 								children: r
@@ -8417,8 +8437,8 @@ function pe({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 					})
 				]
 			}),
-			/* @__PURE__ */ (0, x.jsx)(E, { item: e }),
-			l && /* @__PURE__ */ (0, x.jsx)(ue, {
+			/* @__PURE__ */ (0, x.jsx)(de, { item: e }),
+			l && /* @__PURE__ */ (0, x.jsx)(T, {
 				triage: l,
 				label: "무료 API 1차 판정",
 				advice: l.advice || "애매함을 감지해 Codex 하나빛에게 전달했어요.",
@@ -8428,10 +8448,10 @@ function pe({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 				className: "analysis-notice",
 				children: e.workflow.analysisNotice
 			}),
-			c && /* @__PURE__ */ (0, x.jsx)(ue, {
+			c && /* @__PURE__ */ (0, x.jsx)(T, {
 				triage: c,
 				label: u?.status === "complete" ? "Codex 하나빛 심층검토" : "무료 API 판정",
-				advice: ie(e) ? le(e) : c.advice || le(e),
+				advice: ae(e) ? ue(e) : c.advice || ue(e),
 				className: u?.status === "complete" ? "codex-triage" : ""
 			}),
 			u?.status === "daily_limit" && /* @__PURE__ */ (0, x.jsx)("p", {
@@ -8442,7 +8462,8 @@ function pe({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 				className: "codex-review-note",
 				children: "Codex 심층검토를 완료하지 못해 무료 API 판정을 보존했어요."
 			}),
-			/* @__PURE__ */ (0, x.jsx)(de, { gate: e.workflow.autoPublishGate }),
+			/* @__PURE__ */ (0, x.jsx)(fe, { gate: e.workflow.autoPublishGate }),
+			/* @__PURE__ */ (0, x.jsx)(pe, { shadow: e.workflow.editorialShadow }),
 			e.workflow.canReanalyze && /* @__PURE__ */ (0, x.jsx)("button", {
 				type: "button",
 				className: "reanalysis-button",
@@ -8450,7 +8471,7 @@ function pe({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 				onClick: s,
 				children: n ? "새 정책으로 판정 중…" : "↻ 새 정책으로 다시 판정"
 			}),
-			e.media.length > 0 && /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [ie(e) && /* @__PURE__ */ (0, x.jsx)("p", {
+			e.media.length > 0 && /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [ae(e) && /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "media-review-note",
 				children: "이미지는 자동 판정에 포함되지 않았어요 · 사람 확인 필요"
 			}), /* @__PURE__ */ (0, x.jsx)("div", {
@@ -8461,8 +8482,8 @@ function pe({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 					loading: "lazy"
 				}, e.url))
 			})] }),
-			/* @__PURE__ */ (0, x.jsx)(ce, { item: e }),
-			/* @__PURE__ */ (0, x.jsx)(fe, {
+			/* @__PURE__ */ (0, x.jsx)(le, { item: e }),
+			/* @__PURE__ */ (0, x.jsx)(me, {
 				item: e,
 				preview: t,
 				busy: n,
@@ -8473,7 +8494,7 @@ function pe({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 		]
 	});
 }
-function me() {
+function O() {
 	let [e, t] = (0, y.useState)(null), [n, r] = (0, y.useState)(""), [i, a] = (0, y.useState)({}), [o, s] = (0, y.useState)(null), [c, l] = (0, y.useState)(""), [u, d] = (0, y.useState)(null), [f, p] = (0, y.useState)("action");
 	async function m() {
 		let e = await fetch("/api/news", { cache: "no-store" });
@@ -8492,7 +8513,7 @@ function me() {
 			media: t.reduce((e, t) => e + t.media.length, 0)
 		};
 	}, [e]), g = (0, y.useMemo)(() => {
-		let t = ae.find((e) => e.id === f) ?? ae[0];
+		let t = oe.find((e) => e.id === f) ?? oe[0];
 		return (e?.items ?? []).filter(t.matches);
 	}, [e, f]);
 	async function _(e) {
@@ -8609,7 +8630,7 @@ function me() {
 		/* @__PURE__ */ (0, x.jsx)("nav", {
 			className: "filters",
 			"aria-label": "뉴스 필터",
-			children: ae.map((t) => {
+			children: oe.map((t) => {
 				let n = (e?.items ?? []).filter(t.matches).length;
 				return /* @__PURE__ */ (0, x.jsxs)("button", {
 					type: "button",
@@ -8640,7 +8661,7 @@ function me() {
 		/* @__PURE__ */ (0, x.jsx)("section", {
 			className: "news-list",
 			"aria-label": "수집된 뉴스",
-			children: g.map((e) => /* @__PURE__ */ (0, x.jsx)(pe, {
+			children: g.map((e) => /* @__PURE__ */ (0, x.jsx)(D, {
 				item: e,
 				preview: i[e.id],
 				busy: o === e.id,
@@ -8653,5 +8674,5 @@ function me() {
 		})
 	] })] });
 }
-(0, b.createRoot)(document.querySelector("#news-root")).render(/* @__PURE__ */ (0, x.jsx)(me, {}));
+(0, b.createRoot)(document.querySelector("#news-root")).render(/* @__PURE__ */ (0, x.jsx)(O, {}));
 //#endregion

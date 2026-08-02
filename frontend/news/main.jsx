@@ -37,6 +37,12 @@ const AUTO_GATE_LABELS = {
   human_review: "사람 확인 필요",
   blocked: "자동 게시 제외",
 };
+const EDITORIAL_SHADOW_LABELS = {
+  ready: "자동 게시 후보",
+  merge: "같은 사건에 합치기",
+  hold: "자동 대기",
+  hub_only: "허브에만 보관",
+};
 const FAILURE_LABELS = {
   timeout: "응답 시간이 초과됐어요.",
   invalid_response: "응답 형식이 깨져 번역을 저장하지 못했어요.",
@@ -202,6 +208,21 @@ function AutoPublishGate({ gate }) {
       </div>
       <p>{gate.reason}</p>
       {gate.decision === "eligible" && <small>현재는 판정만 표시하며 실제 DC 자동 게시는 꺼져 있어요.</small>}
+    </section>
+  );
+}
+
+function EditorialShadow({ shadow }) {
+  if (!shadow) return null;
+  return (
+    <section className={`editorial-shadow editorial-shadow-${shadow.decision}`}>
+      <div>
+        <span>AUTONOMOUS EDITOR · SHADOW</span>
+        <strong>{EDITORIAL_SHADOW_LABELS[shadow.decision]}</strong>
+      </div>
+      <p>{shadow.reason}</p>
+      {shadow.storySize > 1 && <small>같은 사건으로 감지한 출처 {shadow.storySize}개</small>}
+      <small>현재는 그림자 판정만 기록하며 실제 자동 게시는 실행하지 않아요.</small>
     </section>
   );
 }
@@ -378,6 +399,7 @@ function NewsCard({ item, preview, busy, error, onPreview, onPublish, onRetry, o
       )}
 
       <AutoPublishGate gate={item.workflow.autoPublishGate} />
+      <EditorialShadow shadow={item.workflow.editorialShadow} />
 
       {item.workflow.canReanalyze && (
         <button type="button" className="reanalysis-button" disabled={busy} onClick={onReanalyze}>

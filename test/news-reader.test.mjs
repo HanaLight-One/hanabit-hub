@@ -59,6 +59,7 @@ test("뉴스 리더는 내부 경로와 Discord ID 없이 공개 계약을 반�
     assert.equal(payload.items[0].workflow.triage.evidenceTag, "official");
     assert.equal(payload.items[0].workflow.triage.boardCategory, "news");
     assert.equal(payload.items[0].workflow.autoPublishGate.decision, "eligible");
+    assert.equal(payload.items[0].workflow.editorialShadow.decision, "ready");
     assert.equal(payload.items[0].workflow.canReanalyze, false);
     assert.equal(payload.items[0].workflow.freeTriage.decision, "review");
     assert.equal(payload.items[0].workflow.codexReview.status, "complete");
