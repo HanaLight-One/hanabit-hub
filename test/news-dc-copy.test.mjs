@@ -56,6 +56,12 @@ test("DC 뉴스 원고는 태그·번역·AI 해설·출처를 결정적으로 �
   assert.doesNotMatch(draft.bodyText, /쓰세요|프레이밍하세요/u);
   assert.match(draft.bodyText, /원문 번역이 아니며/u);
   assert.match(draft.bodyText, /https:\/\/x\.com\/gregbrockman\/status\/123456/u);
+  assert.equal(draft.bodyText.indexOf("원문 링크"), 0);
+  assert.equal(
+    draft.bodyText.indexOf("https://x.com/gregbrockman/status/123456") <
+      draft.bodyText.indexOf("게시자: Greg Brockman"),
+    true,
+  );
   assert.doesNotMatch(`${draft.title}\n${draft.bodyText}`, /\p{Extended_Pictographic}/u);
   assert.doesNotMatch(draft.bodyText, /openai\.com\/sk\//u);
   assert.equal(draft.imageCount, 2);

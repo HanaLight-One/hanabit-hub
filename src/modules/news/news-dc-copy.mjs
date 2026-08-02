@@ -136,11 +136,11 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
   );
   const links = sourceLinks(record);
   const bodyParts = [
+    ...(links.included.length ? ["원문 링크", ...links.included, ""] : []),
     profileLine,
     "",
     ...sections.flatMap(({ label, body }) => [label, body, ""]),
     notice,
-    ...(links.included.length ? ["", "원문 링크", ...links.included] : []),
   ];
   const bodyText = bodyParts.join("\n").replace(/\n{3,}/gu, "\n\n").trim();
   const combiningMarkCount = (bodyText.match(COMBINING_MARK_PATTERN) ?? []).length +

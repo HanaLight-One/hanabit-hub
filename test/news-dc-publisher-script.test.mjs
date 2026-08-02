@@ -81,6 +81,26 @@ test("DC 본문은 고정 섹션에만 크기와 하이라이트 서식을 적�
   assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/u);
 });
 
+test("원문 링크 카드는 게시자와 번역보다 먼저 배치한다", () => {
+  const html = textToHtml([
+    "원문 링크",
+    "https://x.com/gdb/status/2083773552793465087",
+    "",
+    "게시자: Greg Brockman · OpenAI",
+    "",
+    "본문 번역",
+    "번역 내용",
+  ].join("\n"));
+  assert.equal(
+    html.indexOf("https://x.com/gdb/status") < html.indexOf("게시자: Greg Brockman"),
+    true,
+  );
+  assert.equal(
+    html.indexOf("게시자: Greg Brockman") < html.indexOf("본문 번역"),
+    true,
+  );
+});
+
 test("게시자는 저장소의 정확한 네 기본 커버 경로만 허용한다", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-publisher-cover-"));
   const id = "d".repeat(32);
