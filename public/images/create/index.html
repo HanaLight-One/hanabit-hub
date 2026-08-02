@@ -44,7 +44,10 @@
               <p class="section-label">DRAFT REQUEST</p>
               <h2>생성 방식 고르기</h2>
             </div>
-            <span id="source-status" class="source-status">새 요청</span>
+            <div class="source-controls">
+              <span id="source-status" class="source-status">새 요청</span>
+              <button id="source-picker-open" class="source-picker-open" type="button">소스 선택</button>
+            </div>
           </div>
 
           <fieldset class="mode-grid">
@@ -193,5 +196,21 @@
         <div id="jobs-list" class="jobs-list" aria-live="polite"></div>
       </section>
     </main>
+
+    <dialog id="source-picker" class="source-picker" aria-labelledby="source-picker-title">
+      <div class="source-picker-head">
+        <div>
+          <p class="section-label">IMAGE ARCHIVE</p>
+          <h2 id="source-picker-title">소스 이미지 고르기</h2>
+        </div>
+        <button id="source-picker-close" class="source-picker-close" type="button" aria-label="닫기">×</button>
+      </div>
+      <label class="source-search">
+        <span>이미지 검색</span>
+        <input id="source-search" type="search" placeholder="날짜, 파일명, 이미지 종류" />
+      </label>
+      <p id="source-picker-status" class="source-picker-status" aria-live="polite">이미지를 불러올 준비가 됐어요.</p>
+      <div id="source-picker-grid" class="source-picker-grid"></div>
+    </dialog>
   </body>
 </html>

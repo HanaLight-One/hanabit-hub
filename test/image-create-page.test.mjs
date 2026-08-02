@@ -42,6 +42,9 @@ test("/images/create가 안전한 추가생성 초안 화면을 제공한다", a
     assert.match(body, /id="jobs-list"/);
     assert.match(body, /id="source-remove"/);
     assert.match(body, /연결 해제/);
+    assert.match(body, /id="source-picker"/);
+    assert.match(body, /id="source-picker-open"/);
+    assert.match(body, /소스 이미지 고르기/);
     assert.match(body, /1장 실제 생성/);
     assert.match(body, /disabled/);
     assert.equal(body.includes("<form action="), false);
@@ -92,6 +95,12 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(scriptBody, /history\.replaceState/);
     assert.match(scriptBody, /source = null/);
     assert.match(scriptBody, /새 요청 · 소스 없음/);
+    assert.match(scriptBody, /openSourcePicker/);
+    assert.match(scriptBody, /source-option/);
+    assert.match(scriptBody, /mode: preferredMode/);
+    assert.match(scriptBody, /이어 만들 제작 기록이 없어요/);
+    assert.match(scriptBody, /button\.dataset\.unavailable/);
+    assert.match(scriptBody, /hasProductionRecord/);
     assert.match(scriptBody, /purpose/);
     assert.equal(scriptBody.includes('method: "PUT"'), false);
     assert.equal(scriptBody.includes('method: "DELETE"'), false);

@@ -3,6 +3,7 @@ export async function handleImageListRoute({
   response,
   pathname,
   archive,
+  store = null,
   sendJson,
 }) {
   if (pathname !== "/api/images") return false;
@@ -17,6 +18,18 @@ export async function handleImageListRoute({
     return true;
   }
 
-  sendJson(response, 200, await archive.list());
+  const payload = await archive.list();
+  if (!store?.availableImageIds) {
+    sendJson(response, 200, payload);
+    return true;
+  }
+  const available = new Set(store.availableImageIds());
+  sendJson(response, 200, {
+    ...payload,
+    images: payload.images.map((image) => ({
+      ...image,
+      hasProductionRecord: available.has(image.id),
+    })),
+  });
   return true;
 }

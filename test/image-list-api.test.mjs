@@ -6,8 +6,8 @@ import test from "node:test";
 import { createServer } from "../src/server.mjs";
 import { createImageArchive } from "../src/modules/images/image-archive.mjs";
 
-async function withServer(archive, callback) {
-  const server = createServer({ archive });
+async function withServer(archive, callback, recordStore = null) {
+  const server = createServer({ archive, recordStore });
   await new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(0, "127.0.0.1", resolve);
@@ -43,6 +43,23 @@ test("이미지 목록 API가 안전한 읽기 전용 응답을 제공한다", a
     assert.equal(body.images[0].date, "2026-07-29");
     assert.equal(JSON.stringify(body).includes(root), false);
   });
+});
+
+test("이미지 목록은 내부 내용 없이 소스 사용 가능 여부만 표시한다", async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-list-source-api-"));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  await writeFile(path.join(root, "source.png"), "image");
+  const archive = createImageArchive({ dailyImagesRoot: root, pilotImagesRoot: root });
+  const listed = await archive.list();
+  const availableId = listed.images[0].id;
+  const recordStore = { availableImageIds() { return [availableId]; } };
+
+  await withServer(archive, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/images`);
+    const body = await response.json();
+    assert.equal(body.images[0].hasProductionRecord, true);
+    assert.equal("prompt" in body.images[0], false);
+  }, recordStore);
 });
 
 test("이미지 목록 API는 쓰기 요청을 거부한다", async (context) => {

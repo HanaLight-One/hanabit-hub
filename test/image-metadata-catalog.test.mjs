@@ -47,6 +47,7 @@ test("완료된 Hub 작업을 이미지 ID와 연결해 프롬프트와 선택 �
     const record = await catalog.get(image.id);
 
     assert.equal(record.prompt, "고딕 다과회에서 서로 웃고 있는 세 사람");
+    assert.deepEqual(catalog.availableImageIds(), [image.id]);
     assert.deepEqual(record.characterIds, ["pink-bridge", "헤일라", "리벨라"]);
     assert.deepEqual(record.characters, ["핑크브릿지", "헤일라", "리벨라"]);
     assert.equal(record.style, "고딕");

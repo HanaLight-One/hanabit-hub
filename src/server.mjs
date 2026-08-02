@@ -602,6 +602,7 @@ export function createServer({
           response,
           pathname: url.pathname,
           archive,
+          store: recordStore,
           sendJson,
         })
       ) {

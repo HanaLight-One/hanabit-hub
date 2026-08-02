@@ -132,6 +132,48 @@
   white-space: nowrap;
 }
 
+.source-controls { display: flex; align-items: center; gap: 8px; }
+.source-picker-open {
+  padding: 8px 11px;
+  border: 1px solid rgb(216 255 82 / 38%);
+  border-radius: 999px;
+  background: rgb(216 255 82 / 7%);
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.source-picker-open:hover, .source-picker-open:focus-visible { border-color: var(--accent); outline: none; }
+
+.source-picker {
+  width: min(940px, calc(100% - 28px));
+  max-height: min(820px, calc(100dvh - 28px));
+  padding: 24px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: #0e141a;
+  color: var(--text);
+}
+.source-picker::backdrop { background: rgb(0 0 0 / 72%); backdrop-filter: blur(4px); }
+.source-picker-head { display: flex; align-items: start; justify-content: space-between; gap: 20px; }
+.source-picker-head h2 { margin: 4px 0 0; font-size: 26px; }
+.source-picker-close { width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--text); cursor: pointer; font-size: 24px; }
+.source-search { margin-top: 22px; display: block; }
+.source-search span { display: block; margin-bottom: 8px; color: var(--muted); font-size: 11px; }
+.source-search input { width: 100%; padding: 13px 15px; border: 1px solid var(--line); border-radius: 12px; background: #090e12; color: var(--text); font: inherit; }
+.source-picker-status { margin: 14px 0; color: var(--muted); font-size: 12px; }
+.source-picker-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.source-option { min-width: 0; padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--text); text-align: left; cursor: pointer; }
+.source-option:hover, .source-option:focus-visible { border-color: var(--accent); outline: none; }
+.source-option:disabled { cursor: not-allowed; opacity: .5; }
+.source-option[data-unavailable="true"] { border-color: rgb(255 206 82 / 38%); }
+.source-option img { width: 100%; aspect-ratio: 1; display: block; object-fit: cover; background: #090e12; }
+.source-option span { display: block; padding: 10px; }
+.source-option strong, .source-option small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.source-option small { margin-top: 5px; color: var(--muted); font-size: 10px; }
+
 .mode-grid {
   margin: 30px 0 0;
   padding: 0;
@@ -558,4 +600,7 @@
   .jobs-heading p { margin-top: 8px; }
   .job-card { grid-template-columns: 1fr; }
   .job-visual, .job-visual img { min-height: 210px; max-height: 340px; }
+  .source-controls { align-items: stretch; flex-direction: column; }
+  .source-picker { padding: 18px; }
+  .source-picker-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

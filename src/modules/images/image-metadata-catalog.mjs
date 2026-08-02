@@ -326,5 +326,13 @@ export function createImageMetadataCatalog({ database, archive, jobRoot, dailyMa
     return legacyStore ? legacyStore.get(imageId) : null;
   }
 
-  return Object.freeze({ get, synchronize });
+  function availableImageIds() {
+    return Object.freeze(
+      database.prepare("SELECT image_id FROM image_generation_metadata ORDER BY indexed_at DESC")
+        .all()
+        .map((row) => row.image_id),
+    );
+  }
+
+  return Object.freeze({ get, synchronize, availableImageIds });
 }

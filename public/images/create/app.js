@@ -24,6 +24,12 @@ const STAGE_LABELS = Object.freeze({
 const elements = {
   form: document.querySelector("#creation-form"),
   sourceStatus: document.querySelector("#source-status"),
+  sourcePickerOpen: document.querySelector("#source-picker-open"),
+  sourcePicker: document.querySelector("#source-picker"),
+  sourcePickerClose: document.querySelector("#source-picker-close"),
+  sourcePickerStatus: document.querySelector("#source-picker-status"),
+  sourcePickerGrid: document.querySelector("#source-picker-grid"),
+  sourceSearch: document.querySelector("#source-search"),
   scene: document.querySelector("#scene-request"),
   characterCount: document.querySelector("#character-count"),
   characterGrid: document.querySelector("#character-grid"),
@@ -78,6 +84,7 @@ let previewPayload = null;
 let savedDraftId = null;
 let savedExecutionMode = null;
 let purposeTouched = false;
+let sourceImages = null;
 
 function formatDateTime(value) {
   const date = new Date(value);
@@ -111,10 +118,10 @@ function setSourceModesEnabled(enabled) {
   for (const input of sourceModes) input.disabled = !enabled;
 }
 
-function selectRequestedMode() {
-  if (!source || !(requestedMode in MODE_LABELS)) return;
+function selectRequestedMode(mode = requestedMode) {
+  if (!source || !(mode in MODE_LABELS)) return;
   const requestedInput = document.querySelector(
-    `input[name="mode"][value="${requestedMode}"]`,
+    `input[name="mode"][value="${mode}"]`,
   );
   if (requestedInput && !requestedInput.disabled) requestedInput.checked = true;
 }
@@ -235,15 +242,20 @@ async function loadCreationOptions() {
   }
 }
 
-async function loadSourceContext() {
+async function loadSourceContext(preferredMode = requestedMode) {
   if (!source) {
     elements.sourceStatus.textContent = "새 요청";
+    elements.sourcePickerOpen.textContent = "소스 선택";
     elements.previewSource.textContent = "없음";
     return;
   }
 
   elements.sourceContext.hidden = false;
+  elements.sourceRecord.replaceChildren();
+  elements.sourceMessage.textContent = "제작 기록을 확인하는 중이에요.";
+  setSourceModesEnabled(false);
   elements.sourceStatus.textContent = "연결 확인 중";
+  elements.sourcePickerOpen.textContent = "소스 변경";
   elements.previewSource.textContent = "확인 중";
 
   try {
@@ -273,7 +285,7 @@ async function loadSourceContext() {
     ]);
     elements.sourceMessage.textContent = "제작 기록을 안전하게 불러왔어요.";
     setSourceModesEnabled(true);
-    selectRequestedMode();
+    selectRequestedMode(preferredMode);
   } catch {
     elements.sourceStatus.textContent = "연결 실패";
     elements.previewSource.textContent = "불러오지 못함";
@@ -286,6 +298,102 @@ setSourceModesEnabled(false);
 loadCreationOptions();
 loadSourceContext();
 
+function resetDraftAfterSourceChange() {
+  previewPayload = null;
+  savedDraftId = null;
+  savedExecutionMode = null;
+  elements.draftButton.disabled = true;
+  elements.draftButton.textContent = "격리 초안 저장";
+  elements.executeButton.hidden = true;
+  elements.executeButton.disabled = false;
+}
+
+function renderSourcePicker(query = "") {
+  const normalized = query.trim().toLocaleLowerCase("ko-KR");
+  const matches = (sourceImages ?? []).filter((image) => {
+    const haystack = `${image.name} ${image.date ?? ""} ${image.group ?? ""} ${image.category ?? ""}`.toLocaleLowerCase("ko-KR");
+    return !normalized || haystack.includes(normalized);
+  }).slice(0, 80);
+  elements.sourcePickerGrid.replaceChildren();
+  elements.sourcePickerStatus.textContent = normalized
+    ? `${matches.length}개 검색 결과`
+    : `최근 이미지 ${matches.length}개`;
+  for (const image of matches) {
+    const button = document.createElement("button");
+    button.className = "source-option";
+    button.type = "button";
+    button.dataset.sourceId = image.id;
+    const preview = document.createElement("img");
+    preview.src = image.thumbnailUrl;
+    preview.alt = "";
+    preview.loading = "lazy";
+    const copy = document.createElement("span");
+    const name = document.createElement("strong");
+    name.textContent = image.name;
+    const meta = document.createElement("small");
+    meta.textContent = `${image.date ?? "날짜 없음"} · ${image.category ?? image.group}`;
+    copy.append(name, meta);
+    button.append(preview, copy);
+    elements.sourcePickerGrid.append(button);
+  }
+}
+
+async function openSourcePicker() {
+  elements.sourcePicker.showModal();
+  elements.sourceSearch.value = "";
+  elements.sourceSearch.focus();
+  if (sourceImages) {
+    renderSourcePicker();
+    return;
+  }
+  elements.sourcePickerStatus.textContent = "이미지 아카이브를 불러오는 중이에요.";
+  try {
+    const response = await fetch("/api/images", { cache: "no-store" });
+    if (!response.ok) throw new Error();
+    const payload = await response.json();
+    sourceImages = Array.isArray(payload.images)
+      ? payload.images.filter((image) => image.hasProductionRecord !== false)
+      : [];
+    renderSourcePicker();
+  } catch {
+    elements.sourcePickerStatus.textContent = "이미지 아카이브를 불러오지 못했어요.";
+  }
+}
+
+elements.sourcePickerOpen.addEventListener("click", openSourcePicker);
+elements.sourcePickerClose.addEventListener("click", () => elements.sourcePicker.close());
+elements.sourceSearch.addEventListener("input", () => renderSourcePicker(elements.sourceSearch.value));
+elements.sourcePickerGrid.addEventListener("click", async (event) => {
+  const button = event.target.closest("button[data-source-id]");
+  if (!button || !SAFE_SOURCE_ID.test(button.dataset.sourceId ?? "")) return;
+  button.disabled = true;
+  elements.sourcePickerStatus.textContent = "이 이미지의 제작 기록을 확인하는 중이에요.";
+  try {
+    const recordResponse = await fetch(
+      `/api/images/${encodeURIComponent(button.dataset.sourceId)}/production-record`,
+      { cache: "no-store" },
+    );
+    if (!recordResponse.ok) {
+      button.dataset.unavailable = "true";
+      elements.sourcePickerStatus.textContent =
+        "이전 이미지라 이어 만들 제작 기록이 없어요. 다른 이미지를 골라주세요.";
+      return;
+    }
+  } catch {
+    elements.sourcePickerStatus.textContent = "제작 기록을 확인하지 못했어요. 잠시 후 다시 골라주세요.";
+    button.disabled = false;
+    return;
+  }
+  const currentMode = elements.form.querySelector('input[name="mode"]:checked')?.value;
+  const preferredMode = currentMode && currentMode !== "new" ? currentMode : "same-combination";
+  source = button.dataset.sourceId;
+  const query = new URLSearchParams({ source, mode: preferredMode });
+  window.history.replaceState(null, "", `${window.location.pathname}?${query}`);
+  elements.sourcePicker.close();
+  resetDraftAfterSourceChange();
+  await loadSourceContext(preferredMode);
+});
+
 elements.sourceRemove.addEventListener("click", () => {
   source = null;
   window.history.replaceState(null, "", window.location.pathname);
@@ -294,16 +402,12 @@ elements.sourceRemove.addEventListener("click", () => {
   elements.sourceImage.alt = "";
   elements.sourceRecord.replaceChildren();
   elements.sourceStatus.textContent = "새 요청 · 소스 없음";
+  elements.sourcePickerOpen.textContent = "소스 선택";
   elements.previewSource.textContent = "없음";
   setSourceModesEnabled(false);
   const newMode = elements.form.querySelector('input[name="mode"][value="new"]');
   if (newMode) newMode.checked = true;
-  previewPayload = null;
-  savedDraftId = null;
-  savedExecutionMode = null;
-  elements.draftButton.disabled = true;
-  elements.draftButton.textContent = "격리 초안 저장";
-  elements.executeButton.hidden = true;
+  resetDraftAfterSourceChange();
 });
 
 elements.styleToggle.addEventListener("click", () => {
