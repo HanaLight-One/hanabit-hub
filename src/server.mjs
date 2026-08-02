@@ -17,6 +17,8 @@ import { loadXSourceRoster } from "./modules/news/x-watch-source.mjs";
 import { createNewsSourceProfileIndex } from "./modules/news/news-source-profiles.mjs";
 import { createNewsApprovalService } from "./modules/news/news-approval.mjs";
 import { handleNewsApprovalRoute } from "./modules/news/news-approval-route.mjs";
+import { createNewsDcPublicationService } from "./modules/news/news-dc-publication.mjs";
+import { handleNewsDcPublicationRoute } from "./modules/news/news-dc-publication-route.mjs";
 import { createNewsProcessor } from "./modules/news/news-processor.mjs";
 import { createCodexNewsReviewer } from "./modules/news/codex-news-review.mjs";
 import { handleNewsAnalysisRetryRoute } from "./modules/news/news-analysis-retry-route.mjs";
@@ -195,6 +197,18 @@ const newsProcessor = path.isAbsolute(generationConfig?.freeTextRunnerPath ?? ""
     })
   : null;
 const newsApproval = createNewsApprovalService({ root: path.join(APP_ROOT, "state", "news") });
+const newsDcPublisherConfig = config.integrations?.news?.dcPublisher;
+const newsDcPublication = createNewsDcPublicationService({
+  root: path.join(APP_ROOT, "state", "news"),
+  sourceProfiles: newsSourceProfiles,
+  enabled:
+    newsDcPublisherConfig?.enabled === true &&
+    config.allowedActions.includes("publish-news-to-dc"),
+  publisherRoot: newsDcPublisherConfig?.publisherRoot,
+  galleryId: newsDcPublisherConfig?.galleryId,
+  headTextName: newsDcPublisherConfig?.headTextName,
+  publisherScriptPath: path.join(APP_ROOT, "scripts", "publish-news-to-dc.cjs"),
+});
 const pushNotifications = createPushNotificationService({
   root: path.join(APP_ROOT, "state", "notifications"),
 });
@@ -322,6 +336,7 @@ export function createServer({
   news = newsReader,
   newsAnalysisProcessor = newsProcessor,
   newsApprovalService = newsApproval,
+  newsDcPublicationService = newsDcPublication,
   notificationService = pushNotifications,
   fortune = fortuneArchive,
   drafts = generationDrafts,
@@ -433,6 +448,18 @@ export function createServer({
           response,
           pathname: url.pathname,
           approvalService: newsApprovalService,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
+        await handleNewsDcPublicationRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          publicationService: newsDcPublicationService,
           sendJson,
         })
       ) {

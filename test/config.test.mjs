@@ -96,3 +96,33 @@ test("Codex 뉴스 검토는 고정 실행 경로와 제한된 일일 상한만 
     integrations: { news: { codexReview: { enabled: true, executablePath: "C:\\codex.ps1", dailyLimit: 99 } } },
   }), /일일 상한/);
 });
+
+test("뉴스 DC 게시자는 고정 갤러리·말머리와 절대 실행 루트만 허용한다", () => {
+  const base = {
+    host: "127.0.0.1",
+    port: 8790,
+    operations: { timezone: "Asia/Seoul", dayStartsAtHour: 2 },
+    allowedActions: ["publish-news-to-dc"],
+    integrations: { imageStudio: { enabled: false } },
+  };
+  assert.throws(
+    () => validateConfig({
+      ...base,
+      integrations: {
+        ...base.integrations,
+        news: { dcPublisher: { enabled: true, publisherRoot: "relative", galleryId: "chatgpt", headTextName: "뉴스/소식" } },
+      },
+    }),
+    /publisherRoot 절대경로/u,
+  );
+  assert.throws(
+    () => validateConfig({
+      ...base,
+      integrations: {
+        ...base.integrations,
+        news: { dcPublisher: { enabled: true, publisherRoot: "C:\\publisher", galleryId: "other", headTextName: "뉴스/소식" } },
+      },
+    }),
+    /chatgpt 갤러리/u,
+  );
+});

@@ -197,45 +197,80 @@ function AutoPublishGate({ gate }) {
   );
 }
 
-function ApprovalPanel({ item, confirming, busy, error, onBegin, onCancel, onApprove }) {
+function DcPublicationPanel({ item, preview, busy, error, onPreview, onPublish }) {
   if (item.workflow.publishedToDc) {
-    return <div className="approval approved">DC 게시 완료 영수증이 확인됐어요.</div>;
-  }
-  if (item.workflow.dcApproval) {
     return (
       <div className="approval approved">
-        <strong>DC 게시 승인 완료</strong>
-        <span>{formatDate(item.workflow.dcApproval.approvedAt)} · 아직 실제 게시 전</span>
+        <strong>DC 게시 완료</strong>
+        {item.workflow.dcPublication?.url && (
+          <a href={item.workflow.dcPublication.url} target="_blank" rel="noopener noreferrer">게시글 확인</a>
+        )}
       </div>
     );
   }
-  if (!item.workflow.canApproveForDc) {
+  if (item.workflow.dcPublication?.status === "submitting") {
+    return <div className="approval confirm">DC에 한 번 제출하고 있어요. 완료될 때까지 다시 누르지 마세요.</div>;
+  }
+  if (item.workflow.dcPublication?.status === "ambiguous-no-retry") {
+    return (
+      <div className="approval danger">
+        <strong>게시 결과를 자동으로 확정하지 못했어요.</strong>
+        <span>중복 게시를 막기 위해 다시 제출하지 않습니다. DC 게시판에서 직접 확인해 주세요.</span>
+      </div>
+    );
+  }
+  if (!item.workflow.canApproveForDc && !item.workflow.dcApproval) {
     return <div className="approval unavailable">번역과 판정이 끝난 검토 후보만 승인할 수 있어요.</div>;
   }
-  if (!confirming) {
+  if (!preview) {
     return (
       <div className="approval">
-        <p>승인은 게시 대기 영수증만 남깁니다. 실제 DC 게시는 실행하지 않아요.</p>
-        <button type="button" className="approve-button" onClick={onBegin}>DC 게시 승인</button>
+        <p>먼저 실제로 들어갈 제목·본문·이미지 순서와 DC 안전 검사를 확인해요.</p>
+        {error && <span className="action-error">{error}</span>}
+        <button type="button" className="preview-button" onClick={onPreview} disabled={busy}>
+          {busy ? "원고 만드는 중…" : "DC 원고 미리보기"}
+        </button>
       </div>
     );
   }
   return (
-    <div className="approval confirm">
-      <strong>정말 게시 대기함으로 승인할까요?</strong>
-      <span>원문·번역·이미지를 마지막으로 확인해 주세요.</span>
-      {error && <span className="action-error">{error}</span>}
-      <div className="approval-actions">
-        <button type="button" className="cancel-button" onClick={onCancel} disabled={busy}>취소</button>
-        <button type="button" className="approve-button" onClick={onApprove} disabled={busy}>
-          {busy ? "승인 저장 중…" : "확인하고 승인"}
-        </button>
+    <section className="dc-preview">
+      <div className="dc-preview-heading">
+        <span>DC POST PREVIEW</span>
+        <strong>{preview.headText}</strong>
       </div>
-    </div>
+      <dl>
+        <div><dt>제목</dt><dd>{preview.title}</dd></div>
+        <div><dt>이미지</dt><dd>{preview.imageCount}장 · 본문 최상단 첨부</dd></div>
+      </dl>
+      <div className="dc-copy-preview">
+        <span>본문</span>
+        <pre>{preview.bodyText}</pre>
+      </div>
+      <ul className="dc-warnings">
+        {preview.preflight.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+      </ul>
+      {preview.preflight.emojiRemovedCount > 0 && (
+        <p className="dc-safe-note">미리보기와 실제 게시 원고 모두에서 이모지를 제거했어요.</p>
+      )}
+      {!preview.publisherReady && <p className="action-error">실제 DC 게시 실행환경을 확인해 주세요.</p>}
+      {error && <span className="action-error">{error}</span>}
+      <p className="dc-submit-copy">
+        누르면 필요한 경우 승인을 먼저 저장하고 DC에 정확히 한 번 제출합니다. 실패가 불명확하면 자동 재시도하지 않아요.
+      </p>
+      <button
+        type="button"
+        className="publish-button"
+        onClick={onPublish}
+        disabled={busy || !preview.publisherReady || !preview.preflight.ready || !preview.canPublish}
+      >
+        {busy ? "DC에 제출 중…" : "수동 DC 게시"}
+      </button>
+    </section>
   );
 }
 
-function NewsCard({ item, confirming, busy, error, onBegin, onCancel, onApprove, onRetry, onReanalyze }) {
+function NewsCard({ item, preview, busy, error, onPreview, onPublish, onRetry, onReanalyze }) {
   const triage = item.workflow.triage;
   const freeTriage = item.workflow.freeTriage;
   const codexReview = item.workflow.codexReview;
@@ -344,14 +379,13 @@ function NewsCard({ item, confirming, busy, error, onBegin, onCancel, onApprove,
       )}
 
       <Original item={item} />
-      <ApprovalPanel
+      <DcPublicationPanel
         item={item}
-        confirming={confirming}
+        preview={preview}
         busy={busy}
         error={error}
-        onBegin={onBegin}
-        onCancel={onCancel}
-        onApprove={onApprove}
+        onPreview={onPreview}
+        onPublish={onPublish}
       />
     </article>
   );
@@ -360,7 +394,7 @@ function NewsCard({ item, confirming, busy, error, onBegin, onCancel, onApprove,
 function App() {
   const [payload, setPayload] = useState(null);
   const [loadError, setLoadError] = useState("");
-  const [confirmingId, setConfirmingId] = useState(null);
+  const [previews, setPreviews] = useState({});
   const [busyId, setBusyId] = useState(null);
   const [actionError, setActionError] = useState("");
   const [actionErrorId, setActionErrorId] = useState(null);
@@ -391,23 +425,61 @@ function App() {
     return (payload?.items ?? []).filter(selected.matches);
   }, [payload, filter]);
 
-  async function approve(item) {
+  async function loadPreview(item) {
     setBusyId(item.id);
     setActionError("");
     setActionErrorId(null);
     try {
-      const response = await fetch(`/api/news/${item.id}/dc-approval`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ confirmation: "approve-dc-publication" }),
-      });
+      const response = await fetch(`/api/news/${item.id}/dc-preview`, { cache: "no-store" });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "승인을 저장하지 못했어요.");
-      await load();
-      setConfirmingId(null);
+      if (!response.ok) throw new Error(result.error || "DC 원고를 만들지 못했어요.");
+      setPreviews((current) => ({ ...current, [item.id]: result }));
     } catch (error) {
       setActionError(error.message);
       setActionErrorId(item.id);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function publishToDc(item) {
+    const confirmed = window.confirm(
+      "이 원고를 실제 DCInside 챗갤에 한 번 게시할까요?\n제출 결과가 불명확하면 자동으로 다시 시도하지 않습니다.",
+    );
+    if (!confirmed) return;
+    setBusyId(item.id);
+    setActionError("");
+    setActionErrorId(null);
+    try {
+      if (!item.workflow.dcApproval) {
+        const approvalResponse = await fetch(`/api/news/${item.id}/dc-approval`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ confirmation: "approve-dc-publication" }),
+        });
+        const approvalResult = await approvalResponse.json();
+        if (!approvalResponse.ok) throw new Error(approvalResult.error || "게시 승인을 저장하지 못했어요.");
+      }
+      const response = await fetch(`/api/news/${item.id}/dc-publication`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ confirmation: "publish-news-to-dc-now" }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "DC 게시 요청을 완료하지 못했어요.");
+      await load();
+      const previewResponse = await fetch(`/api/news/${item.id}/dc-preview`, { cache: "no-store" });
+      if (previewResponse.ok) {
+        const refreshedPreview = await previewResponse.json();
+        setPreviews((current) => ({ ...current, [item.id]: refreshedPreview }));
+      }
+      if (result.publication?.status === "failed-preflight") {
+        throw new Error("DC 로그인·말머리·금칙어 검사 단계에서 게시가 중단됐어요. 원고를 확인한 뒤 다시 시도할 수 있어요.");
+      }
+    } catch (error) {
+      setActionError(error.message);
+      setActionErrorId(item.id);
+      await load().catch(() => {});
     } finally {
       setBusyId(null);
     }
@@ -465,7 +537,7 @@ function App() {
       <main>
         <p className="eyebrow">HANABIT NEWS LAB · REACT PILOT</p>
         <h1>뉴스<br /><em>검수실.</em></h1>
-        <p className="intro">원문·번역·판정·이미지를 한곳에서 확인하고, 검토가 끝난 뉴스만 DC 게시 대기 상태로 승인합니다.</p>
+        <p className="intro">원문·번역·판정·이미지를 확인하고, DC에 들어갈 최종 원고를 미리 본 뒤 수동으로 한 번 게시합니다.</p>
 
         <section className="summary" aria-label="뉴스 현황">
           <div><strong>{summary.total.toLocaleString("ko-KR")}</strong><span>전체 대기</span></div>
@@ -499,12 +571,11 @@ function App() {
             <NewsCard
               item={item}
               key={item.id}
-              confirming={confirmingId === item.id}
+              preview={previews[item.id]}
               busy={busyId === item.id}
               error={actionErrorId === item.id ? actionError : ""}
-              onBegin={() => { setActionError(""); setActionErrorId(null); setConfirmingId(item.id); }}
-              onCancel={() => { setActionError(""); setActionErrorId(null); setConfirmingId(null); }}
-              onApprove={() => approve(item)}
+              onPreview={() => loadPreview(item)}
+              onPublish={() => publishToDc(item)}
               onRetry={() => retry(item)}
               onReanalyze={() => reanalyze(item)}
             />

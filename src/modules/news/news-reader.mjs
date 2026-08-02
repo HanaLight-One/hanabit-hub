@@ -40,6 +40,20 @@ function publicTriage(value) {
   };
 }
 
+function publicDcPublication(value) {
+  if (!value || !["submitting", "posted", "failed-preflight", "ambiguous-no-retry"].includes(value.status)) {
+    return null;
+  }
+  const posted = value.status === "posted";
+  const url = posted ? safeUrl(value.url) : null;
+  return {
+    status: value.status,
+    submittedAt: String(value.submittedAt ?? ""),
+    postId: posted ? safeText(value.postId, 100) || null : null,
+    url: posted && url?.startsWith("https://gall.dcinside.com/") ? url : null,
+  };
+}
+
 function publicItem(record, sourceProfiles) {
   const id = validateId(String(record?.id ?? ""));
   const embeds = Array.isArray(record?.original?.embeds)
@@ -83,6 +97,7 @@ function publicItem(record, sourceProfiles) {
     : "free_unverified";
   const analysisNotice = safeText(record?.workflow?.analysisNotice, 300) ||
     createNewsAnalysisNotice({ codexReviewed: codexReviewStatus === "complete" });
+  const dcPublication = publicDcPublication(record?.workflow?.dcPublication);
   return {
     id,
     source: {
@@ -158,7 +173,8 @@ function publicItem(record, sourceProfiles) {
             approvedAt: String(record.workflow.dcApproval.approvedAt ?? ""),
           }
         : null,
-      publishedToDc: Boolean(record?.workflow?.dcPublication),
+      dcPublication,
+      publishedToDc: dcPublication?.status === "posted",
       autoPublishGate,
       canReanalyze:
         ["pending_review", "ignored"].includes(record?.workflow?.status) &&

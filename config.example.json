@@ -40,6 +40,12 @@
         "enabled": false,
         "executablePath": "",
         "dailyLimit": 4
+      },
+      "dcPublisher": {
+        "enabled": false,
+        "publisherRoot": "",
+        "galleryId": "chatgpt",
+        "headTextName": "뉴스/소식"
       }
     }
   },

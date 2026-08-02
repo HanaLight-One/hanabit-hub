@@ -67,7 +67,7 @@ HTTP 라우트는 검증과 응답만 맡고 실제 동작은 같은 기능 폴�
 | 데이터베이스 | `src/modules/database/` | SQLite 연결과 순차 스키마 마이그레이션 |
 | 이미지 | `src/modules/images/` | 아카이브, 테마, 제작 기록, 화풍, 생성 초안과 1장 실행 |
 | 운세 | `src/modules/fortune/` | 날짜별 운세와 안전한 게시 상태 읽기 |
-| 뉴스 | `src/modules/news/` | Discord/X 수집, 출처 인물 프로필, 무료 번역·판정, 제한된 Codex 심층검토, 실패 재분석, 승인과 알림 |
+| 뉴스 | `src/modules/news/` | Discord/X 수집, 번역·판정, Codex 심층검토, DC 원고 미리보기·수동 단건 게시와 영수증 |
 | 모바일 알림 | `src/modules/notifications/` | Web Push 구독과 제한된 알림 전송 |
 | 시스템 | `src/modules/system/` | allowlist 기반 Codex 상태·긴급 재기동 |
 
@@ -102,9 +102,9 @@ X Filtered Stream ─> #x-watch ┘                         │
                                                          │
                                                          ├─> #news-pending
                                                          ├─> 모바일 Push
-                                                         └─> /news 필터·사람 검토·실패 재분석·승인
+                                                         └─> /news 필터·사람 검토·실패 재분석
                                                                   │
-                                                        실제 DC 게시기는 아직 미연결
+                                                DC 원고 미리보기 ─> 사람 확인 ─> 수동 단건 게시
 ```
 
 실행 진입점은 `scripts/watch-discord-announcements.mjs`다. 실시간 이벤트와
@@ -118,8 +118,14 @@ X Filtered Stream ─> #x-watch ┘                         │
 판정 완료 항목의 새 정책 재판정은 `POST /api/news/:id/reanalysis`, 결정론적 자동 게시
 가능성 표시는 `src/modules/news/news-auto-publish-policy.mjs`가 담당한다. 게이트는
 원문 전용 번역의 귀속 검증과 AI 해설 주의 문구가 없으면 자동 게시 가능으로 판정하지
-않으며, 아직 실제 DC 게시자를 호출하지 않는다. 해설 주의 문구의 단일 원본은
+않으며 자동 게시자를 호출하지 않는다. 사람의 미리보기 확인 뒤 수동 단건 게시만
+`src/modules/news/news-dc-publication.mjs`가 허용한다. 해설 주의 문구의 단일 원본은
 `src/modules/news/news-analysis-notice.mjs`다.
+DC 원고는 `src/modules/news/news-dc-copy.mjs`가 태그·출처·번역·AI 해설·원문 링크를
+결정적으로 조립한다. 그림 이모지와 결합문자를 게시 전에 제거 또는 차단하고, 알려진
+`/sk` 위험 경로 링크는 원고에서 제외한다. 실제 게시 진입점은
+`scripts/publish-news-to-dc.cjs`이며 `chatgpt` 갤러리의 `뉴스/소식` 말머리만 허용한다.
+최종 제출은 한 번만 수행하고 불명확한 결과는 자동 재시도하지 않는다.
 Codex 검토 실행기와 날짜별 사용 영수증은
 `src/modules/news/codex-news-review.mjs`, `state/news/codex-review/`에 있다.
 뉴스 카드의 `누구예요?` 설명은 같은 X 인물 명부를 읽는

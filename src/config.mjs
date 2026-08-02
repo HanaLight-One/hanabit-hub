@@ -12,7 +12,15 @@ const DEFAULT_CONFIG = Object.freeze({
   integrations: {
     imageStudio: { enabled: false },
     fortune: { enabled: false },
-    news: { codexReview: { enabled: false, executablePath: "", dailyLimit: 4 } },
+    news: {
+      codexReview: { enabled: false, executablePath: "", dailyLimit: 4 },
+      dcPublisher: {
+        enabled: false,
+        publisherRoot: "",
+        galleryId: "chatgpt",
+        headTextName: "뉴스/소식",
+      },
+    },
   },
   operations: {
     timezone: "Asia/Seoul",
@@ -50,7 +58,7 @@ function validateConfig(config) {
   if (!Array.isArray(config.allowedActions)) {
     throw new Error("allowedActions는 배열이어야 합니다.");
   }
-  const knownActions = new Set(["restart-codex"]);
+  const knownActions = new Set(["restart-codex", "publish-news-to-dc"]);
   const invalidAction = config.allowedActions.find(
     (action) => typeof action !== "string" || !knownActions.has(action),
   );
@@ -95,6 +103,16 @@ function validateConfig(config) {
     }
     if (!Number.isInteger(codexReview.dailyLimit) || codexReview.dailyLimit < 1 || codexReview.dailyLimit > 12) {
       throw new Error("Codex 뉴스 검토 일일 상한은 1부터 12 사이여야 합니다.");
+    }
+  }
+
+  const dcPublisher = config.integrations?.news?.dcPublisher;
+  if (dcPublisher?.enabled) {
+    if (!path.isAbsolute(dcPublisher.publisherRoot ?? "")) {
+      throw new Error("뉴스 DC 게시자에는 publisherRoot 절대경로가 필요합니다.");
+    }
+    if (dcPublisher.galleryId !== "chatgpt" || dcPublisher.headTextName !== "뉴스/소식") {
+      throw new Error("뉴스 DC 게시 대상은 chatgpt 갤러리의 뉴스/소식 말머리만 허용합니다.");
     }
   }
 
