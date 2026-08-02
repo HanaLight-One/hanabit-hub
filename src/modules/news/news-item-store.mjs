@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
@@ -63,6 +63,34 @@ export function createPendingNewsStore({ root }) {
     });
   }
 
+  async function list({ limit = 100 } = {}) {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 500) {
+      throw new TypeError("뉴스 목록 상한이 올바르지 않습니다.");
+    }
+    let entries;
+    try {
+      entries = await readdir(pendingRoot, { withFileTypes: true });
+    } catch (error) {
+      if (error.code === "ENOENT") return [];
+      throw error;
+    }
+    const records = [];
+    for (const entry of entries) {
+      if (!entry.isDirectory() || !/^[a-f0-9]{32}$/u.test(entry.name)) continue;
+      try {
+        const record = await read(entry.name);
+        if (record.id === entry.name) records.push(record);
+      } catch {
+        // 손상된 단일 항목이 자동 게시 후보 전체를 막지 않게 제외한다.
+      }
+    }
+    records.sort((left, right) =>
+      String(right.source?.publishedAt ?? right.collectedAt ?? "")
+        .localeCompare(String(left.source?.publishedAt ?? left.collectedAt ?? "")),
+    );
+    return records.slice(0, limit);
+  }
+
   async function create(record, { writeMedia = async () => [] } = {}) {
     const target = targetFor(record.id);
     if (await exists(target)) return { created: false, id: record.id };
@@ -90,5 +118,5 @@ export function createPendingNewsStore({ root }) {
     }
   }
 
-  return Object.freeze({ has, read, update, mediaFiles, create });
+  return Object.freeze({ has, read, update, mediaFiles, list, create });
 }

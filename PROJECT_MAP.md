@@ -104,6 +104,8 @@ X Filtered Stream ─> #x-watch ┘                         │
                                                          ├─> 모바일 Push
                                                          └─> /news 필터·사람 검토·실패 재분석
                                                                   │
+                                      자동 품질 관문 ready ─> DC 자동 단건 게시·영수증·Push
+                                                                  │
                                                 DC 원고 미리보기 ─> 사람 확인 ─> 수동 단건 게시
 ```
 
@@ -118,12 +120,13 @@ X Filtered Stream ─> #x-watch ┘                         │
 판정 완료 항목의 새 정책 재판정은 `POST /api/news/:id/reanalysis`, 결정론적 자동 게시
 가능성 표시는 `src/modules/news/news-auto-publish-policy.mjs`가 담당한다. 게이트는
 원문 전용 번역의 귀속 검증과 AI 해설 주의 문구가 없으면 자동 게시 가능으로 판정하지
-않으며 자동 게시자를 호출하지 않는다. 사람의 미리보기 확인 뒤 수동 단건 게시만
-`src/modules/news/news-dc-publication.mjs`가 허용한다. 해설 주의 문구의 단일 원본은
+않으며, 자동 게시 시작 영수증 이후의 새 항목만 실제 게시자에게 전달한다. 사람의 미리보기
+확인 뒤 수동 단건 게시도 `src/modules/news/news-dc-publication.mjs`가 같은 안전 경계로 허용한다.
+해설 주의 문구의 단일 원본은
 `src/modules/news/news-analysis-notice.mjs`다.
 `src/modules/news/news-editorial-governor.mjs`는 최근 뉴스의 직접 링크와 번역 핵심어로
-사건을 묶고 대표 원고·연속 게시 대기를 계산하는 읽기 전용 그림자 편집장이다. 결과는
-`news-reader.mjs`가 API에만 노출하며 승인·게시 상태 파일을 변경하지 않는다.
+사건을 묶고 대표 원고·15분 연속 게시 대기를 계산하는 편집장이다. 결과는
+`news-reader.mjs`가 API에 노출하고, 감시기는 `ready`인 새 원고만 자동 게시 서비스에 전달한다.
 `src/modules/news/news-translation-audit.mjs`는 무료 API가 만든 원문 번역과 관련 글 번역의
 경계·링크·영문명·수치를 로컬에서 재검사한다. 새 뉴스는 `news-processor.mjs`가 감사 영수증을
 저장하고 기존 뉴스는 `news-reader.mjs`가 읽기 전용으로 같은 검사를 적용한다.

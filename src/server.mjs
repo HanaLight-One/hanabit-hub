@@ -205,6 +205,7 @@ const newsDcPublication = createNewsDcPublicationService({
   enabled:
     newsDcPublisherConfig?.enabled === true &&
     config.allowedActions.includes("publish-news-to-dc"),
+  autoPublishEnabled: newsDcPublisherConfig?.autoPublish === true,
   publisherRoot: newsDcPublisherConfig?.publisherRoot,
   galleryId: newsDcPublisherConfig?.galleryId,
   coverRoot: path.join(APP_ROOT, "assets", "news", "dc-covers"),

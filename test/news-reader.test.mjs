@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { createNewsReader } from "../src/modules/news/news-reader.mjs";
+import { NEWS_ANALYSIS_POLICY_VERSION } from "../src/modules/news/news-auto-publish-policy.mjs";
 
 test("뉴스 리더는 내부 경로와 Discord ID 없이 공개 계약을 반환한다", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-reader-"));
@@ -25,7 +26,7 @@ test("뉴스 리더는 내부 경로와 Discord ID 없이 공개 계약을 반�
         freeTriage: { decision: "review", confidence: 0.7, importance: "medium", evidenceTag: "inference", boardCategory: "news", reason: "애매함", advice: "상위 검토" },
         triage: { decision: "publish", confidence: 0.95, importance: "high", evidenceTag: "official", boardCategory: "news", reason: "공식 발표", advice: "바로 검토하세요." },
         codexReview: { status: "complete", reviewedAt: "2026-07-31T00:01:00Z", decision: "publish", confidence: 0.95, importance: "high", evidenceTag: "official", boardCategory: "news", reason: "공식 발표", advice: "바로 검토하세요." },
-        analysisPolicyVersion: 10,
+        analysisPolicyVersion: NEWS_ANALYSIS_POLICY_VERSION,
         dcPublication: null,
       },
       collectedAt: "2026-07-31T00:01:00Z",

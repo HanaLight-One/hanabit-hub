@@ -16,6 +16,7 @@ function record(evidenceTag, overrides = {}) {
       triage: {
         decision: "publish",
         evidenceTag,
+        boardCategory: "news",
         confidence: 0.9,
         importance: "medium",
         ...overrides,
@@ -34,9 +35,12 @@ test("공식과 핵심 인물의 고신뢰 유추는 자동 게시 가능 판정
   assert.equal(useCase.code, "trusted_use_case");
 });
 
-test("루머·의견·낮은 신뢰 유추는 사람 확인으로 남긴다", () => {
-  assert.equal(evaluateNewsAutoPublish(record("rumor"), profile).decision, "human_review");
-  assert.equal(evaluateNewsAutoPublish(record("opinion"), profile).decision, "human_review");
+test("가치 있는 루머·의견은 허용하고 잡담·낮은 중요도는 제외한다", () => {
+  assert.equal(evaluateNewsAutoPublish(record("rumor", { importance: "high" }), profile).decision, "eligible");
+  assert.equal(evaluateNewsAutoPublish(record("opinion", { importance: "high" }), profile).decision, "eligible");
+  assert.equal(evaluateNewsAutoPublish(record("rumor"), profile).decision, "blocked");
+  assert.equal(evaluateNewsAutoPublish(record("use_case", { boardCategory: "chatter" }), profile).decision, "blocked");
+  assert.equal(evaluateNewsAutoPublish(record("confirmed", { importance: "low" }), profile).decision, "blocked");
   assert.equal(evaluateNewsAutoPublish(record("inference", { confidence: 0.81 }), profile).decision, "human_review");
 });
 

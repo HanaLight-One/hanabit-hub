@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { createPendingNewsStore } from "../src/modules/news/news-item-store.mjs";
 import { createNewsProcessor } from "../src/modules/news/news-processor.mjs";
+import { NEWS_ANALYSIS_POLICY_VERSION } from "../src/modules/news/news-auto-publish-policy.mjs";
 
 async function fixture(source, analyze, callback, { codexReviewer = null, sourceProfiles = new Map() } = {}) {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-processor-"));
@@ -199,7 +200,7 @@ test("승인 전 기존 뉴스는 분석 세대를 올려 새 정책으로 다�
     assert.equal(reprocessed.workflow.status, "pending_review");
     assert.equal(reprocessed.workflow.triage.decision, "publish");
     assert.equal(reprocessed.workflow.analysisRevision, 2);
-    assert.equal(reprocessed.workflow.analysisPolicyVersion, 10);
+    assert.equal(reprocessed.workflow.analysisPolicyVersion, NEWS_ANALYSIS_POLICY_VERSION);
     assert.equal(typeof reprocessed.workflow.reanalysisRequestedAt, "string");
     await store.update(id, (record) => ({
       ...record,

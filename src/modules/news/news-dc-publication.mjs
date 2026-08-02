@@ -6,6 +6,9 @@ import { createPendingNewsStore } from "./news-item-store.mjs";
 import { composeNewsDcCopy } from "./news-dc-copy.mjs";
 import { isAllowedNewsDcHeadText } from "./news-dc-head-text.mjs";
 import { createNewsDcCoverCatalog } from "./news-dc-covers.mjs";
+import { evaluateNewsAutoPublish } from "./news-auto-publish-policy.mjs";
+import { applyNewsEditorialShadow } from "./news-editorial-governor.mjs";
+import { findNewsSourceProfile } from "./news-source-profiles.mjs";
 
 const ID_PATTERN = /^[a-f0-9]{32}$/u;
 const POSTED_STATUS = "posted";
@@ -42,6 +45,7 @@ function safePublication(value) {
   }
   return {
     status: value.status,
+    mode: value.mode === "automatic" ? "automatic" : "manual",
     submittedAt: String(value.submittedAt ?? ""),
     postId: value.status === "posted" ? String(value.postId ?? "") || null : null,
     url: value.status === "posted" && /^https:\/\/gall\.dcinside\.com\//u.test(String(value.url ?? ""))
@@ -77,6 +81,7 @@ export function createNewsDcPublicationService({
   root,
   sourceProfiles = new Map(),
   enabled = false,
+  autoPublishEnabled = false,
   publisherRoot = "",
   galleryId = "chatgpt",
   coverRoot,
@@ -97,7 +102,71 @@ export function createNewsDcPublicationService({
   const store = createPendingNewsStore({ root });
   const covers = createNewsDcCoverCatalog({ root: coverRoot });
   const jobRoot = path.join(root, "dc-publication-jobs");
+  const autoStatePath = path.join(root, "auto-publication.json");
   const active = new Set();
+  let autoActivation;
+
+  async function initializeAutoPublishing() {
+    if (!enabled || !autoPublishEnabled) return null;
+    if (autoActivation) return autoActivation;
+    try {
+      const stored = JSON.parse(await readFile(autoStatePath, "utf8"));
+      if (stored?.schemaVersion !== 1 || !Number.isFinite(Date.parse(stored.activatedAt))) {
+        throw publicationError("AUTO_STATE_INVALID", "뉴스 자동 게시 시작 영수증이 올바르지 않습니다.");
+      }
+      autoActivation = Object.freeze({ schemaVersion: 1, activatedAt: stored.activatedAt });
+      return autoActivation;
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+    await mkdir(root, { recursive: true });
+    const value = { schemaVersion: 1, activatedAt: now().toISOString() };
+    try {
+      const handle = await open(autoStatePath, "wx");
+      await handle.writeFile(`${JSON.stringify(value, null, 2)}\n`, "utf8");
+      await handle.close();
+      autoActivation = Object.freeze(value);
+    } catch (error) {
+      if (error.code !== "EEXIST") throw error;
+      const stored = JSON.parse(await readFile(autoStatePath, "utf8"));
+      if (stored?.schemaVersion !== 1 || !Number.isFinite(Date.parse(stored.activatedAt))) {
+        throw publicationError("AUTO_STATE_INVALID", "뉴스 자동 게시 시작 영수증이 올바르지 않습니다.");
+      }
+      autoActivation = Object.freeze({ schemaVersion: 1, activatedAt: stored.activatedAt });
+    }
+    return autoActivation;
+  }
+
+  async function automaticDecisionFor(id) {
+    const activation = await initializeAutoPublishing();
+    if (!activation) return { decision: "disabled", code: "auto_publish_disabled" };
+    const activationTime = Date.parse(activation.activatedAt);
+    const records = await store.list({ limit: 100 });
+    const candidates = records.map((record) => {
+      const profile = findNewsSourceProfile(record.source, sourceProfiles);
+      const processedAt = Date.parse(record.workflow?.processedAt ?? "");
+      const publishedAt = Date.parse(record.source?.publishedAt ?? "");
+      const beforeActivation =
+        !Number.isFinite(processedAt) || processedAt < activationTime ||
+        !Number.isFinite(publishedAt) || publishedAt < activationTime;
+      const gate = beforeActivation
+        ? { decision: "blocked", code: "before_activation", reason: "자동 게시 시작 전 항목이에요." }
+        : evaluateNewsAutoPublish(record, profile);
+      return {
+        ...record,
+        source: { ...record.source, profile },
+        workflow: { ...record.workflow, autoPublishGate: gate },
+      };
+    });
+    const target = applyNewsEditorialShadow(candidates).find((record) => record.id === id);
+    if (!target) return { decision: "blocked", code: "not_found" };
+    return {
+      decision: target.workflow?.editorialShadow?.decision ?? "hold",
+      code: target.workflow?.editorialShadow?.code ?? target.workflow?.autoPublishGate?.code ?? "quality_review",
+      gate: target.workflow?.autoPublishGate,
+      shadow: target.workflow?.editorialShadow,
+    };
+  }
 
   async function runtimeReady() {
     if (!enabled) return false;
@@ -148,7 +217,7 @@ export function createNewsDcPublicationService({
     }
   }
 
-  async function publish(id) {
+  async function publish(id, { automatic = false, automaticDecision = null } = {}) {
     const safeId = validateId(id);
     if (active.has(safeId)) {
       throw publicationError("ALREADY_SUBMITTING", "이미 DC 게시 요청을 처리하고 있습니다.");
@@ -163,7 +232,12 @@ export function createNewsDcPublicationService({
       if (!isAllowedNewsDcHeadText(draft.headText)) {
         throw publicationError("HEAD_TEXT_NOT_ALLOWED", "허용되지 않은 DC 말머리입니다.");
       }
-      if (record.workflow?.dcApproval?.status !== "approved") {
+      const profile = findNewsSourceProfile(record.source, sourceProfiles);
+      const currentAutoGate = evaluateNewsAutoPublish(record, profile);
+      if (automatic && (automaticDecision?.decision !== "ready" || currentAutoGate.decision !== "eligible")) {
+        throw publicationError("AUTO_NOT_ELIGIBLE", "현재 자동 게시 품질 관문을 통과하지 못했습니다.");
+      }
+      if (!automatic && record.workflow?.dcApproval?.status !== "approved") {
         throw publicationError("APPROVAL_REQUIRED", "DC 게시 승인이 먼저 필요합니다.");
       }
       if (!draft.preflight.ready) {
@@ -218,6 +292,7 @@ export function createNewsDcPublicationService({
           dcPublication: {
             schemaVersion: 1,
             status: "submitting",
+            mode: automatic ? "automatic" : "manual",
             submittedAt,
             contentHash: draft.contentHash,
           },
@@ -245,6 +320,7 @@ export function createNewsDcPublicationService({
       const publication = {
         schemaVersion: 1,
         status,
+        mode: automatic ? "automatic" : "manual",
         submittedAt,
         contentHash: draft.contentHash,
         ...(status === "posted"
@@ -255,7 +331,7 @@ export function createNewsDcPublicationService({
         ...current,
         workflow: {
           ...current.workflow,
-          status: status === "posted" ? "published" : "approved_for_dc",
+          status: status === "posted" ? "published" : automatic ? "pending_review" : "approved_for_dc",
           dcPublication: publication,
         },
       }));
@@ -273,5 +349,20 @@ export function createNewsDcPublicationService({
     }
   }
 
-  return Object.freeze({ preview, publish, findCover: covers.find });
+  async function autoPublish(id) {
+    const decision = await automaticDecisionFor(validateId(id));
+    if (decision.decision !== "ready") {
+      return { id, status: decision.decision, code: decision.code };
+    }
+    const result = await publish(id, { automatic: true, automaticDecision: decision });
+    return { ...result, status: result.publication?.status ?? "ambiguous-no-retry" };
+  }
+
+  return Object.freeze({
+    preview,
+    publish,
+    autoPublish,
+    initializeAutoPublishing,
+    findCover: covers.find,
+  });
 }

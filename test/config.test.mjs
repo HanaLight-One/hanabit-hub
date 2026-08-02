@@ -125,4 +125,21 @@ test("뉴스 DC 게시자는 고정 갤러리와 절대 실행 루트만 허용�
     }),
     /chatgpt 갤러리/u,
   );
+  assert.throws(
+    () => validateConfig({
+      ...base,
+      integrations: {
+        ...base.integrations,
+        news: {
+          dcPublisher: {
+            enabled: true,
+            autoPublish: "yes",
+            publisherRoot: "C:\\publisher",
+            galleryId: "chatgpt",
+          },
+        },
+      },
+    }),
+    /자동 게시는 true 또는 false/u,
+  );
 });

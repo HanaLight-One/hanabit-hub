@@ -6,6 +6,8 @@ import webPush from "web-push";
 const EVENT_CATALOG = Object.freeze({
   "image.completed": { title: "이미지 생성 완료", body: "이미지 생성이 완료되었어요오!!!", url: "/images", tag: "image-completed" },
   "news.created": { title: "새 뉴스 도착", body: "뉴스가 올라갔어요오!!!!", url: "/news", tag: "news-created" },
+  "news.published": { title: "뉴스 자동 게시 완료", body: "뉴스가 DC에 자동으로 등록됐어요오!!!!", url: "/news", tag: "news-published" },
+  "news.publication-review": { title: "뉴스 게시 확인 필요", body: "자동 게시 결과가 애매해요!!!! 사람 판단이 필요해요오오오!!!!!", url: "/news", tag: "news-publication-review" },
   "news.duplicate-review": { title: "사람 판단 필요", body: "뉴스가 중복이에요!!!! 사람 판단이 필요해요오오오!!!!!", url: "/news", tag: "news-duplicate" },
   "theme.registered": { title: "오늘의 테마", body: "오늘의 테마가 정상 등록되었어요오!!!!", url: "/images", tag: "theme-registered" },
   "fortune.registered": { title: "오늘의 운세", body: "오늘의 운세가 정상 등록되었어요오!!!!!!!", url: "/fortune", tag: "fortune-registered" },

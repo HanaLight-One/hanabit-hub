@@ -16,6 +16,7 @@ const DEFAULT_CONFIG = Object.freeze({
       codexReview: { enabled: false, executablePath: "", dailyLimit: 4 },
       dcPublisher: {
         enabled: false,
+        autoPublish: true,
         publisherRoot: "",
         galleryId: "chatgpt",
       },
@@ -106,6 +107,9 @@ function validateConfig(config) {
   }
 
   const dcPublisher = config.integrations?.news?.dcPublisher;
+  if (dcPublisher?.autoPublish !== undefined && typeof dcPublisher.autoPublish !== "boolean") {
+    throw new Error("뉴스 DC 자동 게시는 true 또는 false여야 합니다.");
+  }
   if (dcPublisher?.enabled) {
     if (!path.isAbsolute(dcPublisher.publisherRoot ?? "")) {
       throw new Error("뉴스 DC 게시자에는 publisherRoot 절대경로가 필요합니다.");

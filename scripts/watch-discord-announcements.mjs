@@ -17,6 +17,7 @@ import { loadXStreamConfig } from "../src/modules/news/x-stream-config.mjs";
 import { createXStreamStatusNotifier } from "../src/modules/news/x-stream-status-notifier.mjs";
 import { createPushNotificationService } from "../src/modules/notifications/push-notifications.mjs";
 import { createNewsPushNotifier } from "../src/modules/news/news-push-notifier.mjs";
+import { createNewsDcPublicationService } from "../src/modules/news/news-dc-publication.mjs";
 
 const PROJECT_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const stateRoot = path.join(PROJECT_ROOT, "state", "news");
@@ -30,9 +31,30 @@ let sources = [];
 let processor;
 let notifier;
 let pushNotifier;
+let pushNotifications;
+let autoPublisher;
 let token = "";
 let catchupInFlight = null;
 let xStreamController;
+
+async function finishProcessed(record) {
+  await notifier.notify(record);
+  await pushNotifier.notify(record);
+  if (!autoPublisher) return;
+  try {
+    const result = await autoPublisher.autoPublish(record.id);
+    if (result.status === "posted") {
+      await pushNotifications.publish("news.published").catch(() => {});
+      await safeLog(`뉴스 DC 자동 게시 완료: ${record.id}`);
+    } else if (["failed-preflight", "ambiguous-no-retry"].includes(result.status)) {
+      await pushNotifications.publish("news.publication-review").catch(() => {});
+      await safeLog(`뉴스 DC 자동 게시 확인 필요: ${record.id} (${result.status})`);
+    }
+  } catch (error) {
+    await pushNotifications.publish("news.publication-review").catch(() => {});
+    await reportError("뉴스 DC 자동 게시 실패", error);
+  }
+}
 
 async function safeLog(message) {
   const line = `${new Date().toISOString()} ${message}\n`;
@@ -49,8 +71,7 @@ async function catchUp(reason) {
       const summary = await source.collector.collectRecent(source.channel, { limit: 10 });
       for (const id of summary.ids) {
         const processed = await processor.process(id);
-        await notifier.notify(processed);
-        await pushNotifier.notify(processed);
+        await finishProcessed(processed);
       }
       await safeLog(
         `${source.label} 보충 확인(${reason}): 조회 ${summary.scanned}, ` +
@@ -110,6 +131,20 @@ try {
     allowedHandles: allowedXHandles,
   });
   processor = createNewsProcessor({ stateRoot, runnerPath, codexReviewer, sourceProfiles: newsSourceProfiles });
+  const dcPublisherConfig = hubConfig.integrations?.news?.dcPublisher;
+  autoPublisher = createNewsDcPublicationService({
+    root: stateRoot,
+    sourceProfiles: newsSourceProfiles,
+    enabled:
+      dcPublisherConfig?.enabled === true &&
+      hubConfig.allowedActions.includes("publish-news-to-dc"),
+    autoPublishEnabled: dcPublisherConfig?.autoPublish === true,
+    publisherRoot: dcPublisherConfig?.publisherRoot,
+    galleryId: dcPublisherConfig?.galleryId,
+    coverRoot: path.join(PROJECT_ROOT, "assets", "news", "dc-covers"),
+    publisherScriptPath: path.join(PROJECT_ROOT, "scripts", "publish-news-to-dc.cjs"),
+  });
+  await autoPublisher.initializeAutoPublishing();
   client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -125,8 +160,7 @@ try {
       const result = await source.collector.collectMessage(message);
       if (result.status === "created") {
         const processed = await processor.process(result.id);
-        await notifier.notify(processed);
-        await pushNotifier.notify(processed);
+        await finishProcessed(processed);
         await safeLog(`${source.label} 새 항목 즉시 처리: 이미지 ${result.mediaCount}`);
       }
     } catch (error) {
@@ -170,11 +204,12 @@ try {
   }
   sources = channelEntries;
   notifier = createDiscordNewsNotifier({ stateRoot, pendingChannel });
+  pushNotifications = createPushNotificationService({
+    root: path.join(PROJECT_ROOT, "state", "notifications"),
+  });
   pushNotifier = createNewsPushNotifier({
     stateRoot,
-    pushNotifications: createPushNotificationService({
-      root: path.join(PROJECT_ROOT, "state", "notifications"),
-    }),
+    pushNotifications,
   });
 
   if (xStreamConfig.enabled) {

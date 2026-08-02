@@ -24,6 +24,8 @@ test("Push 알림은 키와 구독을 상태 폴더에만 보관하고 고정 �
     assert.equal((await service.subscribe(subscription)).subscriberCount, 1);
     assert.equal((await service.publish("test.missed-you")).sent, 1);
     assert.equal(sent[0].payload.body, "그냥 보고팠어요!!!!!");
+    assert.equal((await service.publish("news.published")).sent, 1);
+    assert.equal(sent[1].payload.url, "/news");
     const stored = await readFile(path.join(root, "subscriptions.json"), "utf8");
     assert.equal(stored.includes("private"), false);
     assert.equal((await service.unsubscribe(subscription.endpoint)).subscriberCount, 0);

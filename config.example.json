@@ -43,6 +43,7 @@
       },
       "dcPublisher": {
         "enabled": false,
+        "autoPublish": true,
         "publisherRoot": "",
         "galleryId": "chatgpt"
       }

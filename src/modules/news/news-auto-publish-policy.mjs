@@ -1,6 +1,6 @@
 const GOOD_IMPORTANCE = new Set(["medium", "high"]);
-const TRUSTED_SOURCES = new Set(["official", "high"]);
-export const NEWS_ANALYSIS_POLICY_VERSION = 10;
+const TRUSTED_SOURCES = new Set(["official", "high", "standard"]);
+export const NEWS_ANALYSIS_POLICY_VERSION = 11;
 
 function result(decision, code, reason) {
   return Object.freeze({ decision, code, reason });
@@ -30,6 +30,9 @@ export function evaluateNewsAutoPublish(record, sourceProfile = null) {
   }
   if (triage.evidenceTag === "official") {
     return result("eligible", "official", "공식 출처의 게시 후보라 자동 게시 조건을 충족해요.");
+  }
+  if (triage.boardCategory === "chatter" || triage.importance === "low") {
+    return result("blocked", "low_value", "잡담 또는 낮은 중요도 항목이라 허브에만 보관해요.");
   }
   const trusted = TRUSTED_SOURCES.has(sourceProfile?.trustLevel) && sourceProfile?.affiliationConfirmed === true;
   const confidence = Number(triage.confidence) || 0;
@@ -61,8 +64,20 @@ export function evaluateNewsAutoPublish(record, sourceProfile = null) {
     }
     return result("eligible", "trusted_inference", "핵심 인물의 구체적인 초기 신호라 [유추] 표현으로 자동 게시할 수 있어요.");
   }
+  if (
+    ["rumor", "opinion"].includes(triage.evidenceTag) &&
+    trusted &&
+    triage.importance === "high" &&
+    confidence >= 0.75
+  ) {
+    return result(
+      "eligible",
+      triage.evidenceTag === "rumor" ? "valuable_rumor" : "notable_opinion",
+      `[${triage.evidenceTag === "rumor" ? "루머" : "의견"}]이지만 신뢰 출처가 전한 높은 중요도의 게시 후보예요.`,
+    );
+  }
   if (["rumor", "opinion"].includes(triage.evidenceTag)) {
-    return result("human_review", triage.evidenceTag, `[${triage.evidenceTag === "rumor" ? "루머" : "의견"}]은 자동 게시하지 않아요.`);
+    return result("blocked", triage.evidenceTag, "가치 기준을 통과하지 못한 루머·의견이라 허브에만 보관해요.");
   }
   return result("human_review", "insufficient_confidence", "출처·중요도·신뢰도 중 자동 게시 기준을 충족하지 못했어요.");
 }
