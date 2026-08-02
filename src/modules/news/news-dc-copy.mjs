@@ -9,6 +9,13 @@ const EVIDENCE_LABELS = Object.freeze({
   rumor: "루머",
   opinion: "의견",
 });
+const UNCONFIRMED_TEXTS = Object.freeze({
+  official: "세부 제공 범위와 적용 시점은 원문만으로 모두 확인되지 않았습니다.",
+  confirmed: "세부 제공 범위와 적용 시점은 원문만으로 모두 확인되지 않았습니다.",
+  inference: "구체적인 기능명·제공 범위·출시 상태는 원문만으로 확인되지 않았습니다.",
+  rumor: "공식 발표 여부와 구체적인 내용은 원문만으로 확인되지 않았습니다.",
+  opinion: "개인의 의견이며 제품 출시나 공식 계획으로 확인된 내용은 아닙니다.",
+});
 const EMOJI_PATTERN = /\p{Extended_Pictographic}|\p{Regional_Indicator}|[\u{FE0F}\u{200D}\u{20E3}]/gu;
 const COMBINING_MARK_PATTERN = /\p{M}/gu;
 
@@ -103,20 +110,12 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map() } = {}) {
     profile?.displayName || record.source?.label || record.source?.account || "출처 확인 필요",
     counter,
   );
-  const profileLines = [
+  const profileLine = [
     `게시자: ${sourceName}`,
-    profile
-      ? [profile.affiliation, ...(profile.roles ?? [])].filter(Boolean).join(" · ")
-      : "출처 정보 확인 필요",
-    profile?.whyTracked,
-    profile?.topics?.length ? `주요 분야: ${profile.topics.join(" · ")}` : null,
-    profile?.trustLabel ? `출처 구분: ${profile.trustLabel}` : null,
-    profile
-      ? `소속 확인: ${profile.affiliationConfirmed ? "확인됨" : "사람 재확인 필요"}${
-          profile.verifiedAt ? ` · ${profile.verifiedAt}` : ""
-        }`
-      : null,
-  ].filter(Boolean).map((line) => cleanLine(line, counter));
+    profile?.affiliation,
+    ...(profile?.roles ?? []).slice(0, 2),
+    profile?.trustLabel,
+  ].filter(Boolean).map((part) => cleanLine(part, counter)).join(" · ");
 
   const sections = [
     section("본문 번역", record.workflow.translation.body, counter),
@@ -127,7 +126,11 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map() } = {}) {
       return section(`관련 글 번역 · ${owner}`, translation?.body, counter);
     }),
     section("왜 중요한가", record.workflow.triage.reason, counter),
-    section("아직 확인되지 않은 점", record.workflow.triage.advice, counter),
+    section(
+      "아직 확인되지 않은 점",
+      UNCONFIRMED_TEXTS[record.workflow.triage.evidenceTag] ?? UNCONFIRMED_TEXTS.inference,
+      counter,
+    ),
   ].filter(Boolean);
 
   const notice = cleanLine(
@@ -138,7 +141,7 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map() } = {}) {
   );
   const links = sourceLinks(record);
   const bodyParts = [
-    ...profileLines,
+    profileLine,
     "",
     ...sections.flatMap(({ label, body }) => [label, body, ""]),
     notice,
