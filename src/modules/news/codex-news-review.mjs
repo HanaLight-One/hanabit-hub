@@ -51,6 +51,15 @@ function limited(value, maximum, label) {
   return text;
 }
 
+function translatedText(value, maximum, label) {
+  const cleaned = String(value ?? "")
+    .replace(/https?:\/\/\S+/giu, " ")
+    .replace(/\b(?:pic\.)?twitter\.com\/\S+/giu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+  return limited(cleaned, maximum, label);
+}
+
 function validateResult(value, contextCount) {
   const decision = String(value?.decision ?? "");
   const importance = String(value?.importance ?? "");
@@ -77,7 +86,7 @@ function validateResult(value, contextCount) {
     return Object.freeze({
       index,
       status,
-      body: limited(entry?.body, 4_000, "Codex 관련 글 교정 본문"),
+      body: translatedText(entry?.body, 4_000, "Codex 관련 글 교정 본문"),
       reason: limited(entry?.reason, 300, "Codex 관련 글 번역 감사 근거"),
     });
   }).sort((left, right) => left.index - right.index);
@@ -87,7 +96,7 @@ function validateResult(value, contextCount) {
         ? value.translationAudit.status
         : (() => { throw new Error("Codex 번역 감사 상태가 올바르지 않습니다."); })(),
       title: limited(value?.translationAudit?.title, 120, "Codex 교정 제목"),
-      body: limited(value?.translationAudit?.body, 4_000, "Codex 교정 본문"),
+      body: translatedText(value?.translationAudit?.body, 4_000, "Codex 교정 본문"),
       reason: limited(value?.translationAudit?.reason, 300, "Codex 번역 감사 근거"),
     }),
     contextTranslationAudits: Object.freeze(contextTranslationAudits),
@@ -119,10 +128,12 @@ function buildPrompt(record, freeResult) {
     "A concrete inference can be publish even without an official product page. Preserve uncertainty in the headline and advice instead of discarding the signal.",
     "Audit the FREE TRANSLATION against SOURCE TEXT before judging newsworthiness.",
     "The translationAudit title and body must translate or faithfully summarize SOURCE TEXT only. Never add a fact, phrase, subject, capability, or claim that exists only in CONTEXT.",
+    "translationAudit.body must contain the complete meaningful SOURCE translation without URLs; do not leave the meaning only in the title.",
     "Use CONTEXT only for triage reason and editorial advice. If the free translation imported any context claim, set translationAudit.status to corrected and replace it with a source-only Korean translation.",
     "Set translationAudit.status to passed only when the supplied free translation is already attributable entirely to SOURCE TEXT.",
     "Audit each FREE CONTEXT TRANSLATION against only its matching CONTEXT text. Return one contextTranslationAudits item per CONTEXT with the same 1-based index.",
     "Context translations are valuable evidence and must be preserved separately; never merge them into SOURCE translation or discard them.",
+    "Remove URLs and media addresses from contextTranslationAudits.body because links are stored separately.",
     "Separate explicit facts from implications. publish means worth sharing with the evidence tag; it still never triggers publication in this process.",
     "Return only the JSON required by the supplied schema, in Korean.",
     `SOURCE TYPE: ${String(record.source?.type ?? "unknown")}`,

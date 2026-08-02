@@ -37,7 +37,7 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
         await mkdir(path.dirname(outputPath), { recursive: true });
         await writeFile(outputPath, JSON.stringify({
           translation: { title: "코덱스 한도 초기화", body: "사용량 한도가 초기화됐습니다." },
-          contextTranslations: [{ index: 1, body: "오늘 새 모델을 사용할 수 있습니다." }],
+          contextTranslations: [{ index: 1, body: "오늘 새 모델을 사용할 수 있습니다. https://example.com/context" }],
           triage: { decision: "publish", confidence: 0.98, importance: "high", evidenceTag: "confirmed", reason: "구체적인 서비스 변경", advice: "게시 가치가 높습니다.", signals: ["usage-limit"] },
         }), "utf8");
       },
@@ -45,7 +45,35 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
     assert.equal(result.triage.decision, "publish");
     assert.equal(result.triage.importance, "high");
     assert.equal(result.triage.evidenceTag, "confirmed");
+    assert.equal(result.contextTranslations[0].body, "오늘 새 모델을 사용할 수 있습니다.");
     await assert.rejects(() => readFile(path.join(runtimeRoot, "e".repeat(32), "prompt.txt"), "utf8"), /ENOENT/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("URL만 남긴 원문 번역 본문은 거부한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-url-only-"));
+  const runnerPath = path.join(root, "runner.ps1");
+  await writeFile(runnerPath, "test", "utf8");
+  try {
+    await assert.rejects(() => invokeFreeNewsAnalysis({
+      id: "4".repeat(32),
+      source: { type: "x-post", account: "gdb" },
+      original: { content: "Ask ChatGPT Work to do any recurring task https://example.com/post", contexts: [] },
+    }, {
+      runnerPath,
+      runtimeRoot: path.join(root, "runtime"),
+      async wait() {},
+      async runProcess(command, args) {
+        const outputPath = args[args.indexOf("-Output") + 1];
+        await writeFile(outputPath, JSON.stringify({
+          translation: { title: "반복 작업", body: "https://example.com/post" },
+          contextTranslations: [],
+          triage: { decision: "publish", confidence: 0.9, importance: "high", evidenceTag: "inference", reason: "반복 작업", advice: "유추로 게시", signals: [] },
+        }), "utf8");
+      },
+    }), /번역 본문 형식/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
