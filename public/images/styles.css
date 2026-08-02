@@ -330,6 +330,7 @@ h1 em { color: var(--accent); font-style: normal; }
 .card-copy strong, .card-copy span { display: block; }
 .card-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-copy span { margin-top: 7px; color: var(--muted); font-size: 12px; }
+.card-copy .original-name { margin-top: 3px; opacity: .72; font-size: 10px; }
 .card-record { min-height: 72px; padding: 0 15px 14px; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .card-record strong { display: block; color: var(--text); }
 .card-record p { display: -webkit-box; margin: 7px 0 0; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }

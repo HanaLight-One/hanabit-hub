@@ -87,6 +87,7 @@ HTTP 라우트는 검증과 응답만 맡고 실제 동작은 같은 기능 폴�
 | 이미지 생성 초안·작업 | `state/image-generation-*` | Hub가 만든 초안과 1장 작업 상태 | 제외 |
 | 이미지·테마·제작 기록 | 외부 설정 루트 | 기존 저장소를 이동 없이 연결 | 외부 |
 | 이미지 휴지통 | 외부 `stateRoot/trash/hub-v1/` | 추가 생성 파일의 복원 영수증과 격리 파일 | 외부 |
+| 오테 게시 썸네일 | 외부 `daily-image-pipeline-v2/assets/daily-theme-thumbnails/` | 10장 공용 자산과 최근 회피 가중 선택 | 외부 |
 | DC 편집실 | `state/dc-compose/` | 업로드 이미지와 게시 직전 격리 사본·영수증 | 제외 |
 | 운세 결과·게시 상태 | 외부 설정 루트 | 읽기 전용 연결 | 외부 |
 
@@ -166,6 +167,7 @@ Responses API 공용 텍스트 실행기의 복구 가능한 정본은 `tools/op
 - Hub는 `config.local.json`으로 주입된 루트와 고정 실행 파일만 사용한다.
 - 이미지 휴지통 쓰기는 `manage-image-trash` allowlist가 켜진 관리자 Hub에서만 허용한다. 오테 본편은 보호하고 추가 생성 이미지만 이동하며, 영구 삭제 시 파일·썸네일 캐시·SQLite 제작 기록을 함께 제거한다.
 - 이미지 운영일은 서울 시간 오전 02시에 바뀐다.
+- 오테 게시자는 외부 Python 선택기가 고른 날짜별 썸네일을 생성 이미지 앞에 한 장 붙이며, 같은 날짜에는 선택을 바꾸지 않는다.
 - 운세 계산·템플릿·예약 게시 코드는 이 저장소의 책임이 아니다.
 - 실제 게시, 예약 작업, Tunnel·DNS 변경은 사용자 승인 전 실행하지 않는다.
 
@@ -226,7 +228,7 @@ publication-jobs/` 아래에 격리 사본을 만든 뒤 `scripts/publish-dc-com
 - 오테 완료 manifest -> 이미지 SQLite 제작 기록: `src/modules/images/image-metadata-catalog.mjs`
 - 추가 생성 작업 카드 -> 안전한 프롬프트·선택 인물·화풍·결과 이미지와 후속 생성 링크:
   `src/modules/images/prompt-only-executor.mjs`, `public/images/create/app.js`
-- 이미지 홈 카드 -> 제작 기록 요약과 편집·인물 유지·화풍 유지 바로가기:
+- 이미지 홈 카드 -> 인물·화풍 기반 표시명, 작은 원본 파일명, 제작 기록 요약과 편집·인물 유지·화풍 유지 바로가기:
   `public/images/app.js`
 - Codex 공식 사용량 -> 홈 남은량 카드: `src/modules/system/codex-usage.mjs`
 - API: `GET /api/system/codex/usage`

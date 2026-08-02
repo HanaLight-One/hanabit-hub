@@ -170,7 +170,10 @@ function renderGrid() {
     name.textContent = image.name;
     const meta = document.createElement("span");
     meta.textContent = `${image.date ?? "날짜 없음"} · ${CATEGORY_LABELS[image.category] ?? image.group}`;
-    copy.append(name, meta);
+    const originalName = document.createElement("span");
+    originalName.className = "original-name";
+    originalName.textContent = `원본 파일 · ${image.name}`;
+    copy.append(name, meta, originalName);
     main.append(preview, copy);
 
     const record = document.createElement("div");
@@ -200,13 +203,28 @@ function renderGrid() {
     }
     card.append(main, record, actions);
     main.addEventListener("click", () => openPanel(image, main));
-    hydrateImageCard(image, record);
+    hydrateImageCard(image, record, name, main);
     fragment.append(card);
   }
   elements.grid.append(fragment);
 }
 
-async function hydrateImageCard(image, target) {
+function compactCharacters(record) {
+  const characters = record.characters ?? [];
+  if (!characters.length) return null;
+  if (characters.length <= 3) return characters.join(" + ");
+  return `${characters.slice(0, 3).join(" + ")} 외 ${characters.length - 3}명`;
+}
+
+function displayTitle(record) {
+  const characters = compactCharacters(record);
+  const style = record.style
+    ?? (record.styleMode === "prompt" ? "프롬프트 화풍" : record.styleMode === "rendering" ? "고정 렌더링" : null);
+  if (characters && style) return `${characters} · ${style}`;
+  return characters ?? style ?? null;
+}
+
+async function hydrateImageCard(image, target, title, main) {
   let record = state.productionRecords.get(image.id);
   if (record === undefined) {
     try {
@@ -221,6 +239,11 @@ async function hydrateImageCard(image, target) {
   if (!record) {
     target.textContent = "이전 이미지 · 상세 기록 없음";
     return;
+  }
+  const humanTitle = displayTitle(record);
+  if (humanTitle) {
+    title.textContent = humanTitle;
+    main.setAttribute("aria-label", `${humanTitle} 제작 기록 열기`);
   }
   const characters = record.characters?.length
     ? record.characters.join(", ")

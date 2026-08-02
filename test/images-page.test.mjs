@@ -60,6 +60,8 @@ test("이미지 화면의 스크립트와 스타일을 제공한다", async () =
     assert.match(scriptBody, /인물 유지/);
     assert.match(scriptBody, /화풍 유지/);
     assert.match(await style.text(), /\.image-card > img/);
+    assert.match(scriptBody, /function displayTitle/u);
+    assert.match(scriptBody, /원본 파일/u);
     assert.equal(style.status, 200);
     assert.match(style.headers.get("content-type"), /text\/css/);
   });
