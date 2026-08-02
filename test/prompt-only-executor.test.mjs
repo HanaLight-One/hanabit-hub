@@ -6,6 +6,8 @@ import test from "node:test";
 import { createGenerationDraftStore } from "../src/modules/images/generation-drafts.mjs";
 import { createPromptOnlyExecutor } from "../src/modules/images/prompt-only-executor.mjs";
 
+const SOURCE_ID = "f".repeat(64);
+
 async function fixture(callback, { now } = {}) {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-prompt-executor-"));
   const draftRoot = path.join(root, "drafts");
@@ -17,6 +19,7 @@ async function fixture(callback, { now } = {}) {
   const freeTextRunnerPath = path.join(root, "free.ps1");
   const freeTextPythonExecutablePath = path.join(root, "free-python.exe");
   const freeTextKeyStorePath = path.join(root, "openai-api-key.dpapi");
+  const sourceImagePath = path.join(root, "owner-source.png");
   await mkdir(outputRoot, { recursive: true });
   await Promise.all([
     writeFile(assetIndexPath, JSON.stringify({
@@ -42,12 +45,18 @@ async function fixture(callback, { now } = {}) {
     writeFile(freeTextRunnerPath, "test", "utf8"),
     writeFile(freeTextPythonExecutablePath, "test", "utf8"),
     writeFile(freeTextKeyStorePath, "test", "utf8"),
+    writeFile(sourceImagePath, "source", "utf8"),
   ]);
   const catalog = { async list() { return {
     styles: [{ id: "calm", label: "calm" }],
     characters: [{ id: "pink-bridge", label: "핑크브릿지" }, { id: "헤일라", label: "헤일라" }],
   }; } };
   const archive = {
+    async find(id) {
+      return id === SOURCE_ID
+        ? { target: sourceImagePath, record: { id: SOURCE_ID } }
+        : null;
+    },
     async findByTarget(target) {
       if (path.basename(target) !== "result.png") return null;
       return { record: {
@@ -59,7 +68,7 @@ async function fixture(callback, { now } = {}) {
       } };
     },
   };
-  const drafts = createGenerationDraftStore({ root: draftRoot, catalog, archive: null });
+  const drafts = createGenerationDraftStore({ root: draftRoot, catalog, archive });
   const launches = [];
   const executor = createPromptOnlyExecutor({
     draftStore: drafts,
@@ -302,5 +311,27 @@ test("자동 선택 안내 생성 초안은 실제 worker 실행을 거부한다
     });
     await assert.rejects(() => executor.start(draft.id), /아직 실제 생성/);
     assert.equal(launches.length, 0);
+  });
+});
+
+test("직접 선택한 소스 이미지를 worker 참조 컨텍스트에 연결한다", async () => {
+  await fixture(async ({ drafts, executor, jobRoot }) => {
+    const draft = await drafts.create({
+      prompt: "얼굴은 유지하고 배경을 정원으로 바꿔줘",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: SOURCE_ID,
+      characters: { mode: "none", ids: [] },
+      style: { mode: "prompt", id: null },
+    });
+    await executor.start(draft.id);
+    const job = JSON.parse(await readFile(path.join(jobRoot, `${draft.id}.json`), "utf8"));
+    const workerContext = JSON.parse(
+      (await readFile(path.join(jobRoot, `${draft.id}.worker-context.json`), "utf8")).replace(/^\uFEFF/u, ""),
+    );
+    assert.equal(job.sourceImageId, SOURCE_ID);
+    assert.match(job.sourceImagePath, /owner-source\.png$/u);
+    assert.equal(workerContext.user_reference_image, job.sourceImagePath);
+    assert.equal(workerContext.generation_rules.user_reference_follows_prompt, true);
   });
 });

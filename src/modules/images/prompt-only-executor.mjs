@@ -135,6 +135,18 @@ export function createPromptOnlyExecutor({
       throw executionError("NOT_EXECUTABLE", "이 선택 조합은 아직 실제 생성에 연결되지 않았습니다.");
     }
 
+    let sourceImage = null;
+    if (draft.sourceImageId !== null) {
+      if (!archive?.find) {
+        throw executionError("INVALID_SOURCE", "선택한 소스 이미지를 확인할 수 없어요.");
+      }
+      sourceImage = await archive.find(draft.sourceImageId);
+      if (!sourceImage) {
+        throw executionError("INVALID_SOURCE", "선택한 소스 이미지를 찾을 수 없어요.");
+      }
+      await requireFile(sourceImage.target, "소스 이미지");
+    }
+
     await Promise.all([
       requireFile(assetIndexPath, "자산 색인"),
       requireFile(pythonExecutablePath, "Python"),
@@ -179,6 +191,8 @@ export function createPromptOnlyExecutor({
       characters: draft.characters,
       style: draft.style,
       useImageAnchors: draft.useImageAnchors === true,
+      sourceImageId: draft.sourceImageId,
+      sourceImagePath: sourceImage?.target ?? null,
       outputs: [],
       progress: { completed: 0, total: 1 },
       requestedBy: "hanabit-hub-owner",

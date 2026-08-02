@@ -64,5 +64,5 @@
     "timezone": "Asia/Seoul",
     "dayStartsAtHour": 2
   },
-  "allowedActions": ["restart-codex", "manage-image-trash", "publish-dc-compose", "manage-theme-thumbnails"]
+  "allowedActions": ["restart-codex", "manage-image-trash", "publish-dc-compose", "manage-theme-thumbnails", "manage-source-uploads"]
 }

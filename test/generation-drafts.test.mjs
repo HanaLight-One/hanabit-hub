@@ -173,3 +173,20 @@ test("초안은 오테 추가와 자유 추가 목적만 허용한다", async ()
     );
   });
 });
+
+test("새 장면도 직접 고른 소스 이미지를 보존하고 실행할 수 있다", async () => {
+  await fixture(async ({ root, store }) => {
+    const result = await store.create({
+      prompt: "이 참조 이미지의 인물을 정원 장면으로 옮겨줘",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: SOURCE_ID,
+      characters: { mode: "none", ids: [] },
+      style: { mode: "prompt", id: null },
+    });
+    assert.equal(result.route, "prompt-only");
+    assert.equal(result.executionMode, "prompt-only");
+    const saved = JSON.parse(await readFile(path.join(root, `${result.id}.json`), "utf8"));
+    assert.equal(saved.sourceImageId, SOURCE_ID);
+  });
+});

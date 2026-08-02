@@ -86,6 +86,7 @@ HTTP 라우트는 검증과 응답만 맡고 실제 동작은 같은 기능 폴�
 | Hub SQLite | `state/hanabit-hub.sqlite` | 뉴스 원장 v1은 미연결, 이미지 제작 기록 v2는 운영 색인·조회 | 제외 |
 | Push 구독·키 | `state/notifications/` | 모바일 Web Push 상태 | 제외 |
 | 이미지 생성 초안·작업 | `state/image-generation-*` | Hub가 만든 초안과 1장 작업 상태 | 제외 |
+| 직접 업로드 생성 소스 | `state/image-source-uploads/YYYY-MM-DD/` | 사용자가 올린 PNG·JPG·WebP를 오테와 분리해 Responses 주 참조로 보관 | 제외 |
 | 이미지·테마·제작 기록 | 외부 설정 루트 | 기존 저장소를 이동 없이 연결 | 외부 |
 | 이미지 휴지통 | 외부 `stateRoot/trash/hub-v1/` | 추가 생성 파일의 복원 영수증과 격리 파일 | 외부 |
 | 오테 게시 썸네일 | 외부 `daily-image-pipeline-v2/assets/daily-theme-thumbnails/` | 숫자 이름 PNG 공용 자산, 최근 회피 가중 선택, 날짜별 강제 선택 | 외부 |
@@ -224,13 +225,17 @@ publication-jobs/` 아래에 격리 사본을 만든 뒤 `scripts/publish-dc-com
 - 외부 파이프라인과 Hub 사이의 소유권 경계
 
 `test/project-map.test.mjs`는 백엔드 모듈과 React 진입점이 지도에서 빠지면
-`npm.cmd run check`를 실패시킨다. 마지막 구조 대조일은 **2026-08-01**이다.
+`npm.cmd run check`를 실패시킨다. 마지막 구조 대조일은 **2026-08-02**다.
 
 ## 2026-08-01 추가 연결
 
 - 오테 완료 manifest -> 이미지 SQLite 제작 기록: `src/modules/images/image-metadata-catalog.mjs`
 - 추가 생성 작업 카드 -> 안전한 프롬프트·선택 인물·화풍·결과 이미지와 후속 생성 링크:
   `src/modules/images/prompt-only-executor.mjs`, `public/images/create/app.js`
+- 직접 업로드 소스 -> `POST /api/images/source-uploads`가 최대 20MB PNG·JPG·WebP를
+  Hub 상태 폴더에 저장하고, 새 장면 초안의 `sourceImageId`와 worker의
+  `user_reference_image`로만 전달한다. 제작 기록이 없는 업로드는 이어 만들기가 아니라
+  사용자가 고른 프롬프트·인물·화풍을 적용하는 새 장면 참조로 취급한다.
 - 이미지 홈 카드 -> 인물·화풍 기반 표시명, 작은 원본 파일명, 제작 기록 요약과 편집·인물 유지·화풍 유지 바로가기:
   `public/images/app.js`
 - Codex 공식 사용량 -> 홈 남은량 카드: `src/modules/system/codex-usage.mjs`

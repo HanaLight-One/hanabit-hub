@@ -66,6 +66,7 @@ function validateConfig(config) {
     "manage-image-trash",
     "publish-dc-compose",
     "manage-theme-thumbnails",
+    "manage-source-uploads",
   ]);
   const invalidAction = config.allowedActions.find(
     (action) => typeof action !== "string" || !knownActions.has(action),

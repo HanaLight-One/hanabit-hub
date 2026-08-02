@@ -226,6 +226,14 @@ export async function buildImageStudioQueueContext(
     },
   };
 
+  if (job.sourceImagePath) {
+    if (!path.isAbsolute(job.sourceImagePath)) {
+      throw new TypeError("sourceImagePath는 절대경로여야 합니다.");
+    }
+    context.user_reference_image = path.resolve(job.sourceImagePath);
+    context.generation_rules.user_reference_follows_prompt = true;
+  }
+
   if (["guided-cast", "pink-bridge"].includes(job.mode)) {
     const index = JSON.parse(await readFile(assetIndexPath, "utf8"));
     const characterIds = job.mode === "pink-bridge"

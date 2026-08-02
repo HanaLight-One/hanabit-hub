@@ -46,6 +46,8 @@ import { handleImageThumbnailRoute } from "./modules/images/image-thumbnail-rout
 import { createImageThumbnailService } from "./modules/images/image-thumbnails.mjs";
 import { createImageTrashService } from "./modules/images/image-trash.mjs";
 import { handleImageTrashRoute } from "./modules/images/image-trash-route.mjs";
+import { createSourceUploadManager } from "./modules/images/source-uploads.mjs";
+import { handleSourceUploadsRoute } from "./modules/images/source-uploads-route.mjs";
 import { createStyleAssetManager } from "./modules/images/style-assets.mjs";
 import { handleStyleAssetsRoute } from "./modules/images/style-assets-route.mjs";
 import { handleProductionRecordRoute } from "./modules/images/production-record-route.mjs";
@@ -67,6 +69,7 @@ const IS_MAIN = Boolean(
 );
 const config = await loadConfig();
 const imageStudioConfig = config.integrations?.imageStudio;
+const sourceUploadsRoot = path.join(APP_ROOT, "state", "image-source-uploads");
 const productionRecordStore =
   imageStudioConfig?.enabled && imageStudioConfig.productionRecordsRoot
     ? createProductionRecordStore({ root: imageStudioConfig.productionRecordsRoot })
@@ -86,6 +89,7 @@ const imageArchive =
         dailyImagesRoot: imageStudioConfig.dailyImagesRoot,
         dailyImagesRoots: imageStudioConfig.dailyImagesRoots,
         pilotImagesRoot: imageStudioConfig.pilotImagesRoot,
+        sourceUploadsRoot,
       })
     : null;
 const imageThumbnails =
@@ -231,6 +235,13 @@ const newsDcPublication = createNewsDcPublicationService({
 const pushNotifications = createPushNotificationService({
   root: path.join(APP_ROOT, "state", "notifications"),
 });
+const sourceUploads = imageArchive
+  ? createSourceUploadManager({
+      root: sourceUploadsRoot,
+      archive: imageArchive,
+      enabled: config.allowedActions.includes("manage-source-uploads"),
+    })
+  : null;
 const fortuneConfig = config.integrations?.fortune;
 const fortuneArchive = fortuneConfig?.enabled
   ? createFortuneArchive({
@@ -394,6 +405,7 @@ export function createServer({
   styleAssetManager = styleAssets,
   themeThumbnailManager = themeThumbnails,
   imageTrash = runtimeImageTrash,
+  sourceUploadManager = sourceUploads,
   dcComposer = runtimeDcComposer,
 } = {}) {
   return http.createServer(async (request, response) => {
@@ -675,6 +687,18 @@ export function createServer({
           response,
           pathname: url.pathname,
           trash: imageTrash,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
+        await handleSourceUploadsRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          manager: sourceUploadManager,
           sendJson,
         })
       ) {

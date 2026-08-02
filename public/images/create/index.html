@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="/images/create/styles.css" />
     <link rel="stylesheet" href="/codex-usage-indicator.css" />
     <script src="/codex-usage-indicator.js" type="module"></script>
-    <script src="/images/create/app.js?v=20260802-source-picker" type="module"></script>
+    <script src="/images/create/app.js?v=20260802-source-upload" type="module"></script>
   </head>
   <body>
     <header class="topbar">
@@ -206,6 +206,17 @@
         </div>
         <button id="source-picker-close" class="source-picker-close" type="button" aria-label="닫기">×</button>
       </div>
+      <form id="source-upload-form" class="source-upload-form">
+        <label>
+          <span>내 이미지 업로드</span>
+          <input id="source-upload-file" type="file"
+            accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" required />
+        </label>
+        <button id="source-upload-button" type="submit">업로드하고 소스로 사용</button>
+      </form>
+      <p id="source-upload-status" class="source-upload-status" aria-live="polite">
+        PNG·JPG·WebP · 최대 20MB · 오테 이미지와 분리 보관
+      </p>
       <label class="source-search">
         <span>이미지 검색</span>
         <input id="source-search" type="search" placeholder="날짜, 파일명, 이미지 종류" />

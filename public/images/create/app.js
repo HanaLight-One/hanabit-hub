@@ -30,6 +30,10 @@ const elements = {
   sourcePickerStatus: document.querySelector("#source-picker-status"),
   sourcePickerGrid: document.querySelector("#source-picker-grid"),
   sourceSearch: document.querySelector("#source-search"),
+  sourceUploadForm: document.querySelector("#source-upload-form"),
+  sourceUploadFile: document.querySelector("#source-upload-file"),
+  sourceUploadButton: document.querySelector("#source-upload-button"),
+  sourceUploadStatus: document.querySelector("#source-upload-status"),
   scene: document.querySelector("#scene-request"),
   characterCount: document.querySelector("#character-count"),
   characterGrid: document.querySelector("#character-grid"),
@@ -273,7 +277,9 @@ async function loadSourceContext(preferredMode = requestedMode) {
     const recordResponse = await fetch(image.productionRecordUrl);
     if (recordResponse.status === 404) {
       elements.sourceMessage.textContent =
-        "구조화된 제작 기록이 없어 유지 모드는 아직 사용할 수 없어요.";
+        "제작 기록이 없는 직접 참조 이미지예요. 새 장면에서 고른 인물·화풍·프롬프트와 함께 사용해요.";
+      const newMode = elements.form.querySelector('input[name="mode"][value="new"]');
+      if (newMode) newMode.checked = true;
       return;
     }
     if (!recordResponse.ok) throw new Error("Production record request failed");
@@ -361,9 +367,7 @@ async function openSourcePicker() {
     const response = await fetch("/api/images", { cache: "no-store" });
     if (!response.ok) throw new Error();
     const payload = await response.json();
-    sourceImages = Array.isArray(payload.images)
-      ? payload.images.filter((image) => image.hasProductionRecord !== false)
-      : [];
+    sourceImages = Array.isArray(payload.images) ? payload.images : [];
     renderSourcePicker();
   } catch {
     elements.sourcePickerStatus.textContent = "이미지 아카이브를 불러오지 못했어요.";
@@ -379,38 +383,86 @@ function closeSourcePicker() {
   }
 }
 
+async function selectSourceImage(image, button = null) {
+  if (!image || !SAFE_SOURCE_ID.test(image.id ?? "")) return;
+  if (button) button.disabled = true;
+
+  let hasProductionRecord = image.hasProductionRecord !== false;
+  if (hasProductionRecord) {
+    try {
+      const recordResponse = await fetch(
+        `/api/images/${encodeURIComponent(image.id)}/production-record`,
+        { cache: "no-store" },
+      );
+      if (recordResponse.status === 404) {
+        hasProductionRecord = false;
+        image.hasProductionRecord = false;
+      } else if (!recordResponse.ok) {
+        throw new Error("Production record request failed");
+      }
+    } catch {
+      elements.sourcePickerStatus.textContent = "제작 기록을 확인하지 못했어요. 잠시 뒤 다시 골라주세요.";
+      if (button) button.disabled = false;
+      return;
+    }
+  }
+
+  const currentMode = elements.form.querySelector('input[name="mode"]:checked')?.value;
+  const preferredMode = hasProductionRecord
+    ? currentMode && currentMode !== "new" ? currentMode : "same-combination"
+    : "new";
+  source = image.id;
+  const query = new URLSearchParams({ source, mode: preferredMode });
+  window.history.replaceState(null, "", `${window.location.pathname}?${query}`);
+  closeSourcePicker();
+  resetDraftAfterSourceChange();
+  await loadSourceContext(preferredMode);
+}
+
 elements.sourcePickerOpen.addEventListener("click", openSourcePicker);
 elements.sourcePickerClose.addEventListener("click", closeSourcePicker);
 elements.sourceSearch.addEventListener("input", () => renderSourcePicker(elements.sourceSearch.value));
 elements.sourcePickerGrid.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-source-id]");
   if (!button || !SAFE_SOURCE_ID.test(button.dataset.sourceId ?? "")) return;
-  button.disabled = true;
-  elements.sourcePickerStatus.textContent = "이 이미지의 제작 기록을 확인하는 중이에요.";
-  try {
-    const recordResponse = await fetch(
-      `/api/images/${encodeURIComponent(button.dataset.sourceId)}/production-record`,
-      { cache: "no-store" },
-    );
-    if (!recordResponse.ok) {
-      button.dataset.unavailable = "true";
-      elements.sourcePickerStatus.textContent =
-        "이전 이미지라 이어 만들 제작 기록이 없어요. 다른 이미지를 골라주세요.";
-      return;
-    }
-  } catch {
-    elements.sourcePickerStatus.textContent = "제작 기록을 확인하지 못했어요. 잠시 후 다시 골라주세요.";
-    button.disabled = false;
+  const image = sourceImages?.find((item) => item.id === button.dataset.sourceId);
+  await selectSourceImage(image, button);
+});
+
+elements.sourceUploadForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const file = elements.sourceUploadFile.files?.[0];
+  if (!file) {
+    elements.sourceUploadStatus.textContent = "업로드할 이미지를 먼저 골라주세요.";
     return;
   }
-  const currentMode = elements.form.querySelector('input[name="mode"]:checked')?.value;
-  const preferredMode = currentMode && currentMode !== "new" ? currentMode : "same-combination";
-  source = button.dataset.sourceId;
-  const query = new URLSearchParams({ source, mode: preferredMode });
-  window.history.replaceState(null, "", `${window.location.pathname}?${query}`);
-  closeSourcePicker();
-  resetDraftAfterSourceChange();
-  await loadSourceContext(preferredMode);
+  elements.sourceUploadButton.disabled = true;
+  elements.sourceUploadStatus.textContent = "소스 보관함에 안전하게 저장하는 중이에요.";
+  try {
+    const response = await fetch("/api/images/source-uploads", {
+      method: "POST",
+      headers: {
+        "content-type": file.type || "application/octet-stream",
+        "x-source-upload-confirmation": "upload-generation-source",
+        "x-source-file-name": encodeURIComponent(file.name),
+      },
+      body: file,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.image) {
+      const message = typeof payload.error === "string" ? payload.error : payload.error?.message;
+      throw new Error(message || "이미지를 업로드하지 못했어요.");
+    }
+    payload.image.hasProductionRecord = false;
+    sourceImages = [payload.image, ...(sourceImages ?? []).filter((item) => item.id !== payload.image.id)];
+    elements.sourceUploadForm.reset();
+    elements.sourceUploadStatus.textContent = "업로드 완료! 새 장면의 소스로 연결할게요.";
+    await selectSourceImage(payload.image);
+  } catch (error) {
+    elements.sourceUploadStatus.textContent = error.message || "이미지를 업로드하지 못했어요.";
+  } finally {
+    elements.sourceUploadButton.disabled = false;
+  }
 });
 
 elements.sourceRemove.addEventListener("click", () => {
@@ -524,7 +576,7 @@ elements.form.addEventListener("submit", (event) => {
         : styleValue.startsWith("render:")
           ? { mode: "rendering", id: styleValue.slice("render:".length) }
           : { mode: "selected", id: styleValue };
-  const sourceImageId = data.get("mode") === "new" ? null : source;
+  const sourceImageId = source;
   const useImageAnchors = data.has("use-image-anchors");
   const route =
     data.get("mode") === "new" && characterSelection.mode === "none" && ["selected", "prompt", "rendering"].includes(styleSelection.mode)

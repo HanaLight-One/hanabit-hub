@@ -96,7 +96,7 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
     if (suppliedSourceImageId !== null && !SOURCE_ID_PATTERN.test(suppliedSourceImageId)) {
       throw draftError("INVALID_SOURCE", "원본 이미지 ID가 올바르지 않습니다.");
     }
-    const sourceImageId = mode === "new" ? null : suppliedSourceImageId;
+    const sourceImageId = suppliedSourceImageId;
     if (SOURCE_MODES.has(mode) && sourceImageId === null) {
       throw draftError("INVALID_SOURCE", "이 생성 방식에는 원본 이미지가 필요합니다.");
     }
@@ -118,7 +118,7 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
     }
     const useImageAnchors = input.useImageAnchors === true;
     const route =
-      mode === "new" && sourceImageId === null && characters.mode === "none" && NO_CHARACTER_STYLE_MODES.has(style.mode)
+      mode === "new" && characters.mode === "none" && NO_CHARACTER_STYLE_MODES.has(style.mode)
         ? "prompt-only"
         : "guided";
     const id = randomUUID().replaceAll("-", "");
@@ -177,7 +177,6 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
 export function classifyDraftExecution(draft) {
   if (
     draft?.mode !== "new" ||
-    draft?.sourceImageId !== null ||
     draft?.executionEnabled !== false
   ) return null;
   if (

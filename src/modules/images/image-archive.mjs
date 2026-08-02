@@ -4,7 +4,7 @@ import path from "node:path";
 
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif"]);
 const IMAGE_ID_PATTERN = /^[a-f0-9]{64}$/;
-const SOURCES = Object.freeze(["daily", "pilot"]);
+const BASE_SOURCES = Object.freeze(["daily", "pilot"]);
 
 function imageId(source, relative) {
   return crypto.createHash("sha256").update(`${source}:${relative}`).digest("hex");
@@ -20,8 +20,16 @@ function publicUrls(id, modifiedAtMs) {
   });
 }
 
-function classify(relative) {
+function classify(relative, source) {
   const parts = relative.split("/");
+  if (source === "upload") {
+    return {
+      date: parts[0]?.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? null,
+      album: "내 소스",
+      group: "직접 업로드",
+      category: "source-upload",
+    };
+  }
   const album = parts[0] || "기타";
   const date = album.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
   const group = parts.length > 2 ? parts[1] : "미리보기";
@@ -71,7 +79,7 @@ async function walkImages(root, source) {
           name: entry.name,
           modifiedAt: info.mtime.toISOString(),
           size: info.size,
-          ...classify(relative),
+          ...classify(relative, source),
           ...publicUrls(id, info.mtimeMs),
           }),
         }),
@@ -110,6 +118,7 @@ export function createImageArchive({
   dailyImagesRoot,
   dailyImagesRoots = [],
   pilotImagesRoot,
+  sourceUploadsRoot,
 }) {
   if (!Array.isArray(dailyImagesRoots)) {
     throw new TypeError("dailyImagesRoots는 배열이어야 합니다.");
@@ -118,9 +127,11 @@ export function createImageArchive({
   const roots = {
     daily: uniqueRoots([...dailyImagesRoots, dailyImagesRoot]),
     pilot: uniqueRoots([pilotImagesRoot]),
+    upload: uniqueRoots([sourceUploadsRoot]),
   };
+  const sources = sourceUploadsRoot ? [...BASE_SOURCES, "upload"] : [...BASE_SOURCES];
 
-  for (const source of SOURCES) {
+  for (const source of sources) {
     for (const root of roots[source]) {
       if (!path.isAbsolute(root)) {
         throw new TypeError(`${source} 이미지 루트는 절대경로여야 합니다.`);
@@ -130,7 +141,7 @@ export function createImageArchive({
 
   async function list() {
     const inspections = await Promise.all(
-      SOURCES.map(async (source) => [
+      sources.map(async (source) => [
         source,
         await Promise.all(
           roots[source].map(async (root) => ({
@@ -178,7 +189,7 @@ export function createImageArchive({
       throw new TypeError("imageId는 64자리 소문자 16진수여야 합니다.");
     }
 
-    for (const source of SOURCES) {
+    for (const source of sources) {
       for (const root of roots[source]) {
         const inspection = await inspectRoot(root);
         if (!inspection.available) continue;
@@ -200,7 +211,7 @@ export function createImageArchive({
   async function findByTarget(target) {
     if (!path.isAbsolute(target ?? "")) return null;
     const resolvedTarget = path.resolve(target).toLowerCase();
-    for (const source of SOURCES) {
+    for (const source of sources) {
       for (const root of roots[source]) {
         const inspection = await inspectRoot(root);
         if (!inspection.available) continue;
@@ -223,7 +234,7 @@ export function createImageArchive({
 
   async function listIndexable() {
     const entriesById = new Map();
-    for (const source of SOURCES) {
+    for (const source of sources) {
       for (const root of roots[source]) {
         const inspection = await inspectRoot(root);
         if (!inspection.available) continue;
@@ -243,7 +254,7 @@ export function createImageArchive({
   function containsTarget(target) {
     if (!path.isAbsolute(target ?? "")) return false;
     const resolvedTarget = path.resolve(target);
-    return SOURCES.some((source) => roots[source].some((root) => {
+    return sources.some((source) => roots[source].some((root) => {
       const relative = path.relative(root, resolvedTarget);
       return relative !== "" && relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
     }));
