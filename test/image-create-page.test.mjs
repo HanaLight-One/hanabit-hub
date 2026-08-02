@@ -107,8 +107,12 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(scriptBody, /\/api\/images\/source-uploads/);
     assert.match(scriptBody, /upload-generation-source/);
     assert.match(scriptBody, /selectSourceImage/);
+    assert.match(scriptBody, /clipboardData/);
+    assert.match(scriptBody, /moveUploadedSourceToTrash/);
+    assert.match(scriptBody, /move-image-to-trash/);
+    assert.match(body, /Ctrl\+V/);
     assert.match(scriptBody, /mode: preferredMode/);
-    assert.match(scriptBody, /이어 만들 제작 기록이 없어요/);
+    assert.match(scriptBody, /제작 기록이 없는 직접 참조 이미지예요/);
     assert.match(scriptBody, /hasProductionRecord/);
     assert.match(scriptBody, /purpose/);
     assert.equal(scriptBody.includes('method: "PUT"'), false);

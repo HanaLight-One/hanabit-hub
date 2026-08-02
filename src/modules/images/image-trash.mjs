@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const EXTRA_CATEGORIES = new Set(["theme-extra", "free-extra", "legacy-extra"]);
+const EXTRA_CATEGORIES = new Set(["theme-extra", "free-extra", "legacy-extra", "source-upload"]);
 const TRASH_ID_PATTERN = /^[a-f0-9]{32}$/u;
 
 function operationError(code, message) {

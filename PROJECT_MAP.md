@@ -235,7 +235,9 @@ publication-jobs/` 아래에 격리 사본을 만든 뒤 `scripts/publish-dc-com
 - 직접 업로드 소스 -> `POST /api/images/source-uploads`가 최대 20MB PNG·JPG·WebP를
   Hub 상태 폴더에 저장하고, 새 장면 초안의 `sourceImageId`와 worker의
   `user_reference_image`로만 전달한다. 제작 기록이 없는 업로드는 이어 만들기가 아니라
-  사용자가 고른 프롬프트·인물·화풍을 적용하는 새 장면 참조로 취급한다.
+  사용자가 고른 프롬프트·인물·화풍을 적용하는 새 장면 참조로 취급한다. 소스 선택창은
+  파일 선택과 클립보드 이미지 붙여넣기를 같은 검증 API로 처리하고, 직접 업로드 카드만
+  기존 이미지 휴지통으로 이동할 수 있다.
 - 이미지 홈 카드 -> 인물·화풍 기반 표시명, 작은 원본 파일명, 제작 기록 요약과 편집·인물 유지·화풍 유지 바로가기:
   `public/images/app.js`
 - Codex 공식 사용량 -> 홈 남은량 카드: `src/modules/system/codex-usage.mjs`

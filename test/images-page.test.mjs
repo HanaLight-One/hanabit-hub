@@ -34,8 +34,8 @@ test("/images가 읽기 전용 이미지 화면을 제공한다", async () => {
     assert.match(body, /자유 추가/);
     assert.match(body, /id="generation-status"/);
     assert.match(body, /id="prompt-record"/);
-    assert.match(body, /styles\.css\?v=20260802-trash/);
-    assert.match(body, /app\.js\?v=20260802-trash/);
+    assert.match(body, /styles\.css\?v=20260802-upload-trash/);
+    assert.match(body, /app\.js\?v=20260802-upload-trash/);
     assert.equal(body.includes("삭제"), false);
   });
 });
@@ -62,6 +62,7 @@ test("이미지 화면의 스크립트와 스타일을 제공한다", async () =
     assert.match(await style.text(), /\.image-card > img/);
     assert.match(scriptBody, /function displayTitle/u);
     assert.match(scriptBody, /원본 파일/u);
+    assert.match(scriptBody, /source-upload/u);
     assert.equal(style.status, 200);
     assert.match(style.headers.get("content-type"), /text\/css/);
   });

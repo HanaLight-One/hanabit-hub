@@ -45,6 +45,7 @@ const CATEGORY_LABELS = Object.freeze({
   "theme-extra": "오테 추가",
   "free-extra": "자유 추가",
   "legacy-extra": "이전 추가",
+  "source-upload": "직접 업로드",
 });
 const STAGE_LABELS = Object.freeze({
   planning: "무료 API 준비 중",
@@ -53,7 +54,7 @@ const STAGE_LABELS = Object.freeze({
   failed: "최근 생성 실패",
   stalled: "생성 확인 필요",
 });
-const DELETABLE_CATEGORIES = new Set(["theme-extra", "free-extra", "legacy-extra"]);
+const DELETABLE_CATEGORIES = new Set(["theme-extra", "free-extra", "legacy-extra", "source-upload"]);
 
 async function moveToTrash(image) {
   if (!DELETABLE_CATEGORIES.has(image.category)) return;

@@ -12,11 +12,14 @@ async function fixture(context) {
   const archiveRoot = path.join(root, "archive");
   const extraRoot = path.join(archiveRoot, "2026-08-02", "extra-requests", "free-play", "job");
   const dailyRoot = path.join(archiveRoot, "2026-08-02", "final");
+  const uploadRoot = path.join(root, "source-uploads");
   await mkdir(extraRoot, { recursive: true });
   await mkdir(dailyRoot, { recursive: true });
+  await mkdir(path.join(uploadRoot, "2026-08-02"), { recursive: true });
   await writeFile(path.join(extraRoot, "extra.png"), "extra");
   await writeFile(path.join(dailyRoot, "daily.png"), "daily");
-  const archive = createImageArchive({ dailyImagesRoot: archiveRoot });
+  await writeFile(path.join(uploadRoot, "2026-08-02", "upload.png"), "upload");
+  const archive = createImageArchive({ dailyImagesRoot: archiveRoot, sourceUploadsRoot: uploadRoot });
   const images = (await archive.list()).images;
   const deletedIds = [];
   const removedThumbnails = [];
@@ -37,6 +40,7 @@ async function fixture(context) {
     service,
     extra: images.find((image) => image.name === "extra.png"),
     daily: images.find((image) => image.name === "daily.png"),
+    upload: images.find((image) => image.name === "upload.png"),
     deletedIds,
     removedThumbnails,
   };
@@ -61,6 +65,16 @@ test("추가 생성 이미지를 휴지통으로 옮긴 뒤 원래 위치로 복
 test("오늘의 테마 본편은 휴지통 이동을 거부한다", async (context) => {
   const { service, daily } = await fixture(context);
   await assert.rejects(() => service.move(daily.id), (error) => error.code === "PROTECTED");
+});
+
+test("직접 업로드 이미지는 기존 휴지통으로 옮겼다가 복원할 수 있다", async (context) => {
+  const { archive, service, upload } = await fixture(context);
+  const original = (await archive.find(upload.id)).target;
+  const item = await service.move(upload.id);
+  assert.equal(item.image.category, "source-upload");
+  assert.equal(await archive.find(upload.id), null);
+  await service.restore(item.id);
+  assert.equal(await readFile(original, "utf8"), "upload");
 });
 
 test("영구 삭제는 휴지통 파일과 DB 기록 및 썸네일 캐시를 제거한다", async (context) => {

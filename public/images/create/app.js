@@ -325,6 +325,8 @@ function renderSourcePicker(query = "") {
     ? `${matches.length}개 검색 결과`
     : `최근 이미지 ${matches.length}개`;
   for (const image of matches) {
+    const card = document.createElement("article");
+    card.className = "source-option-card";
     const button = document.createElement("button");
     button.className = "source-option";
     button.type = "button";
@@ -340,7 +342,17 @@ function renderSourcePicker(query = "") {
     meta.textContent = `${image.date ?? "날짜 없음"} · ${image.category ?? image.group}`;
     copy.append(name, meta);
     button.append(preview, copy);
-    elements.sourcePickerGrid.append(button);
+    card.append(button);
+    if (image.category === "source-upload") {
+      const trash = document.createElement("button");
+      trash.type = "button";
+      trash.className = "source-option-trash";
+      trash.dataset.trashSourceId = image.id;
+      trash.textContent = "휴지통";
+      trash.setAttribute("aria-label", `${image.name} 휴지통으로 이동`);
+      card.append(trash);
+    }
+    elements.sourcePickerGrid.append(card);
   }
 }
 
@@ -423,19 +435,19 @@ elements.sourcePickerOpen.addEventListener("click", openSourcePicker);
 elements.sourcePickerClose.addEventListener("click", closeSourcePicker);
 elements.sourceSearch.addEventListener("input", () => renderSourcePicker(elements.sourceSearch.value));
 elements.sourcePickerGrid.addEventListener("click", async (event) => {
+  const trashButton = event.target.closest("button[data-trash-source-id]");
+  if (trashButton) {
+    const image = sourceImages?.find((item) => item.id === trashButton.dataset.trashSourceId);
+    await moveUploadedSourceToTrash(image, trashButton);
+    return;
+  }
   const button = event.target.closest("button[data-source-id]");
   if (!button || !SAFE_SOURCE_ID.test(button.dataset.sourceId ?? "")) return;
   const image = sourceImages?.find((item) => item.id === button.dataset.sourceId);
   await selectSourceImage(image, button);
 });
 
-elements.sourceUploadForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const file = elements.sourceUploadFile.files?.[0];
-  if (!file) {
-    elements.sourceUploadStatus.textContent = "업로드할 이미지를 먼저 골라주세요.";
-    return;
-  }
+async function uploadSourceFile(file) {
   elements.sourceUploadButton.disabled = true;
   elements.sourceUploadStatus.textContent = "소스 보관함에 안전하게 저장하는 중이에요.";
   try {
@@ -463,6 +475,50 @@ elements.sourceUploadForm.addEventListener("submit", async (event) => {
   } finally {
     elements.sourceUploadButton.disabled = false;
   }
+}
+
+async function moveUploadedSourceToTrash(image, button) {
+  if (!image || image.category !== "source-upload") return;
+  if (!confirm(`'${image.name}' 업로드 이미지를 휴지통으로 옮길까요?\n휴지통에서 복원하거나 영구 삭제할 수 있어요.`)) return;
+  button.disabled = true;
+  elements.sourcePickerStatus.textContent = "업로드 이미지를 휴지통으로 옮기는 중이에요.";
+  try {
+    const response = await fetch(`/api/images/${encodeURIComponent(image.id)}/trash`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ confirmation: "move-image-to-trash" }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "휴지통으로 옮기지 못했어요.");
+    sourceImages = (sourceImages ?? []).filter((item) => item.id !== image.id);
+    if (source === image.id) elements.sourceRemove.click();
+    renderSourcePicker(elements.sourceSearch.value);
+    elements.sourcePickerStatus.textContent = "휴지통으로 이동했어요.";
+  } catch (error) {
+    button.disabled = false;
+    elements.sourcePickerStatus.textContent = error.message || "휴지통으로 옮기지 못했어요.";
+  }
+}
+
+elements.sourceUploadForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const file = elements.sourceUploadFile.files?.[0];
+  if (!file) {
+    elements.sourceUploadStatus.textContent = "업로드할 이미지를 먼저 골라주세요.";
+    return;
+  }
+  await uploadSourceFile(file);
+});
+
+elements.sourcePicker.addEventListener("paste", async (event) => {
+  const item = [...(event.clipboardData?.items ?? [])].find((candidate) =>
+    candidate.kind === "file" && candidate.type.startsWith("image/"),
+  );
+  const file = item?.getAsFile();
+  if (!file) return;
+  event.preventDefault();
+  elements.sourceUploadStatus.textContent = "클립보드 이미지를 발견했어요!";
+  await uploadSourceFile(file);
 });
 
 elements.sourceRemove.addEventListener("click", () => {
