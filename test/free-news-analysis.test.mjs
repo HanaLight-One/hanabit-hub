@@ -44,6 +44,9 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
         assert.match(prompt, /Do not omit CONTEXT translations/);
         assert.match(prompt, /credible insider explicitly saying they used a named capability is usually inference/);
         assert.match(prompt, /newsworthiness separately from certainty/);
+        assert.match(prompt, /SOURCE plus directly linked, quoted, replied-to, or parent CONTEXT as one evidence package/u);
+        assert.match(prompt, /MUST choose use_case when SOURCE or its direct CONTEXT explicitly describes a real person using AI/u);
+        assert.match(prompt, /Never change an explicit use_case to inference/u);
         assert.equal(schema.type, "object");
         assert.deepEqual(schema.required, ["translation", "contextTranslations", "triage"]);
         assert.equal(schema.additionalProperties, false);

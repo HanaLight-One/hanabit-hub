@@ -59,7 +59,9 @@ test("Codex exec는 읽기 전용 일회성 스키마 출력만 사용한다", a
         assert.equal(schema.additionalProperties, false);
         assert.equal(schema.properties.evidenceTag.enum.includes("use_case"), true);
         assert.deepEqual(schema.properties.boardCategory.enum, ["news", "information", "chatter", "ai_creation"]);
-        assert.match(options.input, /use_case means the post itself directly describes a real usage example/u);
+        assert.match(options.input, /SOURCE plus directly linked, quoted, replied-to, or parent CONTEXT as one evidence package/u);
+        assert.match(options.input, /MUST choose use_case when SOURCE or its direct CONTEXT explicitly describes a real person using AI/u);
+        assert.match(options.input, /Never change an explicit use_case to inference/u);
         await writeFile(outputPath, JSON.stringify({
           translationAudit: { status: "passed", title: "Codex", body: "Codex", reason: "원문과 일치한다." },
           contextTranslationAudits: [{ index: 1, status: "passed", body: "앱 개발은 쉬운 부분입니다.", reason: "관련 글과 일치한다." }],
