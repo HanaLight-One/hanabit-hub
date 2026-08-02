@@ -90,6 +90,23 @@ function safeDcUrl(value) {
   }
 }
 
+async function withoutDcWatermarkField(FormDataCtor, action) {
+  const prototype = FormDataCtor?.prototype;
+  const originalAppend = prototype?.append;
+  if (typeof originalAppend !== "function" || typeof action !== "function") {
+    throw new TypeError("WATERMARK_GUARD_UNAVAILABLE");
+  }
+  prototype.append = function appendWithoutWatermark(name, ...values) {
+    if (String(name) === "add_watermark") return undefined;
+    return originalAppend.call(this, name, ...values);
+  };
+  try {
+    return await action();
+  } finally {
+    prototype.append = originalAppend;
+  }
+}
+
 async function publishNews({ jobPath, publisherRoot }) {
   if (process.env.PUBLISH_DRY_RUN !== "false") throw new Error("DRY_RUN_ENABLED");
   const job = validateJob(JSON.parse(fs.readFileSync(jobPath, "utf8")), jobPath);
@@ -98,6 +115,7 @@ async function publishNews({ jobPath, publisherRoot }) {
   }
   const publisherRequire = createRequire(path.join(publisherRoot, "package.json"));
   const dc = publisherRequire("@gurumnyang/dcinside.js");
+  const FormDataCtor = publisherRequire("form-data");
   const headTexts = await dc.getGalleryHeadTexts({ galleryId: job.galleryId });
   const headText = headTexts.find((entry) => String(entry.name ?? "") === job.headTextName);
   if (!headText) throw new Error("HEAD_TEXT_UNAVAILABLE");
@@ -121,7 +139,7 @@ async function publishNews({ jobPath, publisherRoot }) {
   });
   let result;
   try {
-    result = await dc.createPost({
+    result = await withoutDcWatermarkField(FormDataCtor, () => dc.createPost({
       galleryId: job.galleryId,
       subject: job.title,
       content: textToHtml(job.bodyText),
@@ -135,7 +153,7 @@ async function publishNews({ jobPath, publisherRoot }) {
       useGallNickname: process.env.DC_USE_GALL_NICKNAME !== "false",
       jar: login.jar,
       userAgent,
-    });
+    }));
   } catch {
     writeResult(job.resultPath, {
       status: "ambiguous-no-retry",
@@ -184,4 +202,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { validateJob, safeDcUrl, safeBodyLink, textToHtml };
+module.exports = { validateJob, safeDcUrl, safeBodyLink, textToHtml, withoutDcWatermarkField };

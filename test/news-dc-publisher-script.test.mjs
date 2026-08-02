@@ -7,7 +7,13 @@ import path from "node:path";
 import test from "node:test";
 
 const require = createRequire(import.meta.url);
-const { validateJob, safeDcUrl, safeBodyLink, textToHtml } = require("../scripts/publish-news-to-dc.cjs");
+const {
+  validateJob,
+  safeDcUrl,
+  safeBodyLink,
+  textToHtml,
+  withoutDcWatermarkField,
+} = require("../scripts/publish-news-to-dc.cjs");
 
 function job() {
   const jobPath = path.resolve("state", "test-news", "job.json");
@@ -47,6 +53,36 @@ test("게시 결과 링크는 DCInside HTTPS 주소만 허용한다", () => {
     "https://gall.dcinside.com/mgallery/board/view/?id=chatgpt&no=119992",
   );
   assert.equal(safeDcUrl("https://example.com/fake"), null);
+});
+
+test("이미지 워터마크 필드는 빈 값 대신 제출 폼에서 완전히 제외한다", async () => {
+  class FakeFormData {
+    constructor() {
+      this.entries = [];
+    }
+
+    append(name, value) {
+      this.entries.push([name, value]);
+      return this;
+    }
+  }
+
+  const originalAppend = FakeFormData.prototype.append;
+  const form = await withoutDcWatermarkField(FakeFormData, async () => {
+    const value = new FakeFormData();
+    value.append("id", "chatgpt");
+    value.append("add_watermark", "");
+    value.append("memo", "본문");
+    return value;
+  });
+
+  assert.deepEqual(form.entries, [["id", "chatgpt"], ["memo", "본문"]]);
+  assert.equal(FakeFormData.prototype.append, originalAppend);
+  await assert.rejects(
+    withoutDcWatermarkField(FakeFormData, async () => { throw new Error("중단"); }),
+    /중단/u,
+  );
+  assert.equal(FakeFormData.prototype.append, originalAppend);
 });
 
 test("원고의 안전한 단독 URL 줄만 클릭 가능한 링크로 변환한다", () => {
