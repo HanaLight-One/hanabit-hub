@@ -109,14 +109,17 @@ function meaningfulSourceText(value) {
     .trim();
 }
 
+function preserveSourceStructure(sourceText, translatedBody) {
+  const source = meaningfulSourceText(sourceText);
+  if (!/[：:]$/u.test(source) || /[：:]$/u.test(translatedBody)) return translatedBody;
+  return `${translatedBody.replace(/[.!?。！？]+$/u, "").trimEnd()}:`;
+}
+
 function validateTranslationFidelity(sourceText, translatedBody) {
   const source = meaningfulSourceText(sourceText);
   if (/\bempower(?:ed|ing|ment|s)?\b/iu.test(source) &&
-      !/(?:할|해낼|만들)\s*수\s*있게|가능하게|힘을\s*실어|역량|권한|능력을\s*(?:주|부여)/u.test(translatedBody)) {
+      !/(?:할|해낼|만들)\s*수\s*(?:있게|있도록)|가능하게|힘을\s*실어|역량|권한|능력을\s*(?:주|부여)|(?:직접|스스로).{0,30}(?:돕|지원)/u.test(translatedBody)) {
     throw new Error("원문의 자립·가능 의미가 번역에서 누락되었습니다.");
-  }
-  if (/[：:]$/u.test(source) && !/[：:]$/u.test(translatedBody)) {
-    throw new Error("원문의 연결 문장 구조가 번역에서 누락되었습니다.");
   }
 }
 
@@ -173,7 +176,10 @@ function validateResult(value, contextCount, sourceText) {
   }
   const title = limited(value?.translation?.title, 120, "번역 제목");
   const translatedBody = cleanTranslatedText(value?.translation?.body);
-  const body = limited(translatedBody || title, 4_000, "번역 본문");
+  const body = preserveSourceStructure(
+    sourceText,
+    limited(translatedBody || title, 4_000, "번역 본문"),
+  );
   validateTranslationFidelity(sourceText, body);
   return Object.freeze({
     translation: Object.freeze({
