@@ -1,6 +1,6 @@
 const GOOD_IMPORTANCE = new Set(["medium", "high"]);
 const TRUSTED_SOURCES = new Set(["official", "high"]);
-export const NEWS_ANALYSIS_POLICY_VERSION = 2;
+export const NEWS_ANALYSIS_POLICY_VERSION = 3;
 
 function result(decision, code, reason) {
   return Object.freeze({ decision, code, reason });
@@ -20,6 +20,12 @@ export function evaluateNewsAutoPublish(record, sourceProfile = null) {
   }
   if (!triage.evidenceTag) {
     return result("human_review", "legacy_analysis", "새 정보 성격 태그로 다시 판정해야 해요.");
+  }
+  if (!["codex_verified", "codex_corrected", "human_verified"].includes(workflow.translationReview?.status)) {
+    return result("human_review", "translation_unverified", "원문 전용 번역의 귀속 검증이 끝나지 않아 자동 게시하지 않아요.");
+  }
+  if (!String(workflow.analysisNotice ?? "").includes("원문 번역이 아니며")) {
+    return result("human_review", "analysis_notice_missing", "AI 해설 주의 문구가 없어 자동 게시하지 않아요.");
   }
   if (triage.evidenceTag === "official") {
     return result("eligible", "official", "공식 출처의 게시 후보라 자동 게시 조건을 충족해요.");

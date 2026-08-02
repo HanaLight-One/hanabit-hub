@@ -32,6 +32,12 @@ test("DC 승인은 검토 후보에 게시 실행 없는 승인 영수증만 남
     assert.equal(first.changed, true);
     assert.equal(second.changed, false);
     assert.equal(saved.workflow.status, "approved_for_dc");
+    assert.deepEqual(saved.workflow.translationReview, {
+      status: "human_verified",
+      reviewer: "owner",
+      reviewedAt: "2026-08-01T12:34:56.000Z",
+    });
+    assert.match(saved.workflow.analysisNotice, /원문 번역이 아니며/);
     assert.deepEqual(saved.workflow.dcApproval, {
       schemaVersion: 1,
       status: "approved",

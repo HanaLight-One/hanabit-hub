@@ -2,6 +2,7 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { findNewsSourceProfile } from "./news-source-profiles.mjs";
 import { evaluateNewsAutoPublish, NEWS_ANALYSIS_POLICY_VERSION } from "./news-auto-publish-policy.mjs";
+import { createNewsAnalysisNotice } from "./news-analysis-notice.mjs";
 
 const ID_PATTERN = /^[a-f0-9]{32}$/u;
 const MEDIA_NAME_PATTERN = /^[a-zA-Z0-9_-]+\.(gif|jpe?g|png|webp)$/u;
@@ -76,6 +77,12 @@ function publicItem(record, sourceProfiles) {
 
   const sourceProfile = findNewsSourceProfile(record?.source, sourceProfiles);
   const autoPublishGate = evaluateNewsAutoPublish(record, sourceProfile);
+  const translationReviewStatus = ["free_unverified", "codex_verified", "codex_corrected", "human_verified"]
+    .includes(record?.workflow?.translationReview?.status)
+    ? record.workflow.translationReview.status
+    : "free_unverified";
+  const analysisNotice = safeText(record?.workflow?.analysisNotice, 300) ||
+    createNewsAnalysisNotice({ codexReviewed: codexReviewStatus === "complete" });
   return {
     id,
     source: {
@@ -113,6 +120,11 @@ function publicItem(record, sourceProfiles) {
             body: safeText(record.workflow.translation.body, 4_000),
           }
         : null,
+      translationReview: {
+        status: translationReviewStatus,
+        reason: safeText(record?.workflow?.translationReview?.reason, 300) || null,
+      },
+      analysisNotice,
       triage,
       freeTriage,
       codexReview: codexReviewStatus
@@ -146,8 +158,7 @@ function publicItem(record, sourceProfiles) {
         ["pending_review", "ignored"].includes(record?.workflow?.status) &&
         !record?.workflow?.dcApproval &&
         !record?.workflow?.dcPublication &&
-        (Number(record?.workflow?.analysisPolicyVersion) || 0) < NEWS_ANALYSIS_POLICY_VERSION &&
-        !["official", "confirmed", "inference", "rumor", "opinion"].includes(record?.workflow?.triage?.evidenceTag),
+        (Number(record?.workflow?.analysisPolicyVersion) || 0) < NEWS_ANALYSIS_POLICY_VERSION,
     },
     collectedAt: String(record?.collectedAt ?? ""),
     media,

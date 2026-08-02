@@ -9,6 +9,17 @@ const EVIDENCE_TAGS = new Set(["official", "confirmed", "inference", "rumor", "o
 const OUTPUT_SCHEMA = Object.freeze({
   type: "object",
   properties: {
+    translationAudit: {
+      type: "object",
+      properties: {
+        status: { type: "string", enum: ["passed", "corrected"] },
+        title: { type: "string", minLength: 1, maxLength: 120 },
+        body: { type: "string", minLength: 1, maxLength: 4000 },
+        reason: { type: "string", minLength: 1, maxLength: 300 },
+      },
+      required: ["status", "title", "body", "reason"],
+      additionalProperties: false,
+    },
     decision: { type: "string", enum: ["skip", "review", "publish"] },
     confidence: { type: "number", minimum: 0, maximum: 1 },
     importance: { type: "string", enum: ["low", "medium", "high"] },
@@ -16,7 +27,7 @@ const OUTPUT_SCHEMA = Object.freeze({
     reason: { type: "string", minLength: 1, maxLength: 500 },
     advice: { type: "string", minLength: 1, maxLength: 600 },
   },
-  required: ["decision", "confidence", "importance", "evidenceTag", "reason", "advice"],
+  required: ["translationAudit", "decision", "confidence", "importance", "evidenceTag", "reason", "advice"],
   additionalProperties: false,
 });
 
@@ -38,6 +49,14 @@ function validateResult(value) {
     throw new Error("Codex 뉴스 검토 신뢰도가 올바르지 않습니다.");
   }
   return Object.freeze({
+    translationAudit: Object.freeze({
+      status: ["passed", "corrected"].includes(value?.translationAudit?.status)
+        ? value.translationAudit.status
+        : (() => { throw new Error("Codex 번역 감사 상태가 올바르지 않습니다."); })(),
+      title: limited(value?.translationAudit?.title, 120, "Codex 교정 제목"),
+      body: limited(value?.translationAudit?.body, 4_000, "Codex 교정 본문"),
+      reason: limited(value?.translationAudit?.reason, 300, "Codex 번역 감사 근거"),
+    }),
     decision,
     confidence,
     importance,
@@ -64,6 +83,10 @@ function buildPrompt(record, freeResult) {
     "A short reply may be meaningful when parent context reveals product direction, adoption, capability, policy, or a credible industry signal.",
     "Classify evidenceTag as official, confirmed, inference, rumor, or opinion. A credible insider explicitly saying they used a named capability is usually inference, not rumor.",
     "A concrete inference can be publish even without an official product page. Preserve uncertainty in the headline and advice instead of discarding the signal.",
+    "Audit the FREE TRANSLATION against SOURCE TEXT before judging newsworthiness.",
+    "The translationAudit title and body must translate or faithfully summarize SOURCE TEXT only. Never add a fact, phrase, subject, capability, or claim that exists only in CONTEXT.",
+    "Use CONTEXT only for triage reason and editorial advice. If the free translation imported any context claim, set translationAudit.status to corrected and replace it with a source-only Korean translation.",
+    "Set translationAudit.status to passed only when the supplied free translation is already attributable entirely to SOURCE TEXT.",
     "Separate explicit facts from implications. publish means worth sharing with the evidence tag; it still never triggers publication in this process.",
     "Return only the JSON required by the supplied schema, in Korean.",
     `SOURCE TYPE: ${String(record.source?.type ?? "unknown")}`,

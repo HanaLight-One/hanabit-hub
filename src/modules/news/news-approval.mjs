@@ -1,5 +1,6 @@
 import path from "node:path";
 import { createPendingNewsStore } from "./news-item-store.mjs";
+import { createNewsAnalysisNotice } from "./news-analysis-notice.mjs";
 
 const ID_PATTERN = /^[a-f0-9]{32}$/u;
 const REVIEWABLE_DECISIONS = new Set(["review", "publish"]);
@@ -43,6 +44,15 @@ export function createNewsApprovalService({ root, now = () => new Date() }) {
           workflow: {
             ...workflow,
             status: "approved_for_dc",
+            translationReview: {
+              ...(workflow.translationReview ?? {}),
+              status: "human_verified",
+              reviewer: "owner",
+              reviewedAt: now().toISOString(),
+            },
+            analysisNotice: workflow.analysisNotice || createNewsAnalysisNotice({
+              codexReviewed: workflow.codexReview?.status === "complete",
+            }),
             dcApproval: {
               schemaVersion: 1,
               status: "approved",

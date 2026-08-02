@@ -95,10 +95,10 @@ Hub 생성 메타데이터를 웹 제작 기록에 연결한다.
 
 ```text
 Discord Announcement ─┐
-                      ├─> Discord watcher ─> JSON 대기함 ─> 무료 API 번역·판정
+                      ├─> Discord watcher ─> JSON 대기함 ─> 무료 API 원문 번역·판정
 X Filtered Stream ─> #x-watch ┘                         │
-                         게시가치 + 공식·확정·유추·루머·의견 태그
-                                      애매한 X만 ─> Codex 심층검토(일 4건)
+                         원문 번역과 관련 문맥을 분리 + 게시가치·정보 성격 태그
+                                      애매한 X만 ─> Codex 번역 귀속 감사·심층검토(일 4건)
                                                          │
                                                          ├─> #news-pending
                                                          ├─> 모바일 Push
@@ -114,7 +114,9 @@ X Filtered Stream ─> #x-watch ┘                         │
 `translation_failed` 항목에만 허용하며 이미지 분석 API는 호출하지 않는다.
 판정 완료 항목의 새 정책 재판정은 `POST /api/news/:id/reanalysis`, 결정론적 자동 게시
 가능성 표시는 `src/modules/news/news-auto-publish-policy.mjs`가 담당한다. 게이트는
-아직 실제 DC 게시자를 호출하지 않는다.
+원문 전용 번역의 귀속 검증과 AI 해설 주의 문구가 없으면 자동 게시 가능으로 판정하지
+않으며, 아직 실제 DC 게시자를 호출하지 않는다. 해설 주의 문구의 단일 원본은
+`src/modules/news/news-analysis-notice.mjs`다.
 Codex 검토 실행기와 날짜별 사용 영수증은
 `src/modules/news/codex-news-review.mjs`, `state/news/codex-review/`에 있다.
 뉴스 카드의 `누구예요?` 설명은 같은 X 인물 명부를 읽는

@@ -252,6 +252,11 @@ function NewsCard({ item, confirming, busy, error, onBegin, onCancel, onApprove,
           </h2>
           <p className="section-label body-label">본문 번역</p>
           <p>{item.workflow.translation.body}</p>
+          <small className="translation-boundary">
+            원문만 번역 · 관련 글의 정보는 번역문에 포함하지 않음
+            {item.workflow.translationReview?.status === "codex_corrected" && " · Codex가 귀속 오류를 교정함"}
+            {item.workflow.translationReview?.status === "codex_verified" && " · Codex 귀속 검증 완료"}
+          </small>
         </section>
       ) : (
         <section className="translation-box muted-box">
@@ -277,6 +282,8 @@ function NewsCard({ item, confirming, busy, error, onBegin, onCancel, onApprove,
           className="free-triage"
         />
       )}
+
+      {triage && <p className="analysis-notice">{item.workflow.analysisNotice}</p>}
 
       {triage && (
         <TriageBox

@@ -8304,7 +8304,15 @@ function de({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a
 						className: "section-label body-label",
 						children: "본문 번역"
 					}),
-					/* @__PURE__ */ (0, x.jsx)("p", { children: e.workflow.translation.body })
+					/* @__PURE__ */ (0, x.jsx)("p", { children: e.workflow.translation.body }),
+					/* @__PURE__ */ (0, x.jsxs)("small", {
+						className: "translation-boundary",
+						children: [
+							"원문만 번역 · 관련 글의 정보는 번역문에 포함하지 않음",
+							e.workflow.translationReview?.status === "codex_corrected" && " · Codex가 귀속 오류를 교정함",
+							e.workflow.translationReview?.status === "codex_verified" && " · Codex 귀속 검증 완료"
+						]
+					})
 				]
 			}) : /* @__PURE__ */ (0, x.jsxs)("section", {
 				className: "translation-box muted-box",
@@ -8335,6 +8343,10 @@ function de({ item: e, confirming: t, busy: n, error: r, onBegin: i, onCancel: a
 				label: "무료 API 1차 판정",
 				advice: u.advice || "애매함을 감지해 Codex 하나빛에게 전달했어요.",
 				className: "free-triage"
+			}),
+			l && /* @__PURE__ */ (0, x.jsx)("p", {
+				className: "analysis-notice",
+				children: e.workflow.analysisNotice
 			}),
 			l && /* @__PURE__ */ (0, x.jsx)(le, {
 				triage: l,

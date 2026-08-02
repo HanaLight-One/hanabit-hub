@@ -81,6 +81,12 @@ test("애매한 무료 판정은 Codex 검토 결과를 최종 판정으로 보�
         status: "complete",
         reviewedAt: "2026-08-01T04:00:00.000Z",
         result: {
+          translationAudit: {
+            status: "corrected",
+            title: "원문 전용 제목",
+            body: "원문에 있는 내용만 번역했습니다.",
+            reason: "무료 번역이 부모 문맥을 섞었다.",
+          },
           decision: "publish",
           confidence: 0.88,
           importance: "medium",
@@ -99,6 +105,8 @@ test("애매한 무료 판정은 Codex 검토 결과를 최종 판정으로 보�
     assert.equal(saved.workflow.triage.decision, "publish");
     assert.equal(saved.workflow.triage.evidenceTag, "inference");
     assert.equal(saved.workflow.codexReview.status, "complete");
+    assert.equal(saved.workflow.translation.body, "원문에 있는 내용만 번역했습니다.");
+    assert.equal(saved.workflow.translationReview.status, "codex_corrected");
   }, { codexReviewer });
 });
 
@@ -146,7 +154,7 @@ test("승인 전 기존 뉴스는 분석 세대를 올려 새 정책으로 다�
     assert.equal(reprocessed.workflow.status, "pending_review");
     assert.equal(reprocessed.workflow.triage.decision, "publish");
     assert.equal(reprocessed.workflow.analysisRevision, 2);
-    assert.equal(reprocessed.workflow.analysisPolicyVersion, 2);
+    assert.equal(reprocessed.workflow.analysisPolicyVersion, 3);
     assert.equal(typeof reprocessed.workflow.reanalysisRequestedAt, "string");
     await store.update(id, (record) => ({
       ...record,

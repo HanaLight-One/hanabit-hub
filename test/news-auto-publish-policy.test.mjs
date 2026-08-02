@@ -11,6 +11,8 @@ function record(evidenceTag, overrides = {}) {
   return {
     workflow: {
       status: "pending_review",
+      translationReview: { status: "codex_verified" },
+      analysisNotice: "주의: 아래 해설은 AI가 정리한 내용입니다. 원문 번역이 아니며, 최종 판단은 독자에게 있습니다.",
       triage: {
         decision: "publish",
         evidenceTag,
@@ -39,4 +41,12 @@ test("기존 승인·게시 영수증이 있으면 자동 처리하지 않는다
   const approved = record("official");
   approved.workflow.dcApproval = { status: "approved" };
   assert.equal(evaluateNewsAutoPublish(approved, profile).decision, "blocked");
+});
+
+test("원문 귀속이 검증되지 않은 번역은 자동 게시하지 않는다", () => {
+  const unverified = record("official");
+  unverified.workflow.translationReview = { status: "free_unverified" };
+  const result = evaluateNewsAutoPublish(unverified, profile);
+  assert.equal(result.decision, "human_review");
+  assert.equal(result.code, "translation_unverified");
 });

@@ -3,6 +3,7 @@ import { invokeFreeNewsAnalysis } from "./free-news-analysis.mjs";
 import { createPendingNewsStore } from "./news-item-store.mjs";
 import { findNewsSourceProfile } from "./news-source-profiles.mjs";
 import { NEWS_ANALYSIS_POLICY_VERSION } from "./news-auto-publish-policy.mjs";
+import { createNewsAnalysisNotice } from "./news-analysis-notice.mjs";
 
 const OFFICIAL_TYPES = new Set(["discord-announcement"]);
 const OFFICIAL_X_ACCOUNTS = new Set(["openai", "openaidevs"]);
@@ -42,6 +43,12 @@ export function createNewsProcessor({ stateRoot, runnerPath, analyze = invokeFre
           : record;
         const result = await analyze(analysisRecord, { runnerPath, runtimeRoot });
         let finalTriage = result.triage;
+        let finalTranslation = result.translation;
+        let translationReview = {
+          status: "free_unverified",
+          reviewer: "gpt-5.4-mini",
+          reviewedAt: now().toISOString(),
+        };
         let freeTriage = null;
         let codexReview = null;
         if (codexReviewer) {
@@ -49,11 +56,24 @@ export function createNewsProcessor({ stateRoot, runnerPath, analyze = invokeFre
             const reviewed = await codexReviewer.review(analysisRecord, result);
             if (reviewed.status === "complete") {
               freeTriage = result.triage;
-              finalTriage = { ...reviewed.result, signals: ["codex-review"] };
+              const { translationAudit, ...reviewTriage } = reviewed.result;
+              finalTriage = { ...reviewTriage, signals: ["codex-review"] };
+              if (translationAudit) {
+                finalTranslation = {
+                  title: translationAudit.title,
+                  body: translationAudit.body,
+                };
+                translationReview = {
+                  status: translationAudit.status === "corrected" ? "codex_corrected" : "codex_verified",
+                  reviewer: "codex-deep-review",
+                  reason: translationAudit.reason,
+                  reviewedAt: reviewed.reviewedAt,
+                };
+              }
               codexReview = {
                 status: "complete",
                 reviewedAt: reviewed.reviewedAt,
-                ...reviewed.result,
+                ...reviewTriage,
               };
             } else if (["daily_limit", "failed"].includes(reviewed.status)) {
               codexReview = {
@@ -72,7 +92,9 @@ export function createNewsProcessor({ stateRoot, runnerPath, analyze = invokeFre
           workflow: {
             ...current.workflow,
             status: decision === "skip" ? "ignored" : "pending_review",
-            translation: result.translation,
+            translation: finalTranslation,
+            translationReview,
+            analysisNotice: createNewsAnalysisNotice({ codexReviewed: codexReview?.status === "complete" }),
             freeTriage,
             triage: { ...finalTriage, decision, evidenceTag: official ? "official" : finalTriage.evidenceTag },
             codexReview,
@@ -122,9 +144,7 @@ export function createNewsProcessor({ stateRoot, runnerPath, analyze = invokeFre
   async function reprocess(id) {
     const current = await store.read(id);
     const workflow = current.workflow ?? {};
-    const alreadyCurrent =
-      Number(workflow.analysisPolicyVersion) >= NEWS_ANALYSIS_POLICY_VERSION ||
-      ["official", "confirmed", "inference", "rumor", "opinion"].includes(workflow.triage?.evidenceTag);
+    const alreadyCurrent = Number(workflow.analysisPolicyVersion) >= NEWS_ANALYSIS_POLICY_VERSION;
     if (
       !["pending_review", "ignored"].includes(workflow.status) ||
       workflow.dcApproval ||
