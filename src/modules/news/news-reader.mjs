@@ -1,7 +1,7 @@
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { findNewsSourceProfile } from "./news-source-profiles.mjs";
-import { evaluateNewsAutoPublish } from "./news-auto-publish-policy.mjs";
+import { evaluateNewsAutoPublish, NEWS_ANALYSIS_POLICY_VERSION } from "./news-auto-publish-policy.mjs";
 
 const ID_PATTERN = /^[a-f0-9]{32}$/u;
 const MEDIA_NAME_PATTERN = /^[a-zA-Z0-9_-]+\.(gif|jpe?g|png|webp)$/u;
@@ -145,7 +145,9 @@ function publicItem(record, sourceProfiles) {
       canReanalyze:
         ["pending_review", "ignored"].includes(record?.workflow?.status) &&
         !record?.workflow?.dcApproval &&
-        !record?.workflow?.dcPublication,
+        !record?.workflow?.dcPublication &&
+        (Number(record?.workflow?.analysisPolicyVersion) || 0) < NEWS_ANALYSIS_POLICY_VERSION &&
+        !["official", "confirmed", "inference", "rumor", "opinion"].includes(record?.workflow?.triage?.evidenceTag),
     },
     collectedAt: String(record?.collectedAt ?? ""),
     media,

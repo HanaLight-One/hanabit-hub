@@ -2,6 +2,7 @@ import path from "node:path";
 import { invokeFreeNewsAnalysis } from "./free-news-analysis.mjs";
 import { createPendingNewsStore } from "./news-item-store.mjs";
 import { findNewsSourceProfile } from "./news-source-profiles.mjs";
+import { NEWS_ANALYSIS_POLICY_VERSION } from "./news-auto-publish-policy.mjs";
 
 const OFFICIAL_TYPES = new Set(["discord-announcement"]);
 const OFFICIAL_X_ACCOUNTS = new Set(["openai", "openaidevs"]);
@@ -76,6 +77,7 @@ export function createNewsProcessor({ stateRoot, runnerPath, analyze = invokeFre
             triage: { ...finalTriage, decision, evidenceTag: official ? "official" : finalTriage.evidenceTag },
             codexReview,
             analysisFailure: null,
+            analysisPolicyVersion: NEWS_ANALYSIS_POLICY_VERSION,
             processedAt: now().toISOString(),
           },
         }));
@@ -120,10 +122,14 @@ export function createNewsProcessor({ stateRoot, runnerPath, analyze = invokeFre
   async function reprocess(id) {
     const current = await store.read(id);
     const workflow = current.workflow ?? {};
+    const alreadyCurrent =
+      Number(workflow.analysisPolicyVersion) >= NEWS_ANALYSIS_POLICY_VERSION ||
+      ["official", "confirmed", "inference", "rumor", "opinion"].includes(workflow.triage?.evidenceTag);
     if (
       !["pending_review", "ignored"].includes(workflow.status) ||
       workflow.dcApproval ||
-      workflow.dcPublication
+      workflow.dcPublication ||
+      alreadyCurrent
     ) {
       const error = new Error("승인·게시 전의 판정 완료 뉴스만 새 정책으로 다시 판정할 수 있습니다.");
       error.code = "NOT_REPROCESSABLE";
@@ -141,6 +147,7 @@ export function createNewsProcessor({ stateRoot, runnerPath, analyze = invokeFre
         codexReview: null,
         analysisFailure: null,
         analysisRevision: nextRevision,
+        analysisPolicyVersion: null,
         reanalysisRequestedAt: now().toISOString(),
       },
     }));

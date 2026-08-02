@@ -133,11 +133,20 @@ test("승인 전 기존 뉴스는 분석 세대를 올려 새 정책으로 다�
     return result(calls === 1 ? "review" : "publish");
   }, async ({ processor, store, id }) => {
     await processor.process(id);
+    await store.update(id, (record) => ({
+      ...record,
+      workflow: {
+        ...record.workflow,
+        triage: { ...record.workflow.triage, evidenceTag: null },
+        analysisPolicyVersion: null,
+      },
+    }));
     const reprocessed = await processor.reprocess(id);
     assert.equal(calls, 2);
     assert.equal(reprocessed.workflow.status, "pending_review");
     assert.equal(reprocessed.workflow.triage.decision, "publish");
     assert.equal(reprocessed.workflow.analysisRevision, 2);
+    assert.equal(reprocessed.workflow.analysisPolicyVersion, 2);
     assert.equal(typeof reprocessed.workflow.reanalysisRequestedAt, "string");
     await store.update(id, (record) => ({
       ...record,
