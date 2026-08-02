@@ -2,6 +2,7 @@ const { createRequire } = require("node:module");
 const { createHash } = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
+const { safeBodyLink, textToHtml } = require("../src/modules/news/news-dc-html.cjs");
 
 const EMOJI_PATTERN = /\p{Extended_Pictographic}|\p{Regional_Indicator}|[\u{FE0F}\u{200D}\u{20E3}]/gu;
 const COMBINING_MARK_PATTERN = /\p{M}/gu;
@@ -24,46 +25,6 @@ function writeResult(target, value) {
   const temporary = `${resolved}.${process.pid}.tmp`;
   fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, "utf8");
   fs.renameSync(temporary, resolved);
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function safeBodyLink(value) {
-  try {
-    const raw = String(value ?? "").trim();
-    if (!raw || raw !== String(value ?? "")) return null;
-    const url = new URL(raw);
-    const hostname = url.hostname.toLowerCase();
-    const allowedHost = ["x.com", "twitter.com", "discord.com", "openai.com"].includes(hostname) ||
-      hostname.endsWith(".openai.com");
-    const decodedPath = decodeURIComponent(url.pathname);
-    if (url.protocol !== "https:" || url.username || url.password || url.port || !allowedHost ||
-        /(?:^|\/)sk(?:\/|$)/iu.test(decodedPath)) {
-      return null;
-    }
-    return url.href;
-  } catch {
-    return null;
-  }
-}
-
-function textToHtml(value) {
-  return String(value).split("\n")
-    .map((line) => {
-      if (!line) return "<p><br></p>";
-      const link = safeBodyLink(line);
-      return link
-        ? `<p><a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link)}</a></p>`
-        : `<p>${escapeHtml(line)}</p>`;
-    })
-    .join("");
 }
 
 function validateJob(value, jobPath) {

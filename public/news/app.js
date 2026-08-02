@@ -8260,7 +8260,42 @@ function pe({ shadow: e }) {
 		]
 	}) : null;
 }
-function me({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a }) {
+function me({ bodyText: e }) {
+	return /* @__PURE__ */ (0, x.jsx)("div", {
+		className: "dc-copy-content",
+		children: String(e ?? "").split("\n").map((e, t) => {
+			let n = `${t}-${e.slice(0, 24)}`;
+			return e ? e.startsWith("게시자: ") ? /* @__PURE__ */ (0, x.jsx)("p", {
+				className: "dc-copy-publisher",
+				children: e
+			}, n) : [
+				"본문 번역",
+				"왜 중요한가",
+				"아직 확인되지 않은 점",
+				"원문 링크"
+			].includes(e) || e.startsWith("관련 글 번역 · ") ? /* @__PURE__ */ (0, x.jsx)("h4", {
+				className: e === "아직 확인되지 않은 점" ? "dc-copy-section caution" : "dc-copy-section",
+				children: e
+			}, n) : e.startsWith("주의: ") ? /* @__PURE__ */ (0, x.jsx)("p", {
+				className: "dc-copy-notice",
+				children: e
+			}, n) : /^https:\/\/(?:x\.com|twitter\.com|discord\.com|(?:[a-z0-9-]+\.)*openai\.com)\//iu.test(e) ? /* @__PURE__ */ (0, x.jsx)("a", {
+				className: "dc-copy-link",
+				href: e,
+				target: "_blank",
+				rel: "noopener noreferrer",
+				children: e
+			}, n) : /* @__PURE__ */ (0, x.jsx)("p", {
+				className: "dc-copy-line",
+				children: e
+			}, n) : /* @__PURE__ */ (0, x.jsx)("span", {
+				className: "dc-copy-space",
+				"aria-hidden": "true"
+			}, n);
+		})
+	});
+}
+function D({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a }) {
 	return e.workflow.publishedToDc ? /* @__PURE__ */ (0, x.jsxs)("div", {
 		className: "approval approved",
 		children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: "DC 게시 완료" }), e.workflow.dcPublication?.url && /* @__PURE__ */ (0, x.jsx)("a", {
@@ -8299,7 +8334,7 @@ function me({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 			] })] })] }),
 			/* @__PURE__ */ (0, x.jsxs)("div", {
 				className: "dc-copy-preview",
-				children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "본문" }), /* @__PURE__ */ (0, x.jsx)("pre", { children: t.bodyText })]
+				children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "본문" }), /* @__PURE__ */ (0, x.jsx)(me, { bodyText: t.bodyText })]
 			}),
 			/* @__PURE__ */ (0, x.jsx)("ul", {
 				className: "dc-warnings",
@@ -8347,7 +8382,7 @@ function me({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 		]
 	});
 }
-function D({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a, onRetry: o, onReanalyze: s }) {
+function O({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a, onRetry: o, onReanalyze: s }) {
 	let c = e.workflow.triage, l = e.workflow.freeTriage, u = e.workflow.codexReview;
 	return /* @__PURE__ */ (0, x.jsxs)("article", {
 		className: "news-card",
@@ -8485,7 +8520,7 @@ function D({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a,
 				}, e.url))
 			})] }),
 			/* @__PURE__ */ (0, x.jsx)(le, { item: e }),
-			/* @__PURE__ */ (0, x.jsx)(me, {
+			/* @__PURE__ */ (0, x.jsx)(D, {
 				item: e,
 				preview: t,
 				busy: n,
@@ -8496,7 +8531,7 @@ function D({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a,
 		]
 	});
 }
-function O() {
+function he() {
 	let [e, t] = (0, y.useState)(null), [n, r] = (0, y.useState)(""), [i, a] = (0, y.useState)({}), [o, s] = (0, y.useState)(null), [c, l] = (0, y.useState)(""), [u, d] = (0, y.useState)(null), [f, p] = (0, y.useState)("action");
 	async function m() {
 		let e = await fetch("/api/news", { cache: "no-store" });
@@ -8663,7 +8698,7 @@ function O() {
 		/* @__PURE__ */ (0, x.jsx)("section", {
 			className: "news-list",
 			"aria-label": "수집된 뉴스",
-			children: g.map((e) => /* @__PURE__ */ (0, x.jsx)(D, {
+			children: g.map((e) => /* @__PURE__ */ (0, x.jsx)(O, {
 				item: e,
 				preview: i[e.id],
 				busy: o === e.id,
@@ -8676,5 +8711,5 @@ function O() {
 		})
 	] })] });
 }
-(0, b.createRoot)(document.querySelector("#news-root")).render(/* @__PURE__ */ (0, x.jsx)(O, {}));
+(0, b.createRoot)(document.querySelector("#news-root")).render(/* @__PURE__ */ (0, x.jsx)(he, {}));
 //#endregion

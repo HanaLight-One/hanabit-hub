@@ -59,6 +59,28 @@ test("원고의 안전한 단독 URL 줄만 클릭 가능한 링크로 변환한
   assert.doesNotMatch(textToHtml("https://example.com/not-allowed"), /<a /u);
 });
 
+test("DC 본문은 고정 섹션에만 크기와 하이라이트 서식을 적용한다", () => {
+  const html = textToHtml([
+    "게시자: Greg Brockman · OpenAI",
+    "",
+    "본문 번역",
+    "번역 내용 <script>alert(1)</script>",
+    "",
+    "왜 중요한가",
+    "핵심 설명",
+    "",
+    "아직 확인되지 않은 점",
+    "확인 범위",
+    "",
+    "주의: AI가 정리한 해설입니다.",
+  ].join("\n"));
+  assert.match(html, /font-size:20px/u);
+  assert.match(html, /background-color:#fff4d6/u);
+  assert.match(html, /font-size:12px/u);
+  assert.doesNotMatch(html, /<script>/u);
+  assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/u);
+});
+
 test("게시자는 저장소의 정확한 네 기본 커버 경로만 허용한다", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-publisher-cover-"));
   const id = "d".repeat(32);

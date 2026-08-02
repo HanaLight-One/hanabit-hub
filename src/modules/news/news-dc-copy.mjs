@@ -2,6 +2,9 @@ import { createHash } from "node:crypto";
 import { findNewsSourceProfile } from "./news-source-profiles.mjs";
 import { createNewsAnalysisNotice } from "./news-analysis-notice.mjs";
 import { selectNewsDcHeadText } from "./news-dc-head-text.mjs";
+import newsDcHtml from "./news-dc-html.cjs";
+
+const { textToHtml } = newsDcHtml;
 
 const EVIDENCE_LABELS = Object.freeze({
   official: "공식",
@@ -76,20 +79,8 @@ function section(label, body, counter) {
   return cleanBody ? { label, body: cleanBody } : null;
 }
 
-function escapeHtml(value) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
 export function textToDcHtml(value) {
-  return String(value)
-    .split("\n")
-    .map((line) => line ? `<p>${escapeHtml(line)}</p>` : "<p><br></p>")
-    .join("");
+  return textToHtml(value);
 }
 
 export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallbackCover = false } = {}) {

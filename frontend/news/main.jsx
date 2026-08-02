@@ -227,6 +227,27 @@ function EditorialShadow({ shadow }) {
   );
 }
 
+function DcBodyPreview({ bodyText }) {
+  return (
+    <div className="dc-copy-content">
+      {String(bodyText ?? "").split("\n").map((line, index) => {
+        const key = `${index}-${line.slice(0, 24)}`;
+        if (!line) return <span className="dc-copy-space" aria-hidden="true" key={key} />;
+        if (line.startsWith("게시자: ")) return <p className="dc-copy-publisher" key={key}>{line}</p>;
+        if (["본문 번역", "왜 중요한가", "아직 확인되지 않은 점", "원문 링크"].includes(line) ||
+            line.startsWith("관련 글 번역 · ")) {
+          return <h4 className={line === "아직 확인되지 않은 점" ? "dc-copy-section caution" : "dc-copy-section"} key={key}>{line}</h4>;
+        }
+        if (line.startsWith("주의: ")) return <p className="dc-copy-notice" key={key}>{line}</p>;
+        if (/^https:\/\/(?:x\.com|twitter\.com|discord\.com|(?:[a-z0-9-]+\.)*openai\.com)\//iu.test(line)) {
+          return <a className="dc-copy-link" href={line} target="_blank" rel="noopener noreferrer" key={key}>{line}</a>;
+        }
+        return <p className="dc-copy-line" key={key}>{line}</p>;
+      })}
+    </div>
+  );
+}
+
 function DcPublicationPanel({ item, preview, busy, error, onPreview, onPublish }) {
   if (item.workflow.publishedToDc) {
     return (
@@ -284,7 +305,7 @@ function DcPublicationPanel({ item, preview, busy, error, onPreview, onPublish }
       </dl>
       <div className="dc-copy-preview">
         <span>본문</span>
-        <pre>{preview.bodyText}</pre>
+        <DcBodyPreview bodyText={preview.bodyText} />
       </div>
       <ul className="dc-warnings">
         {preview.preflight.warnings.map((warning) => <li key={warning}>{warning}</li>)}
