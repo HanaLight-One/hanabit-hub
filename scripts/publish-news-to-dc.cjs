@@ -35,9 +35,34 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function safeBodyLink(value) {
+  try {
+    const raw = String(value ?? "").trim();
+    if (!raw || raw !== String(value ?? "")) return null;
+    const url = new URL(raw);
+    const hostname = url.hostname.toLowerCase();
+    const allowedHost = ["x.com", "twitter.com", "discord.com", "openai.com"].includes(hostname) ||
+      hostname.endsWith(".openai.com");
+    const decodedPath = decodeURIComponent(url.pathname);
+    if (url.protocol !== "https:" || url.username || url.password || url.port || !allowedHost ||
+        /(?:^|\/)sk(?:\/|$)/iu.test(decodedPath)) {
+      return null;
+    }
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
 function textToHtml(value) {
   return String(value).split("\n")
-    .map((line) => line ? `<p>${escapeHtml(line)}</p>` : "<p><br></p>")
+    .map((line) => {
+      if (!line) return "<p><br></p>";
+      const link = safeBodyLink(line);
+      return link
+        ? `<p><a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link)}</a></p>`
+        : `<p>${escapeHtml(line)}</p>`;
+    })
     .join("");
 }
 
@@ -91,8 +116,13 @@ function validateJob(value, jobPath) {
 function safeDcUrl(value) {
   try {
     const url = new URL(String(value ?? ""));
-    return url.protocol === "https:" && url.hostname === "gall.dcinside.com"
-      ? url.href
+    if (url.protocol !== "https:") return null;
+    if (url.hostname === "gall.dcinside.com") return url.href;
+    const mobilePost = url.hostname === "m.dcinside.com"
+      ? url.pathname.match(/^\/board\/chatgpt\/(\d+)\/?$/u)
+      : null;
+    return mobilePost
+      ? `https://gall.dcinside.com/mgallery/board/view/?id=chatgpt&no=${mobilePost[1]}`
       : null;
   } catch {
     return null;
@@ -193,4 +223,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { validateJob, safeDcUrl };
+module.exports = { validateJob, safeDcUrl, safeBodyLink, textToHtml };

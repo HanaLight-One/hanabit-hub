@@ -7,7 +7,7 @@ import path from "node:path";
 import test from "node:test";
 
 const require = createRequire(import.meta.url);
-const { validateJob, safeDcUrl } = require("../scripts/publish-news-to-dc.cjs");
+const { validateJob, safeDcUrl, safeBodyLink, textToHtml } = require("../scripts/publish-news-to-dc.cjs");
 
 function job() {
   const jobPath = path.resolve("state", "test-news", "job.json");
@@ -42,7 +42,21 @@ test("DC 뉴스 게시 스크립트는 허용된 말머리와 이모지 없는 �
 
 test("게시 결과 링크는 DCInside HTTPS 주소만 허용한다", () => {
   assert.equal(safeDcUrl("https://gall.dcinside.com/mgallery/board/view/?id=chatgpt&no=1")?.startsWith("https://gall.dcinside.com/"), true);
+  assert.equal(
+    safeDcUrl("https://m.dcinside.com/board/chatgpt/119992"),
+    "https://gall.dcinside.com/mgallery/board/view/?id=chatgpt&no=119992",
+  );
   assert.equal(safeDcUrl("https://example.com/fake"), null);
+});
+
+test("원고의 안전한 단독 URL 줄만 클릭 가능한 링크로 변환한다", () => {
+  const xUrl = "https://x.com/gdb/status/2083773552793465087";
+  const html = textToHtml(`원문 링크\n\n${xUrl}`);
+  assert.match(html, new RegExp(`<a href="${xUrl}"`, "u"));
+  assert.equal(safeBodyLink(xUrl), xUrl);
+  assert.equal(safeBodyLink("https://openai.com/sk/blocked"), null);
+  assert.doesNotMatch(textToHtml("문장 안 https://x.com/gdb/status/1"), /<a /u);
+  assert.doesNotMatch(textToHtml("https://example.com/not-allowed"), /<a /u);
 });
 
 test("게시자는 저장소의 정확한 네 기본 커버 경로만 허용한다", async () => {
