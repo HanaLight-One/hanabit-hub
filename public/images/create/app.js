@@ -34,6 +34,7 @@ const elements = {
   styleStatus: document.querySelector("#style-status"),
   styleToggle: document.querySelector("#style-toggle"),
   sourceContext: document.querySelector("#source-context"),
+  sourceRemove: document.querySelector("#source-remove"),
   sourceImage: document.querySelector("#source-image"),
   sourceName: document.querySelector("#source-name"),
   sourceMeta: document.querySelector("#source-meta"),
@@ -57,7 +58,7 @@ const elements = {
 };
 
 const params = new URLSearchParams(window.location.search);
-const source = SAFE_SOURCE_ID.test(params.get("source") ?? "")
+let source = SAFE_SOURCE_ID.test(params.get("source") ?? "")
   ? params.get("source")
   : null;
 const requestedMode = params.get("mode");
@@ -284,6 +285,26 @@ async function loadSourceContext() {
 setSourceModesEnabled(false);
 loadCreationOptions();
 loadSourceContext();
+
+elements.sourceRemove.addEventListener("click", () => {
+  source = null;
+  window.history.replaceState(null, "", window.location.pathname);
+  elements.sourceContext.hidden = true;
+  elements.sourceImage.removeAttribute("src");
+  elements.sourceImage.alt = "";
+  elements.sourceRecord.replaceChildren();
+  elements.sourceStatus.textContent = "새 요청 · 소스 없음";
+  elements.previewSource.textContent = "없음";
+  setSourceModesEnabled(false);
+  const newMode = elements.form.querySelector('input[name="mode"][value="new"]');
+  if (newMode) newMode.checked = true;
+  previewPayload = null;
+  savedDraftId = null;
+  savedExecutionMode = null;
+  elements.draftButton.disabled = true;
+  elements.draftButton.textContent = "격리 초안 저장";
+  elements.executeButton.hidden = true;
+});
 
 elements.styleToggle.addEventListener("click", () => {
   const willOpen = elements.styleGrid.hidden;

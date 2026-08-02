@@ -71,6 +71,29 @@
   font-size: 18px;
 }
 
+.source-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.source-heading .section-label { margin: 0; }
+
+.source-remove {
+  padding: 6px 9px;
+  border: 1px solid rgb(255 206 82 / 38%);
+  border-radius: 999px;
+  background: rgb(255 206 82 / 7%);
+  color: #ffce52;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.source-remove:hover,
+.source-remove:focus-visible { border-color: #ffce52; outline: none; }
+
 .source-meta,
 .source-message {
   margin: 8px 0 0;
