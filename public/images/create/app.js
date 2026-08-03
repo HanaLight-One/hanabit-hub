@@ -45,6 +45,15 @@ const elements = {
   sourceUploadStatus: document.querySelector("#source-upload-status"),
   scene: document.querySelector("#scene-request"),
   characterCount: document.querySelector("#character-count"),
+  oracleReroll: document.querySelector("#oracle-reroll"),
+  oracleChaos: document.querySelector("#oracle-chaos"),
+  oracleChaosValue: document.querySelector("#oracle-chaos-value"),
+  oracleIngredients: document.querySelector("#oracle-ingredients"),
+  oracleSaveStatus: document.querySelector("#oracle-save-status"),
+  oracleNewName: document.querySelector("#oracle-new-name"),
+  oracleNewWeight: document.querySelector("#oracle-new-weight"),
+  oracleAdd: document.querySelector("#oracle-add"),
+  oracleResult: document.querySelector("#oracle-result"),
   characterGrid: document.querySelector("#character-grid"),
   characterStatus: document.querySelector("#character-status"),
   characterToggle: document.querySelector("#character-toggle"),
@@ -106,6 +115,9 @@ let savedExecutionMode = null;
 let savedBatchCount = 1;
 let purposeTouched = false;
 let sourceImages = null;
+let oracleSettings = null;
+let oracleSaving = false;
+let oracleSavePending = false;
 
 async function copyText(value, button) {
   const text = String(value ?? "");
@@ -131,6 +143,151 @@ async function copyText(value, button) {
     button.textContent = "복사 실패";
   }
   setTimeout(() => { button.textContent = original; }, 1_500);
+}
+
+function setOracleMessage(message, state = "") {
+  elements.oracleResult.textContent = message;
+  elements.oracleResult.dataset.state = state;
+}
+
+function oraclePayload() {
+  return {
+    chaos: Number(elements.oracleChaos.value),
+    ingredients: oracleSettings.ingredients.map((item) => ({ ...item })),
+  };
+}
+
+function renderOracleIngredients() {
+  elements.oracleIngredients.replaceChildren();
+  for (const ingredient of oracleSettings.ingredients) {
+    const row = document.createElement("div");
+    row.className = "oracle-ingredient";
+
+    const enabled = document.createElement("input");
+    enabled.type = "checkbox";
+    enabled.checked = ingredient.enabled;
+    enabled.setAttribute("aria-label", `${ingredient.name} 활성화`);
+    enabled.addEventListener("change", () => {
+      ingredient.enabled = enabled.checked;
+      saveOracleSettings();
+    });
+
+    const name = document.createElement("input");
+    name.type = "text";
+    name.maxLength = 30;
+    name.value = ingredient.name;
+    name.setAttribute("aria-label", "신탁 재료 이름");
+    name.addEventListener("change", () => {
+      ingredient.name = name.value.trim();
+      saveOracleSettings();
+    });
+
+    const weight = document.createElement("input");
+    weight.type = "number";
+    weight.min = "0";
+    weight.max = "100";
+    weight.value = ingredient.weight;
+    weight.setAttribute("aria-label", `${ingredient.name} 가중치`);
+    weight.addEventListener("change", () => {
+      ingredient.weight = Math.max(0, Math.min(100, Number(weight.value) || 0));
+      weight.value = ingredient.weight;
+      saveOracleSettings();
+    });
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "삭제";
+    remove.setAttribute("aria-label", `${ingredient.name} 삭제`);
+    remove.addEventListener("click", () => {
+      if (oracleSettings.ingredients.length <= 1) {
+        setOracleMessage("신탁 재료는 최소 한 개 남겨주세요.", "error");
+        return;
+      }
+      oracleSettings.ingredients = oracleSettings.ingredients.filter((item) => item.id !== ingredient.id);
+      renderOracleIngredients();
+      saveOracleSettings();
+    });
+    row.append(enabled, name, weight, remove);
+    elements.oracleIngredients.append(row);
+  }
+}
+
+async function loadOracleSettings() {
+  try {
+    const response = await fetch("/api/images/prompt-oracle/settings", { cache: "no-store" });
+    if (!response.ok) throw new Error("혼돈의 신탁이 아직 준비되지 않았어요.");
+    oracleSettings = await response.json();
+    elements.oracleChaos.value = oracleSettings.chaos;
+    elements.oracleChaosValue.textContent = oracleSettings.chaos;
+    elements.oracleSaveStatus.textContent = "저장됨";
+    renderOracleIngredients();
+  } catch (error) {
+    elements.oracleReroll.disabled = true;
+    elements.oracleSaveStatus.textContent = "연결 안 됨";
+    setOracleMessage(error.message, "error");
+  }
+}
+
+async function saveOracleSettings() {
+  if (!oracleSettings) return;
+  if (oracleSaving) {
+    oracleSavePending = true;
+    return;
+  }
+  oracleSaving = true;
+  oracleSavePending = false;
+  elements.oracleSaveStatus.textContent = "저장 중…";
+  try {
+    const response = await fetch("/api/images/prompt-oracle/settings", {
+      method: "PUT",
+      headers: {
+        "content-type": "application/json",
+        "x-prompt-oracle-confirmation": "update-prompt-oracle-settings",
+      },
+      body: JSON.stringify(oraclePayload()),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "신탁 설정을 저장하지 못했어요.");
+    if (!oracleSavePending) {
+      oracleSettings = result;
+      elements.oracleSaveStatus.textContent = "저장됨";
+      renderOracleIngredients();
+    }
+  } catch (error) {
+    elements.oracleSaveStatus.textContent = "저장 실패";
+    setOracleMessage(error.message, "error");
+  } finally {
+    oracleSaving = false;
+    if (oracleSavePending) saveOracleSettings();
+  }
+}
+
+async function rerollOracle() {
+  if (!oracleSettings) return;
+  elements.oracleReroll.disabled = true;
+  elements.oracleReroll.textContent = "🎲 신탁 중…";
+  setOracleMessage("무료 API가 혼돈의 재료를 장면으로 엮고 있어요…");
+  try {
+    const response = await fetch("/api/images/prompt-oracle/reroll", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chaos: Number(elements.oracleChaos.value) }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "신탁을 받아오지 못했어요.");
+    if (elements.scene.value.trim() && !window.confirm("현재 프롬프트를 새 신탁으로 바꿀까요?")) {
+      setOracleMessage(`신탁 보류 · ${result.ingredients.map((item) => item.name).join(" + ")}`);
+      return;
+    }
+    elements.scene.value = result.scene;
+    elements.scene.dispatchEvent(new Event("input", { bubbles: true }));
+    setOracleMessage(`신탁 완료 · ${result.ingredients.map((item) => item.name).join(" + ")} · 혼돈도 ${result.chaos}%`, "success");
+  } catch (error) {
+    setOracleMessage(error.message, "error");
+  } finally {
+    elements.oracleReroll.disabled = false;
+    elements.oracleReroll.textContent = "🎲 혼돈의 신탁";
+  }
 }
 
 function formatDateTime(value) {
@@ -782,6 +939,43 @@ elements.scene.addEventListener("input", () => {
   elements.characterCount.textContent = elements.scene.value.length;
 });
 
+elements.oracleChaos.addEventListener("input", () => {
+  elements.oracleChaosValue.textContent = elements.oracleChaos.value;
+});
+elements.oracleChaos.addEventListener("change", () => {
+  if (!oracleSettings) return;
+  oracleSettings.chaos = Number(elements.oracleChaos.value);
+  saveOracleSettings();
+});
+elements.oracleAdd.addEventListener("click", () => {
+  if (!oracleSettings) return;
+  const name = elements.oracleNewName.value.trim();
+  if (!name) {
+    setOracleMessage("추가할 신탁 재료 이름을 적어주세요.", "error");
+    return;
+  }
+  if (oracleSettings.ingredients.length >= (oracleSettings.limits?.ingredients ?? 40)) {
+    setOracleMessage("신탁 재료가 가득 찼어요.", "error");
+    return;
+  }
+  oracleSettings.ingredients.push({
+    id: `custom-${Date.now().toString(36)}`,
+    name,
+    weight: Math.max(0, Math.min(100, Number(elements.oracleNewWeight.value) || 0)),
+    enabled: true,
+  });
+  elements.oracleNewName.value = "";
+  renderOracleIngredients();
+  saveOracleSettings();
+});
+elements.oracleNewName.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    elements.oracleAdd.click();
+  }
+});
+elements.oracleReroll.addEventListener("click", rerollOracle);
+
 elements.form.addEventListener("input", (event) => {
   if (event.target instanceof HTMLInputElement && event.target.name === "purpose") {
     purposeTouched = true;
@@ -1205,5 +1399,6 @@ async function loadJobs({ loadMore = false } = {}) {
 }
 
 elements.jobsLoadMore.addEventListener("click", () => loadJobs({ loadMore: true }));
+loadOracleSettings();
 loadJobs();
 setInterval(loadJobs, 10_000);

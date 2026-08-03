@@ -38,6 +38,8 @@ import { createGenerationDraftStore } from "./modules/images/generation-drafts.m
 import { handleGenerationDraftRoute } from "./modules/images/generation-draft-route.mjs";
 import { createPromptOnlyExecutor } from "./modules/images/prompt-only-executor.mjs";
 import { handlePromptOnlyExecutionRoute } from "./modules/images/prompt-only-execution-route.mjs";
+import { createPromptOracle } from "./modules/images/prompt-oracle.mjs";
+import { handlePromptOracleRoute } from "./modules/images/prompt-oracle-route.mjs";
 import { createImageArchive } from "./modules/images/image-archive.mjs";
 import { handleImageContentRoute } from "./modules/images/image-content-route.mjs";
 import { handleImageDetailRoute } from "./modules/images/image-detail-route.mjs";
@@ -141,6 +143,16 @@ const promptOnlyExecutor =
         freeTextKeyStorePath: generationConfig.freeTextKeyStorePath,
         archive: imageArchive,
         optionsCatalog: creationOptions,
+      })
+    : null;
+const promptOracle =
+  generationConfig?.freeTextRunnerPath
+    ? createPromptOracle({
+        settingsPath: path.join(APP_ROOT, "state", "image-prompt-oracle", "settings.json"),
+        runtimeRoot: path.join(APP_ROOT, "state", "image-prompt-oracle", "runtime"),
+        runnerPath: generationConfig.freeTextRunnerPath,
+        pythonExecutablePath: generationConfig.freeTextPythonExecutablePath,
+        keyStorePath: generationConfig.freeTextKeyStorePath,
       })
     : null;
 const themeHistory =
@@ -405,6 +417,7 @@ export function createServer({
   fortune = fortuneArchive,
   drafts = generationDrafts,
   generationExecutor = promptOnlyExecutor,
+  promptOracleService = promptOracle,
   styleAssetManager = styleAssets,
   themeThumbnailManager = themeThumbnails,
   imageTrash = runtimeImageTrash,
@@ -666,6 +679,18 @@ export function createServer({
           response,
           pathname: url.pathname,
           executor: generationExecutor,
+          sendJson,
+        })
+      ) {
+        return;
+      }
+
+      if (
+        await handlePromptOracleRoute({
+          request,
+          response,
+          pathname: url.pathname,
+          oracle: promptOracleService,
           sendJson,
         })
       ) {

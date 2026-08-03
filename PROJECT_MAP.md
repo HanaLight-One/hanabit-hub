@@ -86,6 +86,7 @@ HTTP 라우트는 검증과 응답만 맡고 실제 동작은 같은 기능 폴�
 | Hub SQLite | `state/hanabit-hub.sqlite` | 뉴스 원장, 이미지 제작 기록과 직접 업로드 출처, DC 혼합 블록 초안(v6) | 제외 |
 | Push 구독·키 | `state/notifications/` | 모바일 Web Push 상태 | 제외 |
 | 이미지 생성 초안·작업 | `state/image-generation-*` | Hub가 만든 초안과 1~10장 배치 작업 상태 | 제외 |
+| 혼돈의 신탁 설정 | `state/image-prompt-oracle/` | 사용자 재료·가중치와 임시 무료 API 실행 상태 | 제외 |
 | 직접 업로드 생성 소스 | `state/image-source-uploads/YYYY-MM-DD/` | 사용자가 올린 PNG·JPG·WebP를 오테와 분리해 Responses 주 참조로 보관 | 제외 |
 | 이미지·테마·제작 기록 | 외부 설정 루트 | 기존 저장소를 이동 없이 연결 | 외부 |
 | 이미지 휴지통 | 외부 `stateRoot/trash/hub-v1/` | 추가 생성 파일의 복원 영수증과 격리 파일 | 외부 |

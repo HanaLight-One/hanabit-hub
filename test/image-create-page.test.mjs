@@ -36,7 +36,11 @@ test("/images/create가 안전한 추가생성 초안 화면을 제공한다", a
     assert.match(body, /id="preview-scene-details"/);
     assert.match(body, /id="preview-scene-summary"/);
     assert.match(body, /id="preview-scene-copy"/);
-    assert.match(body, /20260803-job-history/);
+    assert.match(body, /20260803-prompt-oracle/);
+    assert.match(body, /id="oracle-reroll"/);
+    assert.match(body, /id="oracle-chaos"/);
+    assert.match(body, /id="oracle-ingredients"/);
+    assert.match(body, /혼돈의 신탁/);
     assert.match(body, /id="execute-button"/);
     assert.match(body, /name="purpose"/);
     assert.match(body, /value="theme-followup"/);
@@ -112,6 +116,10 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(scriptBody, /\/api\/images\/generation-jobs/);
     assert.match(body, /이전 작업 더 불러오기/);
     assert.match(scriptBody, /JOB_PAGE_SIZE = 10/);
+    assert.match(scriptBody, /\/api\/images\/prompt-oracle\/settings/);
+    assert.match(scriptBody, /\/api\/images\/prompt-oracle\/reroll/);
+    assert.match(scriptBody, /update-prompt-oracle-settings/);
+    assert.match(scriptBody, /현재 프롬프트를 새 신탁으로 바꿀까요/);
     assert.match(scriptBody, /jobDisplayLimit \+= JOB_PAGE_SIZE/);
     assert.match(scriptBody, /generation-jobs\?limit=/);
     assert.match(scriptBody, /같은 조합으로/);
@@ -143,7 +151,7 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(scriptBody, /await loadSourceContext\(\)/);
     assert.match(scriptBody, /제작 기록과 선택을 불러왔어요/);
     assert.match(scriptBody, /purpose/);
-    assert.equal(scriptBody.includes('method: "PUT"'), false);
+    assert.equal((scriptBody.match(/method: "PUT"/gu) ?? []).length, 1);
     assert.equal(scriptBody.includes('method: "DELETE"'), false);
     assert.equal(scriptBody.includes("localStorage"), false);
     assert.match(scriptBody, /SAFE_SOURCE_ID/);

@@ -8,10 +8,10 @@
     <meta name="description" content="하나빛 이미지 추가생성 초안실" />
     <title>추가 이미지 생성실 · Hanabit Hub</title>
     <link rel="stylesheet" href="/images/styles.css" />
-    <link rel="stylesheet" href="/images/create/styles.css?v=20260803-job-history" />
+    <link rel="stylesheet" href="/images/create/styles.css?v=20260803-prompt-oracle" />
     <link rel="stylesheet" href="/codex-usage-indicator.css" />
     <script src="/codex-usage-indicator.js" type="module"></script>
-    <script src="/images/create/app.js?v=20260803-job-history" type="module"></script>
+    <script src="/images/create/app.js?v=20260803-prompt-oracle" type="module"></script>
   </head>
   <body>
     <header class="topbar">
@@ -138,12 +138,38 @@
               aria-labelledby="style-title" aria-live="polite" hidden></div>
           </section>
 
-          <label class="scene-field">
-            <span>원하는 장면</span>
+          <section class="scene-field" aria-labelledby="scene-title">
+            <div class="scene-heading">
+              <label id="scene-title" for="scene-request">원하는 장면</label>
+              <button id="oracle-reroll" class="oracle-reroll" type="button">🎲 혼돈의 신탁</button>
+            </div>
             <textarea id="scene-request" maxlength="12000" required
               placeholder="예: 비가 그친 새벽, 두 사람이 오래된 온실에서 작은 빛을 발견한다."></textarea>
             <small><span id="character-count">0</span> / 12,000</small>
-          </label>
+            <details class="oracle-settings">
+              <summary>⚙ 혼돈 설정</summary>
+              <div class="oracle-settings-body">
+                <label class="oracle-chaos" for="oracle-chaos">
+                  <span>혼돈도 <b id="oracle-chaos-value">68</b>%</span>
+                  <input id="oracle-chaos" type="range" min="0" max="100" step="1" value="68" />
+                  <small>낮으면 그럴듯하게, 높으면 낯선 연결을 더 과감하게 만들어요.</small>
+                </label>
+                <div>
+                  <div class="oracle-list-heading">
+                    <b>신탁 재료와 출현 가중치</b>
+                    <span id="oracle-save-status">불러오는 중…</span>
+                  </div>
+                  <div id="oracle-ingredients" class="oracle-ingredients"></div>
+                </div>
+                <div class="oracle-add-row">
+                  <input id="oracle-new-name" type="text" maxlength="30" placeholder="새 재료 · 예: 달빛" />
+                  <input id="oracle-new-weight" type="number" min="0" max="100" value="30" aria-label="새 재료 가중치" />
+                  <button id="oracle-add" type="button">＋ 추가</button>
+                </div>
+              </div>
+            </details>
+            <p id="oracle-result" class="oracle-result" aria-live="polite"></p>
+          </section>
 
           <div class="safety-note">
             <b>지금은 안전한 초안 단계</b>
