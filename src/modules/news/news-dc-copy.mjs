@@ -82,11 +82,26 @@ function hasKnownDcRisk(url) {
   }
 }
 
+function isDirectMediaUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.hostname.toLowerCase() === "video.twimg.com" ||
+      /\.(?:gif|jpe?g|m4v|mov|mp4|png|webm|webp)(?:$|[?#])/iu.test(url.pathname);
+  } catch {
+    return true;
+  }
+}
+
 function sourceLinks(record) {
   const candidates = [record?.source?.url, ...(record?.original?.links ?? [])]
     .map(safeHttpUrl)
-    .filter(Boolean);
-  const unique = [...new Set(candidates)];
+    .filter(Boolean)
+    .filter((url) => !isDirectMediaUrl(url));
+  let unique = [...new Set(candidates)];
+  if (record?.source?.type === "discord-announcement") {
+    const external = unique.filter((url) => new URL(url).hostname.toLowerCase() !== "discord.com");
+    if (external.length) unique = external;
+  }
   return {
     included: unique.filter((url) => !hasKnownDcRisk(url)).slice(0, 4),
     omitted: unique.filter(hasKnownDcRisk).length,

@@ -114,3 +114,18 @@ test("원문 이미지가 없을 때만 기본 커버를 이미지 수에 포함
   assert.equal(withoutCover.imageCount, 0);
   assert.equal(withoutCover.usesFallbackCover, false);
 });
+
+test("Discord 공식 글은 직접 미디어 주소를 빼고 외부 원문 링크를 우선한다", () => {
+  const sample = record();
+  sample.source = {
+    type: "discord-announcement",
+    url: "https://discord.com/channels/1/2/3",
+  };
+  sample.original.links = [
+    "https://video.twimg.com/amplify_video/example/vid/avc1/1920x1080/example.mp4",
+    "https://openai.com/index/ten-advances-in-mathematics/",
+  ];
+  const draft = composeNewsDcCopy(sample);
+  assert.match(draft.bodyText, /https:\/\/openai\.com\/index\/ten-advances-in-mathematics\//u);
+  assert.doesNotMatch(draft.bodyText, /video\.twimg\.com|\.mp4|discord\.com\/channels/u);
+});

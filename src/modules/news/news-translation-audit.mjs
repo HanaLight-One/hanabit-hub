@@ -1,5 +1,6 @@
 const URL_PATTERN = /(?:https?:\/\/|(?:pic\.)?twitter\.com\/)[^\s]+/giu;
 const LATIN_OR_NUMBER_PATTERN = /[a-z][a-z0-9._+-]{1,}|\d+(?:\.\d+)+|\d{2,}/giu;
+const UNEXPECTED_SCRIPT_PATTERN = /[\p{Script=Arabic}\p{Script=Cyrillic}\p{Script=Devanagari}\p{Script=Hebrew}\p{Script=Thai}]/u;
 
 function clean(value) {
   return String(value ?? "")
@@ -56,6 +57,9 @@ export function auditFreeNewsTranslation(record, translationResult = record?.wor
   }
   if (!/[가-힣]/u.test(`${title} ${body}`)) {
     return result("failed", "korean_missing", "한국어 번역을 확인할 수 없어 자동 검증하지 않아요.");
+  }
+  if (UNEXPECTED_SCRIPT_PATTERN.test(`${title} ${body}`) && !UNEXPECTED_SCRIPT_PATTERN.test(original)) {
+    return result("failed", "unexpected_script", "원문에 없는 문자 체계가 번역에 섞여 자동 검증하지 않아요.");
   }
   if (contextTranslations.length !== contexts.length) {
     return result("failed", "context_count", "관련 글과 관련 글 번역의 개수가 달라 자동 검증하지 않아요.");

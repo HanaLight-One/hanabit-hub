@@ -6,7 +6,15 @@ import test from "node:test";
 import {
   classifyProviderReason,
   invokeFreeNewsAnalysis,
+  prepareNewsSourceText,
 } from "../src/modules/news/free-news-analysis.mjs";
+
+test("Discord 숨김 미디어 링크와 커스텀 이모지는 번역 입력에서 제거한다", () => {
+  assert.equal(
+    prepareNewsSourceText("Update rates[.](https://video.twimg.com/a.mp4)\n\n[Jump to blog post](<https://openai.com/news>) <:_:1362396578412892313>"),
+    "Update rates.\n\nJump to blog post",
+  );
+});
 
 test("무료 API 오류 이름은 비밀값 없이 안전한 원인 코드로 줄인다", () => {
   assert.equal(classifyProviderReason("OpenAI 요청 실패 (RateLimitError)."), "rate_limit");
@@ -64,6 +72,7 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
         assert.match(prompt, /A new model is available today/);
         assert.match(prompt, /translation object must contain only SOURCE TEXT/);
         assert.match(prompt, /Do not compress SOURCE into a headline/);
+        assert.match(prompt, /one concise Korean news headline of at most 50 characters/u);
         assert.match(prompt, /Translate empower or empowering as enabling the person/);
         assert.match(prompt, /Do not omit CONTEXT translations/);
         assert.match(prompt, /credible insider explicitly saying they used a named capability is usually inference/);
@@ -76,6 +85,7 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
         assert.equal(schema.additionalProperties, false);
         assert.equal(schema.properties.contextTranslations.minItems, 1);
         assert.equal(schema.properties.contextTranslations.maxItems, 1);
+        assert.equal(schema.properties.translation.properties.title.maxLength, 50);
         assert.equal(schema.properties.contextTranslations.items.additionalProperties, false);
         assert.equal(schema.properties.triage.additionalProperties, false);
         assert.deepEqual(schema.properties.triage.properties.decision.enum, ["skip", "review", "publish"]);

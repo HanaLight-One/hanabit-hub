@@ -48,3 +48,12 @@ test("원문에 없는 제품명이나 수치를 번역에 추가하면 자동 �
   assert.equal(audit.status, "failed");
   assert.equal(audit.code, "source_invariant_added");
 });
+
+test("원문에 없는 문자 체계가 번역에 섞이면 자동 검증하지 않는다", () => {
+  const audit = auditFreeNewsTranslation(record({ source: "Jump to blog post" }), {
+    translation: { title: "블로그 글", body: "블로그 पोस्ट로 이동" },
+    contextTranslations: [],
+  });
+  assert.equal(audit.status, "failed");
+  assert.equal(audit.code, "unexpected_script");
+});
