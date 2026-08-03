@@ -16,6 +16,7 @@ const MAX_CUSTOM_CHARACTERS = 6;
 const MAX_BATCH_IMAGES = 10;
 const MAX_SELECTED_STYLES = 3;
 const BUILTIN_RENDERING_COUNT = 4;
+const JOB_PAGE_SIZE = 10;
 const PURPOSE_LABELS = Object.freeze({
   "theme-followup": "오테 추가",
   "free-play": "자유 추가",
@@ -77,6 +78,7 @@ const elements = {
   executeButton: document.querySelector("#execute-button"),
   jobsSummary: document.querySelector("#jobs-summary"),
   jobsList: document.querySelector("#jobs-list"),
+  jobsLoadMore: document.querySelector("#jobs-load-more"),
 };
 
 const params = new URLSearchParams(window.location.search);
@@ -94,6 +96,8 @@ const styleLabels = new Map([
   ["render:2.5d-semi-realistic-anime-reality-forward", "2.5D Semi-realistic-anime · reality-forward"],
 ]);
 const characterLabels = new Map();
+let jobDisplayLimit = JOB_PAGE_SIZE;
+let jobsLoading = false;
 let connectedStyleCount = 0;
 let connectedCharacterCount = 0;
 let previewPayload = null;
@@ -1006,14 +1010,17 @@ elements.executeButton.addEventListener("click", async () => {
 });
 
 function renderJobs(payload) {
-  const jobs = Array.isArray(payload.jobs) ? payload.jobs.slice(0, 10) : [];
+  const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
   elements.jobsSummary.textContent = payload.attentionCount
     ? `확인 필요 ${payload.attentionCount}건`
     : payload.activeCount
       ? `진행 중 ${payload.activeCount}건`
       : jobs.length
-        ? "최근 작업이 모두 종료됐어요."
+        ? `${jobs.length.toLocaleString("ko-KR")}건 표시 · ${payload.hasMore ? "이전 작업이 더 있어요." : "모두 불러왔어요."}`
         : "아직 생성 작업이 없어요.";
+  elements.jobsLoadMore.hidden = !payload.hasMore;
+  elements.jobsLoadMore.disabled = false;
+  elements.jobsLoadMore.textContent = "이전 작업 더 불러오기";
   elements.jobsList.replaceChildren();
   for (const job of jobs) {
     const card = document.createElement("article");
@@ -1171,15 +1178,32 @@ async function regenerateJob(job, slot, button) {
   }
 }
 
-async function loadJobs() {
+async function loadJobs({ loadMore = false } = {}) {
+  if (jobsLoading) return;
+  jobsLoading = true;
+  const previousLimit = jobDisplayLimit;
+  if (loadMore) jobDisplayLimit += JOB_PAGE_SIZE;
+  if (loadMore) {
+    elements.jobsLoadMore.disabled = true;
+    elements.jobsLoadMore.textContent = "이전 작업 불러오는 중…";
+  }
   try {
-    const response = await fetch("/api/images/generation-jobs", { cache: "no-store" });
+    const response = await fetch(
+      `/api/images/generation-jobs?limit=${encodeURIComponent(jobDisplayLimit)}`,
+      { cache: "no-store" },
+    );
     if (!response.ok) throw new Error();
     renderJobs(await response.json());
   } catch {
+    jobDisplayLimit = previousLimit;
     elements.jobsSummary.textContent = "작업 상태를 불러오지 못했어요.";
+    elements.jobsLoadMore.disabled = false;
+    elements.jobsLoadMore.textContent = "다시 불러오기";
+  } finally {
+    jobsLoading = false;
   }
 }
 
+elements.jobsLoadMore.addEventListener("click", () => loadJobs({ loadMore: true }));
 loadJobs();
 setInterval(loadJobs, 10_000);

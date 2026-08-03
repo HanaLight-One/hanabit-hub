@@ -609,6 +609,23 @@
 .jobs-heading h2 { margin: 0; font-size: 24px; }
 .jobs-heading p { margin: 0; color: var(--muted); font-size: 12px; }
 .jobs-list { display: grid; gap: 10px; }
+.jobs-load-more {
+  display: block;
+  width: min(420px, 100%);
+  margin: 18px auto 0;
+  padding: 13px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-weight: 850;
+  cursor: pointer;
+}
+.jobs-load-more:hover,
+.jobs-load-more:focus-visible { border-color: var(--accent); color: var(--accent); }
+.jobs-load-more:disabled { cursor: wait; opacity: .65; }
+.jobs-load-more[hidden] { display: none; }
 .job-card {
   display: grid;
   grid-template-columns: minmax(190px, 30%) minmax(0, 1fr);

@@ -13,10 +13,12 @@ async function withServer(executor, callback) {
 
 test("1장 실행 API는 정확한 확인 후 허용된 1장 worker만 시작한다", async () => {
   let starts = 0;
+  let listedWith = null;
   const executor = {
     async start(id) { starts += 1; return { id, status: "processing", route: "prompt-only", count: 1 }; },
     async status(id) { return { id, status: "processing", progress: { completed: 0, total: 1 }, message: "생성 중" }; },
-    async list() {
+    async list(options) {
+      listedWith = options;
       return {
         jobs: [{ id: ID, purpose: "free-play", status: "processing", stage: "planning", progress: { completed: 0, total: 1 } }],
         activeCount: 1,
@@ -36,9 +38,10 @@ test("1장 실행 API는 정확한 확인 후 허용된 1장 worker만 시작한
     assert.equal((await response.json()).count, 1);
     assert.equal(starts, 1);
     assert.equal((await fetch(`${baseUrl}/api/images/generation-jobs/${ID}`)).status, 200);
-    const listing = await fetch(`${baseUrl}/api/images/generation-jobs`);
+    const listing = await fetch(`${baseUrl}/api/images/generation-jobs?limit=37`);
     assert.equal(listing.status, 200);
     assert.equal((await listing.json()).activeCount, 1);
+    assert.deepEqual(listedWith, { limit: 37 });
     assert.equal((await fetch(`${baseUrl}/api/images/generation-jobs`, { method: "POST" })).status, 405);
   });
 });

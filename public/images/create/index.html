@@ -8,10 +8,10 @@
     <meta name="description" content="하나빛 이미지 추가생성 초안실" />
     <title>추가 이미지 생성실 · Hanabit Hub</title>
     <link rel="stylesheet" href="/images/styles.css" />
-    <link rel="stylesheet" href="/images/create/styles.css?v=20260803-prompt-copy" />
+    <link rel="stylesheet" href="/images/create/styles.css?v=20260803-job-history" />
     <link rel="stylesheet" href="/codex-usage-indicator.css" />
     <script src="/codex-usage-indicator.js" type="module"></script>
-    <script src="/images/create/app.js?v=20260803-prompt-copy" type="module"></script>
+    <script src="/images/create/app.js?v=20260803-job-history" type="module"></script>
   </head>
   <body>
     <header class="topbar">
@@ -221,6 +221,9 @@
           <p id="jobs-summary" aria-live="polite">작업 상태를 확인하는 중이에요.</p>
         </div>
         <div id="jobs-list" class="jobs-list" aria-live="polite"></div>
+        <button id="jobs-load-more" class="jobs-load-more" type="button" hidden>
+          이전 작업 더 불러오기
+        </button>
       </section>
     </main>
 

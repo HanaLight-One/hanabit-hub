@@ -159,6 +159,18 @@ test("프롬프트 자유 생성은 모의 worker에 1장으로 한 번만 전�
     assert.equal(listing.jobs[0].status, "failed");
     assert.equal(JSON.stringify(listing).includes("SECRET"), false);
     assert.equal(JSON.stringify(listing).includes("internal"), false);
+    for (let index = 1; index <= 12; index += 1) {
+      const id = index.toString(16).padStart(32, "0");
+      await writeFile(
+        path.join(jobRoot, `${id}.json`),
+        JSON.stringify({ ...job, id, startedAt: new Date(Date.parse(job.startedAt) - index * 1000).toISOString() }),
+        "utf8",
+      );
+    }
+    const firstPage = await executor.list({ limit: 5 });
+    assert.equal(firstPage.jobs.length, 5);
+    assert.equal(firstPage.totalCount, 13);
+    assert.equal(firstPage.hasMore, true);
   });
 });
 

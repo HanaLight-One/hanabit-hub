@@ -414,12 +414,15 @@ export function createPromptOnlyExecutor({
     return await normalizeJob(await readJob(id));
   }
 
-  async function list() {
+  async function list({ limit = 20 } = {}) {
+    const safeLimit = Number.isInteger(limit) ? Math.min(100, Math.max(1, limit)) : 20;
     let entries;
     try {
       entries = await readdir(jobRoot, { withFileTypes: true });
     } catch (error) {
-      if (error.code === "ENOENT") return { jobs: [], activeCount: 0, attentionCount: 0 };
+      if (error.code === "ENOENT") {
+        return { jobs: [], totalCount: 0, hasMore: false, activeCount: 0, attentionCount: 0 };
+      }
       throw error;
     }
     const jobs = [];
@@ -436,9 +439,11 @@ export function createPromptOnlyExecutor({
       }
     }
     jobs.sort((left, right) => right.startedAt.localeCompare(left.startedAt));
-    const recent = jobs.slice(0, 20);
+    const recent = jobs.slice(0, safeLimit);
     return Object.freeze({
       jobs: Object.freeze(recent),
+      totalCount: jobs.length,
+      hasMore: jobs.length > recent.length,
       activeCount: jobs.filter((job) => job.status === "processing").length,
       attentionCount: jobs.filter((job) => job.status === "attention").length,
     });

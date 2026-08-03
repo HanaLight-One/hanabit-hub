@@ -5,6 +5,14 @@ const LIST_PATH = "/api/images/generation-jobs";
 const CONFIRMATION = "generate-one-draft-image";
 const BATCH_CONFIRMATION = "generate-draft-image-batch";
 const REGENERATE_CONFIRMATION = "regenerate-same-settings";
+const DEFAULT_LIST_LIMIT = 10;
+const MAX_LIST_LIMIT = 100;
+
+function readListLimit(request) {
+  const raw = new URL(request.url, "http://127.0.0.1").searchParams.get("limit");
+  if (!raw || !/^\d+$/u.test(raw)) return DEFAULT_LIST_LIMIT;
+  return Math.min(MAX_LIST_LIMIT, Math.max(1, Number.parseInt(raw, 10)));
+}
 
 function sameOrigin(request) {
   const origin = request.headers.origin;
@@ -78,7 +86,7 @@ export async function handlePromptOnlyExecutionRoute({ request, response, pathna
 
   if (listing) {
     if (request.method !== "GET") sendJson(response, 405, { error: "Method not allowed" });
-    else sendJson(response, 200, await executor.list());
+    else sendJson(response, 200, await executor.list({ limit: readListLimit(request) }));
     return true;
   }
 
