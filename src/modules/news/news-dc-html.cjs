@@ -106,7 +106,7 @@ function textToHtml(value, { linkCards = new Map() } = {}) {
       const link = safeBodyLink(line);
       if (link) {
         const anchor = `<div><a class="lnk" href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link)}</a></div>`;
-        return `${anchor}${createOgpBlock(link, linkCards.get(link))}`;
+        return createOgpBlock(link, linkCards.get(link)) || anchor;
       }
       return `<p style="margin:0 0 12px;font-size:15px;line-height:1.75;">${escapeHtml(line)}</p>`;
     })

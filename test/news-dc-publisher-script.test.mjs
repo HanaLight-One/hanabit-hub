@@ -120,6 +120,7 @@ test("X 원문은 DC OGP 응답을 검증해 모바일 링크 카드 저장 표�
   assert.match(html, /\^#\^Greg &lt;Brockman&gt;\^#\^원문 설명\^#\^https:\/\/pbs\.twimg\.com\/card\.jpg::OG_END_\}\}<\/div>/u);
   assert.match(html, /Greg &lt;Brockman&gt;/u);
   assert.doesNotMatch(html, /class="og-div"/u);
+  assert.doesNotMatch(html, /<a class="lnk"/u);
 });
 
 test("DC OGP 조회가 실패하면 게시를 막지 않고 일반 X 링크를 유지한다", async () => {
