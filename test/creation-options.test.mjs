@@ -30,7 +30,14 @@ test("자산 색인에서 안전한 화풍 이름만 제공한다", async (conte
         핑크브릿지: {
           name: "핑크브릿지",
           source: "special_guest",
+          guest_scope: "outside",
           anchor_text: "guest identity only",
+        },
+        베르케스: {
+          name: "베르케스",
+          source: "special_guest",
+          guest_scope: "aether",
+          anchor_text: "same-world guest identity only",
         },
         헤일라: {
           name: "헤일라",
@@ -61,12 +68,14 @@ test("자산 색인에서 안전한 화풍 이름만 제공한다", async (conte
   assert.deepEqual(result.characters[0], {
     id: "pink-bridge",
     label: "핑크브릿지",
+    group: "outside-guest",
   });
   assert.deepEqual(
     result.characters.slice(1),
     [
-      { id: "리벨라", label: "리벨라" },
-      { id: "헤일라", label: "헤일라" },
+      { id: "리벨라", label: "리벨라", group: "chapel" },
+      { id: "베르케스", label: "베르케스", group: "aether-guest" },
+      { id: "헤일라", label: "헤일라", group: "chapel" },
     ],
   );
   assert.equal(serialized.includes(root), false);

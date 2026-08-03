@@ -1,0 +1,132 @@
+--- a/pipeline_common.py
++++ b/pipeline_common.py
+@@ -16,6 +16,9 @@ TOPIC_PATH = ASSET_ROOT / "topic.json"
+ 
+ MAIN_ANCHOR_PATH = ASSET_ROOT / "에테르대예배당_이미지_앵커.txt"
+-GUEST_ANCHOR_PATH = ASSET_ROOT / "에테르대예배당_이미지앵커_특별게스트.txt"
++GUEST_ANCHOR_PATHS = {
++    "aether": ASSET_ROOT / "에테르대예배당_이미지앵커_특별게스트.txt",
++    "outside": ASSET_ROOT / "에테르대예배당밖_이미지앵커_특별게스트.txt",
++}
+ IMAGE_ANCHOR_ROOT = ASSET_ROOT / "예배당_이미지_앵커"
+ PINK_PROMPT_PATH = ASSET_ROOT / "핑크브릿지" / "핑크브릿지_외관_프롬프트.txt"
+ RELATIONSHIP_GROUPS_PATH = PIPELINE_ROOT / "relationship_groups.json"
+@@ -96,13 +99,34 @@ def image_anchor_paths() -> list[Path]:
+     )
+ 
+ 
++def special_guest_asset_paths() -> list[Path]:
++    supported_suffixes = {".txt", ".png", ".jpg", ".jpeg", ".webp"}
++    return sorted(
++        (
++            path
++            for directory in ASSET_ROOT.iterdir()
++            if directory.is_dir()
++            for path in directory.iterdir()
++            if path.is_file()
++            and path.suffix.lower() in supported_suffixes
++            and (
++                "앵커" in path.stem
++                or "외관_프롬프트" in path.stem
++                or path.stem == directory.name
++            )
++        ),
++        key=lambda path: str(path),
++    )
++
++
+ def collect_source_signature() -> dict[str, Any]:
+     text_sources = [
+         MAIN_ANCHOR_PATH,
+-        GUEST_ANCHOR_PATH,
++        *GUEST_ANCHOR_PATHS.values(),
+         PINK_PROMPT_PATH,
+         RELATIONSHIP_GROUPS_PATH,
+         *style_paths(),
++        *special_guest_asset_paths(),
+     ]
+     return {
+         "text_files": [
+--- a/build_index.py
++++ b/build_index.py
+@@ -7,7 +7,8 @@ from typing import Any
+ from typing import Any
+ 
+ from pipeline_common import (
+-    GUEST_ANCHOR_PATH,
++    ASSET_ROOT,
++    GUEST_ANCHOR_PATHS,
+     IMAGE_ANCHOR_ROOT,
+     INDEX_PATH,
+     MAIN_ANCHOR_PATH,
+@@ -110,7 +111,12 @@ def parse_main_characters(text: str) -> tuple[dict[str, Any], dict[str, str]]:
+     return characters, split_sections(shared_text)
+ 
+ 
+-def parse_guest_characters(text: str) -> dict[str, Any]:
++def parse_guest_characters(
++    text: str,
++    *,
++    source_path: Path,
++    guest_scope: str,
++) -> dict[str, Any]:
+     name_markers = list(
+         re.finditer(r"(?m)^(?:\[[^\n]+\]\s*\n)?이름:\s*(.+?)\s*$", text)
+     )
+@@ -130,11 +136,38 @@ def parse_guest_characters(text: str) -> dict[str, Any]:
+             "name": name,
+             "aliases": [name],
+             "source": "special_guest",
+-            "source_path": str(GUEST_ANCHOR_PATH),
++            "guest_scope": guest_scope,
++            "source_path": str(source_path),
+             "anchor_text": block.strip(),
+             "height_text": "",
+         }
+     return characters
++
++
++def attach_guest_assets(characters: dict[str, Any]) -> None:
++    image_suffixes = {".png", ".jpg", ".jpeg", ".webp"}
++    for name, character in characters.items():
++        directory = ASSET_ROOT / name
++        if not directory.is_dir():
++            continue
++        text_candidates = [
++            directory / f"{name}_외관_프롬프트.txt",
++            directory / f"{name}_텍스트_앵커.txt",
++        ]
++        text_path = next((path for path in text_candidates if path.is_file()), None)
++        if text_path:
++            character["appearance_prompt_path"] = str(text_path)
++            character["appearance_prompt"] = read_text(text_path).strip()
++        image_path = next(
++            (
++                path
++                for path in sorted(directory.iterdir(), key=lambda item: item.name)
++                if path.is_file() and path.suffix.lower() in image_suffixes
++            ),
++            None,
++        )
++        if image_path:
++            character["image_anchor_path"] = str(image_path)
+ 
+ 
+ def build_relationship_graph(
+@@ -199,4 +232,15 @@ def build_index() -> dict[str, Any]:
+ def build_index() -> dict[str, Any]:
+     main_characters, shared_sections = parse_main_characters(read_text(MAIN_ANCHOR_PATH))
+-    guest_characters = parse_guest_characters(read_text(GUEST_ANCHOR_PATH))
++    guest_characters: dict[str, Any] = {}
++    for guest_scope, source_path in GUEST_ANCHOR_PATHS.items():
++        parsed = parse_guest_characters(
++            read_text(source_path),
++            source_path=source_path,
++            guest_scope=guest_scope,
++        )
++        duplicates = set(guest_characters).intersection(parsed)
++        if duplicates:
++            raise ValueError(f"특별 게스트 파일에 중복 인물이 있습니다: {sorted(duplicates)}")
++        guest_characters.update(parsed)
++    attach_guest_assets(guest_characters)
+     characters = {**main_characters, **guest_characters}

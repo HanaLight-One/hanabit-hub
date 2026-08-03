@@ -104,7 +104,14 @@ function guidedCastPackage(characterIds, index, { includeImageAnchors = false } 
       };
     }
     if (!characters[id]) throw new Error(`선택한 인물을 자산 색인에서 찾지 못했습니다: ${id}`);
-    return characterPackage(characters[id], { includeImageAnchor: includeImageAnchors });
+    const character = characters[id];
+    if (character.source === "special_guest" && !mixedCast && character.appearance_prompt) {
+      return characterPackage(
+        { ...character, anchor_text: character.appearance_prompt },
+        { includeImageAnchor: includeImageAnchors },
+      );
+    }
+    return characterPackage(character, { includeImageAnchor: includeImageAnchors });
   });
   const ordinaryNames = characterIds.filter((id) => id !== "pink-bridge");
   const matchingGroup = (index.relationship_groups || []).find(

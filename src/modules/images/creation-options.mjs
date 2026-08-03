@@ -26,7 +26,14 @@ function normalizeCharacter(character, fallbackId) {
   ) {
     return null;
   }
-  return Object.freeze({ id, label: id });
+  const group = character?.source !== "special_guest"
+    ? "chapel"
+    : character?.guest_scope === "aether"
+      ? "aether-guest"
+      : character?.guest_scope === "outside"
+        ? "outside-guest"
+        : "guest";
+  return Object.freeze({ id, label: id, group });
 }
 
 export function createCreationOptionsCatalog({ assetIndexPath }) {
@@ -71,7 +78,7 @@ export function createCreationOptionsCatalog({ assetIndexPath }) {
       !seenCharacters.has("pink-bridge")
     ) {
       characters.unshift(
-        Object.freeze({ id: "pink-bridge", label: "핑크브릿지" }),
+        Object.freeze({ id: "pink-bridge", label: "핑크브릿지", group: "outside-guest" }),
       );
     }
 

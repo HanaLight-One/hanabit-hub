@@ -51,7 +51,9 @@ Image Studio의 코드는 Hanabit Hub 저장소에서 관리하되 운영 데이
 꺼짐이다. 켠 경우에도 worker는 참조 이미지의 화풍·배경·소품·동물을 복사하지 않고
 선택한 locked style을 우선한다. 핑크브릿지 단독은 기존 완성형 외형 프롬프트를,
 다른 인물과 섞인 cast는 `special_guest`의 identity-only 앵커를 사용한다. 특별 게스트
-파서 확장은 `patches/daily-image-pipeline-special-guests.patch`로 재현한다.
+다중 인물 파서는 `patches/daily-image-pipeline-special-guests.patch`로, 같은 세계관·세계관 밖
+파일 분리와 이름별 폴더 자산 연결은 `patches/daily-image-pipeline-guest-scopes.patch`로 재현한다.
+자산 색인은 원본 경로를 외부에 노출하지 않고 `guest_scope`만 허브의 안전한 표시 그룹으로 변환한다.
 | 무료 텍스트 runner | `generation.freeTextRunnerPath` | 장면 JSON 생성 |
 | Responses bridge | `generation.codexResponsesBridgePath` | ChatGPT Codex 이미지 도구 연결 |
 

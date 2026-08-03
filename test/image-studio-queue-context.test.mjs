@@ -34,6 +34,15 @@ async function fixture() {
           anchor_text: "adult Pink-Bridge guest identity only",
           height_text: "average height",
         },
+        토끼소년: {
+          name: "토끼소년",
+          source: "special_guest",
+          guest_scope: "outside",
+          anchor_text: "Rabbit Boy compact guest identity",
+          appearance_prompt: "Rabbit Boy complete standalone appearance",
+          image_anchor_path: path.join(root, "rabbit-boy.png"),
+          height_text: "short adult",
+        },
         노아: {
           name: "노아",
           anchor_text: "adult character identity",
@@ -158,6 +167,40 @@ test("핑크브릿지와 일반 인물을 함께 선택하면 한 cast와 참조
   assert.equal(context.cast_packages[0].characters[0].image_anchor_path, null);
   assert.match(context.cast_packages[0].characters[1].image_anchor_path, /noah\.png$/u);
   assert.equal(context.guided_selection.image_anchors_enabled, true);
+});
+
+test("폴더 자산이 있는 외부 특별 게스트는 단독 외형과 선택적 이미지 앵커를 사용한다", async () => {
+  const { assetIndexPath, outputRoot } = await fixture();
+  const context = await buildImageStudioQueueContext({
+    id: "rabbit-boy-single",
+    prompt: "작업실에서 새 장난감을 조립한다",
+    count: 1,
+    mode: "guided-cast",
+    purpose: "free-play",
+    characters: { mode: "custom", ids: ["토끼소년"] },
+    style: { mode: "selected", id: "calm" },
+    useImageAnchors: true,
+  }, { assetIndexPath, outputRoot });
+  const [character] = context.cast_packages[0].characters;
+  assert.match(character.anchor_text, /complete standalone appearance/);
+  assert.match(character.image_anchor_path, /rabbit-boy\.png$/u);
+});
+
+test("외부 특별 게스트가 다른 인물과 함께 나오면 압축 특별 게스트 앵커를 사용한다", async () => {
+  const { assetIndexPath, outputRoot } = await fixture();
+  const context = await buildImageStudioQueueContext({
+    id: "rabbit-boy-mixed",
+    prompt: "토끼소년과 노아가 이야기를 나눈다",
+    count: 1,
+    mode: "guided-cast",
+    purpose: "free-play",
+    characters: { mode: "custom", ids: ["토끼소년", "노아"] },
+    style: { mode: "selected", id: "calm" },
+    useImageAnchors: false,
+  }, { assetIndexPath, outputRoot });
+  const [guest] = context.cast_packages[0].characters;
+  assert.match(guest.anchor_text, /compact guest identity/);
+  assert.equal(guest.image_anchor_path, null);
 });
 
 test("인물별 배치는 각 슬롯에 한 사람짜리 cast를 고정한다", async () => {

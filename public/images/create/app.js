@@ -6,6 +6,12 @@ const MODE_LABELS = Object.freeze({
 });
 const SAFE_SOURCE_ID = /^[a-f0-9]{64}$/;
 const PINK_BRIDGE_ID = "pink-bridge";
+const CHARACTER_GROUPS = Object.freeze([
+  ["chapel", "에테르 대예배당"],
+  ["aether-guest", "같은 세계관 · 특별 게스트"],
+  ["outside-guest", "세계관 밖 · 특별 게스트"],
+  ["guest", "분류 전 특별 게스트"],
+]);
 const MAX_CUSTOM_CHARACTERS = 6;
 const MAX_BATCH_IMAGES = 10;
 const MAX_SELECTED_STYLES = 3;
@@ -184,6 +190,15 @@ function appendCharacterOption(
   characterLabels.set(id, label);
 }
 
+function appendCharacterGroup(label, characters) {
+  if (!characters.length) return;
+  const heading = document.createElement("h4");
+  heading.className = "character-group-heading";
+  heading.textContent = `${label} · ${characters.length}명`;
+  elements.characterGrid.append(heading);
+  for (const character of characters) appendCharacterOption(character);
+}
+
 function selectedCharacterSummary() {
   const selected = [
     ...elements.characterGrid.querySelectorAll('input[name="character"]:checked'),
@@ -270,7 +285,12 @@ async function loadCreationOptions() {
     const styles = Array.isArray(payload.styles) ? payload.styles : [];
     const characters = Array.isArray(payload.characters) ? payload.characters : [];
     for (const style of styles) appendStyleOption(style, { blendable: true });
-    for (const character of characters) appendCharacterOption(character);
+    for (const [groupId, groupLabel] of CHARACTER_GROUPS) {
+      appendCharacterGroup(
+        groupLabel,
+        characters.filter((character) => (character.group ?? "guest") === groupId),
+      );
+    }
     connectedStyleCount = styles.length;
     connectedCharacterCount = characters.length;
     elements.styleStatus.textContent = `${styles.length}개 저장 화풍 · 최대 ${MAX_SELECTED_STYLES}개 혼합 + 렌더링 ${BUILTIN_RENDERING_COUNT}종 · 자동 선택`;
