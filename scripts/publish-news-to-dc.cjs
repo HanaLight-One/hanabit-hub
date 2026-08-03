@@ -2,7 +2,7 @@ const { createRequire } = require("node:module");
 const { createHash } = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
-const { safeBodyLink, textToHtml } = require("../src/modules/news/news-dc-html.cjs");
+const { safeBodyLink, textToHtml, textToHtmlWithCards } = require("../src/modules/news/news-dc-html.cjs");
 
 const EMOJI_PATTERN = /\p{Extended_Pictographic}|\p{Regional_Indicator}|[\u{FE0F}\u{200D}\u{20E3}]/gu;
 const COMBINING_MARK_PATTERN = /\p{M}/gu;
@@ -140,12 +140,13 @@ async function publishNews({ jobPath, publisherRoot }) {
     submittedAt: new Date().toISOString(),
     contentHash: job.contentHash,
   });
+  const contentHtml = await textToHtmlWithCards(job.bodyText);
   let result;
   try {
     result = await withoutDcWatermarkField(FormDataCtor, () => dc.createPost({
       galleryId: job.galleryId,
       subject: job.title,
-      content: textToHtml(job.bodyText),
+      content: contentHtml,
       images: job.media.map((media) => ({
         data: fs.readFileSync(media.path),
         filename: media.filename,
@@ -205,4 +206,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { validateJob, safeDcUrl, safeBodyLink, textToHtml, withoutDcWatermarkField };
+module.exports = { validateJob, safeDcUrl, safeBodyLink, textToHtml, textToHtmlWithCards, withoutDcWatermarkField };

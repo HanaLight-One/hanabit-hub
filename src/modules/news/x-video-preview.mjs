@@ -6,7 +6,7 @@ import ffmpegPath from "ffmpeg-static";
 const VIDEO_HOST = "video.twimg.com";
 const MAX_DOWNLOAD_BYTES = 100 * 1024 * 1024;
 const MAX_GIF_BYTES = 18 * 1024 * 1024;
-const MAX_PREVIEW_SECONDS = 20;
+const MAX_PREVIEW_SECONDS = 60;
 
 function safeVideoUrl(value) {
   const target = new URL(String(value ?? ""));
@@ -99,12 +99,21 @@ export function createXVideoPreviewService({
     const seconds = Math.max(1, Math.min(MAX_PREVIEW_SECONDS, Math.ceil((Number(video.durationMs) || 0) / 1000) || MAX_PREVIEW_SECONDS));
     try {
       await downloadVideo(video.variantUrl, input, fetchImpl);
-      let size;
-      try {
-        size = await convertAttempt({ input, output, executablePath, spawnImpl, width: 480, fps: 10, seconds });
-      } catch {
-        size = await convertAttempt({ input, output, executablePath, spawnImpl, width: 360, fps: 8, seconds: Math.min(seconds, 15) });
+      let size = null;
+      const attempts = [
+        { width: 640, fps: 12, seconds },
+        { width: 480, fps: 10, seconds: Math.min(seconds, 45) },
+        { width: 360, fps: 8, seconds: Math.min(seconds, 30) },
+      ];
+      for (const attempt of attempts) {
+        try {
+          size = await convertAttempt({ input, output, executablePath, spawnImpl, ...attempt });
+          break;
+        } catch {
+          // DC 첨부 상한을 넘거나 변환이 무거우면 더 작은 안전 단계로 낮춘다.
+        }
       }
+      if (!size) throw new Error("GIF 변환의 모든 안전 단계를 통과하지 못했습니다.");
       return { target: output, filename: "x-video-preview.gif", contentType: "image/gif", size };
     } catch {
       await rm(input, { force: true });
@@ -127,7 +136,7 @@ export function createXVideoPreviewService({
 export function xVideoPreviewNotice(durationMs) {
   const duration = Number(durationMs) || 0;
   return duration > MAX_PREVIEW_SECONDS * 1000 || duration <= 0
-    ? "첨부 GIF는 영상 앞부분 최대 20초를 변환한 소리 없는 미리보기입니다. 전체 영상과 음성은 상단 원문 링크에서 확인해 주세요."
+    ? "첨부 GIF는 영상 앞부분 최대 60초를 변환한 소리 없는 미리보기입니다. 전체 영상과 음성은 상단 원문 링크에서 확인해 주세요."
     : "첨부 GIF는 소리 없는 미리보기입니다. 전체 영상과 음성은 상단 원문 링크에서 확인해 주세요.";
 }
 

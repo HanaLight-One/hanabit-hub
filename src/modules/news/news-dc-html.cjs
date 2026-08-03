@@ -1,5 +1,7 @@
 const SAFE_LINK_HOSTS = new Set(["x.com", "twitter.com", "discord.com", "openai.com"]);
+const X_LINK_HOSTS = new Set(["x.com", "twitter.com"]);
 const SECTION_LABELS = new Set(["본문 번역", "왜 중요한가", "아직 확인되지 않은 점", "원문 링크"]);
+const DC_OGP_ENDPOINT = "https://gall.dcinside.com/api/ogp";
 
 function escapeHtml(value) {
   return String(value)
@@ -40,7 +42,54 @@ function labelHtml(line, label) {
   return `<p style="margin:24px 0 10px;"><span style="display:inline-block;padding:4px 8px;background-color:${background};color:${color};font-size:${size};font-weight:700;">${escapeHtml(line)}</span></p>`;
 }
 
-function textToHtml(value) {
+function safeOgpImage(value) {
+  try {
+    const url = new URL(String(value ?? ""));
+    if (url.protocol !== "https:" || url.username || url.password || url.port) return "";
+    return url.href;
+  } catch {
+    return "";
+  }
+}
+
+function createOgpBlock(link, card) {
+  if (!card) return "";
+  const title = String(card.title ?? "").trim().slice(0, 300);
+  const description = String(card.description ?? "").trim().slice(0, 1_000);
+  const image = safeOgpImage(card.image);
+  if (!title) return "";
+  return `<div class="og-div"><p class="og-url">${escapeHtml(link)}</p><p class="og-tit">${escapeHtml(title)}</p><p class="og-txt">${escapeHtml(description)}</p><p class="og-img">${escapeHtml(image)}</p></div>`;
+}
+
+async function fetchDcOgpCard(link, { fetchImpl = fetch } = {}) {
+  const safeLink = safeBodyLink(link);
+  if (!safeLink || !X_LINK_HOSTS.has(new URL(safeLink).hostname.toLowerCase())) return null;
+  try {
+    const response = await fetchImpl(DC_OGP_ENDPOINT, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded; charset=UTF-8" },
+      body: new URLSearchParams({ url: safeLink }),
+      redirect: "error",
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok || (response.url && response.url !== DC_OGP_ENDPOINT)) return null;
+    const text = await response.text();
+    if (text.length > 128_000) return null;
+    const payload = JSON.parse(text);
+    const returnedUrl = safeBodyLink(payload?.og_url);
+    if (!payload?.result || returnedUrl !== safeLink) return null;
+    const card = {
+      title: String(payload.og_title ?? "").trim().slice(0, 300),
+      description: String(payload.og_description ?? "").trim().slice(0, 1_000),
+      image: safeOgpImage(payload.og_image),
+    };
+    return card.title ? card : null;
+  } catch {
+    return null;
+  }
+}
+
+function textToHtml(value, { linkCards = new Map() } = {}) {
   return String(value).split("\n")
     .map((line) => {
       if (!line) return "<p><br></p>";
@@ -54,11 +103,18 @@ function textToHtml(value) {
       }
       const link = safeBodyLink(line);
       if (link) {
-        return `<div><a class="lnk" href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link)}</a></div>`;
+        const anchor = `<div><a class="lnk" href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link)}</a></div>`;
+        return `${anchor}${createOgpBlock(link, linkCards.get(link))}`;
       }
       return `<p style="margin:0 0 12px;font-size:15px;line-height:1.75;">${escapeHtml(line)}</p>`;
     })
     .join("");
 }
 
-module.exports = { safeBodyLink, textToHtml };
+async function textToHtmlWithCards(value, { fetchImpl = fetch } = {}) {
+  const links = [...new Set(String(value).split("\n").map(safeBodyLink).filter(Boolean))];
+  const cards = await Promise.all(links.map(async (link) => [link, await fetchDcOgpCard(link, { fetchImpl })]));
+  return textToHtml(value, { linkCards: new Map(cards.filter(([, card]) => card)) });
+}
+
+module.exports = { safeBodyLink, fetchDcOgpCard, textToHtml, textToHtmlWithCards };

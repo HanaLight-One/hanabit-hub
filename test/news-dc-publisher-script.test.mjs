@@ -12,6 +12,7 @@ const {
   safeDcUrl,
   safeBodyLink,
   textToHtml,
+  textToHtmlWithCards,
   withoutDcWatermarkField,
 } = require("../scripts/publish-news-to-dc.cjs");
 
@@ -95,6 +96,39 @@ test("원고의 안전한 단독 URL 줄만 클릭 가능한 링크로 변환한
   assert.equal(safeBodyLink("https://openai.com/sk/blocked"), null);
   assert.doesNotMatch(textToHtml("문장 안 https://x.com/gdb/status/1"), /<a /u);
   assert.doesNotMatch(textToHtml("https://example.com/not-allowed"), /<a /u);
+});
+
+test("X 원문은 DC OGP 응답을 검증해 링크 카드 저장 블록으로 직렬화한다", async () => {
+  const xUrl = "https://x.com/gdb/status/2083773552793465087";
+  let requestedBody = "";
+  const html = await textToHtmlWithCards(`원문 링크\n${xUrl}`, {
+    async fetchImpl(url, init) {
+      assert.equal(String(url), "https://gall.dcinside.com/api/ogp");
+      assert.equal(init.method, "POST");
+      requestedBody = String(init.body);
+      return new Response(JSON.stringify({
+        result: true,
+        og_url: xUrl,
+        og_title: "Greg <Brockman>",
+        og_description: "원문 설명",
+        og_image: "https://pbs.twimg.com/card.jpg",
+      }), { status: 200 });
+    },
+  });
+  assert.match(requestedBody, /url=https%3A%2F%2Fx\.com%2Fgdb%2Fstatus/u);
+  assert.match(html, /<div class="og-div">/u);
+  assert.match(html, /<p class="og-url">https:\/\/x\.com\/gdb\/status/u);
+  assert.match(html, /Greg &lt;Brockman&gt;/u);
+  assert.match(html, /<p class="og-img">https:\/\/pbs\.twimg\.com\/card\.jpg<\/p>/u);
+});
+
+test("DC OGP 조회가 실패하면 게시를 막지 않고 일반 X 링크를 유지한다", async () => {
+  const xUrl = "https://x.com/gdb/status/2083773552793465087";
+  const html = await textToHtmlWithCards(xUrl, {
+    async fetchImpl() { return new Response("error", { status: 500 }); },
+  });
+  assert.match(html, /<a class="lnk"/u);
+  assert.doesNotMatch(html, /class="og-div"/u);
 });
 
 test("DC 본문은 고정 섹션에만 크기와 하이라이트 서식을 적용한다", () => {

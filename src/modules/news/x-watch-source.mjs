@@ -32,7 +32,7 @@ function safeXVideoVariant(value) {
 }
 
 function selectXVideo(media) {
-  if (media?.type !== "video" || !Array.isArray(media.variants)) return null;
+  if (!["video", "animated_gif"].includes(media?.type) || !Array.isArray(media.variants)) return null;
   const variants = media.variants
     .map((variant) => ({
       bitRate: Number(variant?.bit_rate) || 0,
@@ -306,19 +306,24 @@ export async function fetchXPost(post, {
   };
 }
 
-async function fetchContextPosts(message, primary, relatedPosts, options) {
+async function fetchContextPosts(message, primary, relatedPosts, options, { findVideo = false } = {}) {
   const candidates = [
     ...xPostsFromText(messageText(message)).map((post) => ({ ...post, relation: "provided-link" })),
     ...relatedPosts.map((post) => ({ ...post, relation: "linked-post" })),
   ];
   const contexts = [];
+  let video = null;
   const seen = new Set([primary.statusId]);
   for (const candidate of candidates) {
     if (contexts.length >= MAX_CONTEXT_POSTS) break;
     if (seen.has(candidate.statusId)) continue;
     seen.add(candidate.statusId);
     try {
-      const resolved = await fetchXPost(candidate, options);
+      const resolved = await fetchXPost(candidate, {
+        ...options,
+        includeVideo: findVideo && !video,
+      });
+      video ??= resolved.video;
       contexts.push({
         relation: candidate.relation,
         account: resolved.account,
@@ -331,14 +336,18 @@ async function fetchContextPosts(message, primary, relatedPosts, options) {
       // 보조 문맥은 best effort이며 원문 수집 성공 여부와 분리한다.
     }
   }
-  return contexts;
+  return { contexts, video };
 }
 
 export async function normalizeXWatchMessage(message, options) {
   const post = options.post ?? findAllowedXPost(message, options);
   if (!post) return null;
   const resolved = await fetchXPost(post, { ...options, includeVideo: true });
-  const contexts = await fetchContextPosts(message, post, resolved.relatedPosts, options);
+  const contextResult = await fetchContextPosts(message, post, resolved.relatedPosts, options, {
+    findVideo: !resolved.video,
+  });
+  const contexts = contextResult.contexts;
+  const video = resolved.video ?? contextResult.video;
   const id = xPostId(post);
   const publishedAt = new Date(message.createdTimestamp ?? message.createdAt ?? Date.now());
   return {
@@ -356,7 +365,7 @@ export async function normalizeXWatchMessage(message, options) {
         publishedAt: publishedAt.toISOString(),
       },
       original: { language: "en", content: resolved.content, embeds: [], links: [post.url], contexts },
-      ...(resolved.video ? { internal: { xVideo: resolved.video } } : {}),
+      ...(video ? { internal: { xVideo: video } } : {}),
       workflow: { status: "pending_translation", translation: null, triage: null, dcPublication: null },
       collectedAt: new Date().toISOString(),
     },

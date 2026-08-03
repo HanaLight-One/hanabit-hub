@@ -181,7 +181,7 @@ test("X 영상 GIF는 embed 미리보기만 교체하고 posted 영수증 뒤 �
     assert.equal(publishedMedia[0].filename, "x-video-preview.gif");
     assert.match(publishedBody, /영상 미리보기 안내/u);
     assert.match(publishedBody, /소리 없는 미리보기/u);
-    assert.doesNotMatch(publishedBody, /최대 20초/u);
+    assert.doesNotMatch(publishedBody, /최대 60초/u);
     assert.equal(cleaned, true);
     const saved = JSON.parse(await readFile(itemPath, "utf8"));
     assert.equal(saved.media[0].file, "media/01.png");

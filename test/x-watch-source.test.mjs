@@ -228,3 +228,68 @@ test("X 영상 게시물은 안전한 중간 화질 MP4 메타데이터만 내�
   });
   assert.equal(JSON.stringify(result.record.original).includes("video.twimg.com"), false);
 });
+
+test("주 게시물에 영상이 없으면 연결된 원글의 영상을 내부 미리보기 대상으로 사용한다", async () => {
+  const primaryId = "2091234567890123456";
+  const relatedId = "2091234567890123457";
+  const result = await normalizeXWatchMessage({
+    channelId,
+    type: 0,
+    content: `https://x.com/thsottiaux/status/${primaryId}`,
+  }, {
+    channelId,
+    allowedHandles,
+    xApiBearerToken: "test-bearer-token",
+    async fetchImpl(url, init = {}) {
+      if (url.hostname === "t.co") {
+        return new Response(null, {
+          status: 302,
+          headers: { location: `https://x.com/DevAdventur3s/status/${relatedId}` },
+        });
+      }
+      if (url.hostname === "api.x.com") {
+        const id = url.pathname.split("/").at(-1);
+        assert.equal(init.headers.authorization, "Bearer test-bearer-token");
+        if (id === primaryId) {
+          return new Response(JSON.stringify({ data: { id, text: "Primary post" } }), { status: 200 });
+        }
+        return new Response(JSON.stringify({
+          data: {
+            id,
+            text: "Related video post",
+            attachments: { media_keys: ["related_video"] },
+          },
+          includes: {
+            media: [{
+              media_key: "related_video",
+              type: "video",
+              duration_ms: 85_266,
+              width: 1920,
+              height: 1080,
+              variants: [{
+                bit_rate: 832_000,
+                content_type: "video/mp4",
+                url: "https://video.twimg.com/a/related.mp4",
+              }],
+            }],
+          },
+        }), { status: 200 });
+      }
+      const target = new URL(url.searchParams.get("url"));
+      const id = target.pathname.split("/").at(-1);
+      return new Response(JSON.stringify(id === primaryId ? {
+        author_name: "Tibo",
+        author_url: "https://twitter.com/thsottiaux",
+        html: `<blockquote><p>Primary post <a href="https://t.co/related">https://t.co/related</a></p></blockquote>`,
+      } : {
+        author_name: "Developing Adventures",
+        author_url: "https://twitter.com/DevAdventur3s",
+        html: "<blockquote><p>Related video post</p></blockquote>",
+      }), { status: 200 });
+    },
+  });
+
+  assert.equal(result.record.original.contexts[0].account, "DevAdventur3s");
+  assert.equal(result.record.internal.xVideo.durationMs, 85_266);
+  assert.equal(result.record.internal.xVideo.variantUrl, "https://video.twimg.com/a/related.mp4");
+});
