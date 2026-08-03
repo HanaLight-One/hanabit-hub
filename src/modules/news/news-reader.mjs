@@ -196,6 +196,13 @@ function publicItem(record, sourceProfiles) {
             failedAt: String(record?.workflow?.analysisFailure?.failedAt ?? ""),
           }
         : null,
+      shadowRadar: record?.workflow?.status === "shadow_radar" && record?.workflow?.shadowRadar?.mode === "metadata_only"
+        ? {
+            mode: "metadata_only",
+            state: record.workflow.shadowRadar.state === "unreviewed" ? "unreviewed" : "unknown",
+            reason: safeText(record.workflow.shadowRadar.reason, 300),
+          }
+        : null,
       canApproveForDc:
         record?.workflow?.status === "pending_review" &&
         ["review", "publish"].includes(record?.workflow?.triage?.decision) &&

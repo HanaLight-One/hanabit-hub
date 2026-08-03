@@ -36,6 +36,8 @@ test("React 뉴스 검수실 화면과 승인 스크립트를 제공한다", asy
     assert.equal(script.includes("AUTONOMOUS EDITOR · SHADOW"), true);
     assert.equal(script.includes("원문 경계 자동 검증 완료"), true);
     assert.equal(script.includes("dc-copy-section"), true);
+    assert.equal(script.includes("외신 레이더"), true);
+    assert.equal(script.includes("UNDERCOVER NEWS RADAR"), true);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

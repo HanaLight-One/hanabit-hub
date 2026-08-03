@@ -48,6 +48,7 @@ npm.cmd run dev
 - `npm.cmd run news:x:rules:preview`: X 자동 감지 규칙을 외부 변경 없이 미리 확인
 - `npm.cmd run news:x:rules:sync`: 승인 후 Hanabit 소유 X Filtered Stream 규칙만 등록
 - `npm.cmd run news:official:preview`: 무료 공식 소스 7개의 현재 기준선을 쓰기 없이 확인
+- `npm.cmd run news:shadow:preview`: 외신 RSS 2개의 그림자 기준선을 쓰기 없이 확인
 - `npm.cmd run news:discord:watch`: Gateway 새 공지를 실시간 감시하고 재접속 시 보충
 - `scripts/register-news-watcher-autostart.ps1`: 뉴스 감시기 로그인 자동 시작 등록
 - `scripts/unregister-news-watcher-autostart.ps1`: 뉴스 감시기 작업만 중지·삭제

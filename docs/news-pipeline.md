@@ -194,6 +194,22 @@ OpenAI Developers, Sam Altman, Romain Huet, Greg Brockman 계정만 허용한다
 npm.cmd run news:official:preview
 ```
 
+## 외신 그림자 레이더
+
+The Register AI + ML과 Ars Technica AI의 공식 RSS는 20분마다 사건 후보만 확인한다.
+이 레인은 기사 HTML·이미지·영상·전문을 수집하지 않고 RSS가 제공한 제목, 짧은 설명,
+게시 시각과 원문 링크만 저장한다. 최초 실행의 현재 항목은
+`state/news/shadow-sources.json`에 기준선으로만 남기며 과거 기사를 생성하지 않는다.
+
+새 항목은 `shadow_radar` 상태로 `/news`의 `외신 레이더` 필터에만 나타난다. 무료 API 번역,
+Codex 검토, Discord 알림, 모바일 Push와 DC 자동·수동 게시 경계에는 합류하지 않는다.
+따라서 외신은 게시 원문이 아니라 공식 발표·GitHub·논문 같은 1차 출처를 발견하기 위한
+언더커버 레이더다. 한 피드의 실패는 다른 피드와 기존 Discord·X·공식 소스 감시를 중단하지 않는다.
+
+```powershell
+npm.cmd run news:shadow:preview
+```
+
 ## X 자동 감지 준비
 
 공식 X Filtered Stream 어댑터는 allowlist 계정의 새 게시물을 감지해 해당 링크와

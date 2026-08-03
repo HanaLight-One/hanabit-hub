@@ -9,6 +9,7 @@ const STATUS_LABELS = {
   ignored: "보류 · 게시하지 않음",
   translation_failed: "번역 확인 필요",
   published: "게시 완료",
+  shadow_radar: "외신 그림자 레이더",
 };
 
 const DECISION_LABELS = {
@@ -71,6 +72,7 @@ const FILTERS = [
   { id: "media", label: "이미지 확인", matches: needsImageReview },
   { id: "failed", label: "번역 실패", matches: (item) => item.workflow.status === "translation_failed" },
   { id: "ignored", label: "보류", matches: (item) => item.workflow.status === "ignored" },
+  { id: "shadow", label: "외신 레이더", matches: (item) => item.workflow.status === "shadow_radar" },
   { id: "all", label: "전체", matches: () => true },
 ];
 
@@ -87,7 +89,12 @@ function formatDate(value) {
 function SourceLinks({ item }) {
   const links = new Map(item.original.links.map((url) => [url, "원문 링크"]));
   if (item.source.url) {
-    links.set(item.source.url, item.source.type === "x-post" ? "X 원문" : "Discord 원문");
+    const label = item.source.type === "x-post"
+      ? "X 원문"
+      : item.source.type === "media-rss-shadow"
+        ? "외신 원문"
+        : "Discord 원문";
+    links.set(item.source.url, label);
   }
   if (!links.size) return null;
   return (
@@ -343,6 +350,7 @@ function NewsCard({ item, preview, busy, error, onPreview, onPublish, onRetry, o
   const triage = item.workflow.triage;
   const freeTriage = item.workflow.freeTriage;
   const codexReview = item.workflow.codexReview;
+  const isShadowRadar = item.workflow.status === "shadow_radar";
   return (
     <article className="news-card">
       <div className="card-top">
@@ -362,13 +370,20 @@ function NewsCard({ item, preview, busy, error, onPreview, onPublish, onRetry, o
       {(item.source.label || item.source.account) && (
         <div className="source-heading">
           <p className="source-label">
-            {item.source.label ?? item.source.account} · {item.source.type === "x-post" ? "X" : "Discord"}
+            {item.source.label ?? item.source.account} · {item.source.type === "x-post" ? "X" : isShadowRadar ? "외신 RSS" : "Discord"}
           </p>
           <SourceProfile profile={item.source.profile} />
         </div>
       )}
 
-      {item.workflow.translation ? (
+      {isShadowRadar ? (
+        <section className="shadow-radar-box">
+          <p className="section-label">UNDERCOVER NEWS RADAR</p>
+          <h2>{item.original.content.split("\n")[0] || "제목 없음"}</h2>
+          <p>{item.original.content.split("\n").slice(1).join("\n").trim() || "RSS에 별도 요약이 없어요."}</p>
+          <small>{item.workflow.shadowRadar?.reason}</small>
+        </section>
+      ) : item.workflow.translation ? (
         <section className="translation-box">
           <p className="section-label">제목</p>
           <h2>
@@ -434,8 +449,8 @@ function NewsCard({ item, preview, busy, error, onPreview, onPublish, onRetry, o
         <p className="codex-review-note">Codex 심층검토를 완료하지 못해 무료 API 판정을 보존했어요.</p>
       )}
 
-      <AutoPublishGate gate={item.workflow.autoPublishGate} />
-      <EditorialShadow shadow={item.workflow.editorialShadow} />
+      {!isShadowRadar && <AutoPublishGate gate={item.workflow.autoPublishGate} />}
+      {!isShadowRadar && <EditorialShadow shadow={item.workflow.editorialShadow} />}
 
       {item.workflow.canReanalyze && (
         <button type="button" className="reanalysis-button" disabled={busy} onClick={onReanalyze}>
@@ -455,14 +470,16 @@ function NewsCard({ item, preview, busy, error, onPreview, onPublish, onRetry, o
       )}
 
       <Original item={item} />
-      <DcPublicationPanel
-        item={item}
-        preview={preview}
-        busy={busy}
-        error={error}
-        onPreview={onPreview}
-        onPublish={onPublish}
-      />
+      {!isShadowRadar && (
+        <DcPublicationPanel
+          item={item}
+          preview={preview}
+          busy={busy}
+          error={error}
+          onPreview={onPreview}
+          onPublish={onPublish}
+        />
+      )}
     </article>
   );
 }
@@ -493,6 +510,7 @@ function App() {
       review: items.filter((item) => item.workflow.canApproveForDc).length,
       approved: items.filter((item) => item.workflow.dcApproval).length,
       media: items.reduce((sum, item) => sum + item.media.length, 0),
+      shadow: items.filter((item) => item.workflow.status === "shadow_radar").length,
     };
   }, [payload]);
 
@@ -620,6 +638,7 @@ function App() {
           <div><strong>{summary.review.toLocaleString("ko-KR")}</strong><span>승인 가능</span></div>
           <div><strong>{summary.approved.toLocaleString("ko-KR")}</strong><span>승인 완료</span></div>
           <div><strong>{summary.media.toLocaleString("ko-KR")}</strong><span>보존 이미지</span></div>
+          <div><strong>{summary.shadow.toLocaleString("ko-KR")}</strong><span>외신 그림자</span></div>
         </section>
 
         <nav className="filters" aria-label="뉴스 필터">

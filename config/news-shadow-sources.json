@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "intervalMinutes": 20,
+  "sources": [
+    {
+      "id": "the-register-ai-ml",
+      "label": "The Register · AI + ML",
+      "type": "rss",
+      "url": "https://api.theregister.com/api/v1/article?limit=25&orderBy=published&query=tag%3A%22ai+and+ml%22&remapper=rss&site_id=2",
+      "allowedArticleHosts": ["www.theregister.com"],
+      "limit": 25,
+      "enabled": true
+    },
+    {
+      "id": "ars-technica-ai",
+      "label": "Ars Technica · AI",
+      "type": "rss",
+      "url": "https://arstechnica.com/ai/feed/",
+      "allowedArticleHosts": ["arstechnica.com"],
+      "limit": 25,
+      "enabled": true
+    }
+  ]
+}
