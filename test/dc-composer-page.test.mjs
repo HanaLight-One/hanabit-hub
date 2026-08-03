@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { createServer } from "../src/server.mjs";
 
@@ -9,6 +10,7 @@ test("DC 편집실 React 화면과 업로드·미리보기·실제 게시 진입
     const baseUrl = `http://127.0.0.1:${server.address().port}`;
     const page = await (await fetch(`${baseUrl}/dc`)).text();
     const app = await (await fetch(`${baseUrl}/dc/app.js`)).text();
+    const source = await readFile(new URL("../frontend/dc/main.jsx", import.meta.url), "utf8");
     assert.match(page, /id="dc-root"/u);
     assert.match(page, /\/dc\/app\.js/u);
     assert.equal(app.includes("save-dc-draft"), true);
@@ -17,6 +19,9 @@ test("DC 편집실 React 화면과 업로드·미리보기·실제 게시 진입
     assert.equal(app.includes("자동 저장됨"), true);
     assert.equal(app.includes("텍스트 블록 추가"), true);
     assert.equal(app.includes("위 순서 그대로 들어가요"), true);
+    assert.equal(app.includes("장까지 선택할 수 있어요"), true);
+    assert.match(source, /const MAX_IMAGES = 50/u);
+    assert.match(source, /const MAX_BLOCKS = 101/u);
     assert.equal(app.includes("localStorage"), false);
     assert.equal(app.includes("sessionStorage"), false);
   } finally { await new Promise((resolve) => server.close(resolve)); }

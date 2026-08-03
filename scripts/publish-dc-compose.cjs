@@ -8,6 +8,8 @@ const MEDIA_TYPES = new Set(["image/gif", "image/jpeg", "image/png", "image/webp
 const HEAD_TEXTS = new Set(["잡담", "🛠 작업", "❓ 질문", "💡 정보", "뉴스/소식", "AI창작", "프롬프트", "🔞 후방", "🎄 대회", "공지"]);
 const EMOJI_PATTERN = /\p{Extended_Pictographic}|\p{Regional_Indicator}|[\u{FE0F}\u{200D}\u{20E3}]/gu;
 const MARK_PATTERN = /\p{M}/gu;
+const MAX_IMAGES = 50;
+const MAX_BLOCKS = 101;
 
 function argumentValue(name) { const index = process.argv.indexOf(name); return index >= 0 ? process.argv[index + 1] : undefined; }
 function writeResult(target, value) {
@@ -18,7 +20,7 @@ function writeResult(target, value) {
 function fileHash(target) { return createHash("sha256").update(fs.readFileSync(target)).digest("hex"); }
 
 function validateBlocks(blocks, mediaLength) {
-  if (!Array.isArray(blocks) || blocks.length === 0 || blocks.length > 25) throw new Error("INVALID_BLOCKS");
+  if (!Array.isArray(blocks) || blocks.length === 0 || blocks.length > MAX_BLOCKS) throw new Error("INVALID_BLOCKS");
   const used = new Set();
   for (const block of blocks) {
     if (block?.type === "text") {
@@ -51,7 +53,7 @@ function validateComposeJob(value, jobPath) {
   if ((combined.match(MARK_PATTERN) ?? []).length) throw new Error("UNSUPPORTED_MARK");
   const jobRoot = path.dirname(path.resolve(jobPath));
   if (path.resolve(value.resultPath ?? "") !== path.join(jobRoot, "result.json")) throw new Error("INVALID_RESULT_PATH");
-  if (!Array.isArray(value.media) || value.media.length > 10) throw new Error("INVALID_MEDIA");
+  if (!Array.isArray(value.media) || value.media.length > MAX_IMAGES) throw new Error("INVALID_MEDIA");
   const mediaRoot = path.join(jobRoot, "media");
   for (const [index, media] of value.media.entries()) {
     const target = path.resolve(media.path ?? "");

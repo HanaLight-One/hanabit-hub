@@ -227,6 +227,25 @@ const MIGRATIONS = Object.freeze([
       ALTER TABLE dc_drafts ADD COLUMN layout_json TEXT;
     `,
   },
+  {
+    version: 7,
+    name: "dc composer fifty image positions",
+    sql: `
+      ALTER TABLE dc_draft_images RENAME TO dc_draft_images_v6;
+
+      CREATE TABLE dc_draft_images (
+        draft_id TEXT NOT NULL REFERENCES dc_drafts(id) ON DELETE CASCADE,
+        position INTEGER NOT NULL CHECK (position >= 0 AND position < 50),
+        source_type TEXT NOT NULL CHECK (source_type IN ('archive', 'upload')),
+        source_id TEXT NOT NULL,
+        PRIMARY KEY (draft_id, position),
+        UNIQUE (draft_id, source_type, source_id)
+      ) STRICT;
+
+      INSERT INTO dc_draft_images SELECT * FROM dc_draft_images_v6;
+      DROP TABLE dc_draft_images_v6;
+    `,
+  },
 ]);
 
 function migrate(database, now) {

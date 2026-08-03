@@ -42,7 +42,7 @@ async function fixture(context, { publishResult = "posted" } = {}) {
       } : { status: "ambiguous-no-retry" }), "utf8");
     },
   });
-  return { root, png, archive, composer, jobs };
+  return { root, png, database, archive, composer, jobs };
 }
 
 test("GPT 이미지를 별도 보관하고 허브 이미지와 함께 DC 초안에 순서대로 저장한다", async (context) => {
@@ -105,6 +105,31 @@ test("텍스트와 이미지를 섞은 순서를 초안과 게시 작업에 그�
     { type: "image", mediaIndex: 1 },
     { type: "text", text: "마지막 문단" },
   ]);
+});
+
+test("이미지 50장과 사이사이 텍스트를 한 초안에 보존한다", async (context) => {
+  const { database, composer } = await fixture(context);
+  const images = [];
+  for (let index = 1; index <= 51; index += 1) {
+    const id = index.toString(16).padStart(32, "0");
+    database.prepare(`
+      INSERT INTO dc_uploads (id, original_name, storage_name, content_type, size_bytes, sha256, created_at)
+      VALUES (?, ?, ?, 'image/png', 1, ?, '2026-08-02T13:00:00.000Z')
+    `).run(id, `${index}.png`, `${id}.png`, id);
+    images.push({ sourceType: "upload", sourceId: id });
+  }
+  const blocks = [{ type: "text", text: "시작" }];
+  for (const [index, image] of images.slice(0, 50).entries()) {
+    blocks.push({ type: "image", ...image }, { type: "text", text: `${index + 1}번 설명` });
+  }
+  const draft = await composer.saveDraft({ headText: "AI창작", title: "50장 원고", blocks });
+  assert.equal(draft.images.length, 50);
+  assert.equal(draft.blocks.length, 101);
+  assert.equal(draft.preflight.ready, true);
+  await assert.rejects(
+    () => composer.saveDraft({ headText: "AI창작", title: "51장 원고", bodyText: "본문", images }),
+    { code: "INVALID_IMAGES" },
+  );
 });
 
 test("그림 이모지와 결합 문자는 미리보기에서 게시 불가로 차단한다", async (context) => {

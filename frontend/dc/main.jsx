@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 
+const MAX_IMAGES = 50;
+const MAX_BLOCKS = 101;
+
 function emptyDraft() { return { id: null, headText: "잡담", title: "", bodyText: "", images: [], blocks: [{ type: "text", text: "" }] }; }
 
 async function jsonFetch(url, options = {}) {
@@ -109,7 +112,7 @@ function App() {
     setPreview(null);
     setDraft((current) => {
       if (imageBlocks(current).some((item) => sourceKey(item) === key)) return { ...current, blocks: current.blocks.filter((item) => item.type !== "image" || sourceKey(item) !== key) };
-      if (imageBlocks(current).length >= 10) { setMessage("이미지는 최대 10장까지 선택할 수 있어요."); return current; }
+      if (imageBlocks(current).length >= MAX_IMAGES) { setMessage(`이미지는 최대 ${MAX_IMAGES}장까지 선택할 수 있어요.`); return current; }
       return { ...current, blocks: [...current.blocks, { type: "image", ...image }] };
     });
   }
@@ -126,7 +129,7 @@ function App() {
   }
 
   function addTextBlock() {
-    setDraft((current) => current.blocks.length >= 25 ? current : { ...current, blocks: [...current.blocks, { type: "text", text: "" }] });
+    setDraft((current) => current.blocks.length >= MAX_BLOCKS ? current : { ...current, blocks: [...current.blocks, { type: "text", text: "" }] });
     setPreview(null);
   }
 
@@ -144,7 +147,7 @@ function App() {
   }
 
   async function uploadFiles(event) {
-    const files = [...event.target.files].slice(0, 10);
+    const files = [...event.target.files].slice(0, MAX_IMAGES);
     if (!files.length) return;
     setBusy("upload");
     try {
@@ -239,7 +242,7 @@ function App() {
           <div className="content-block-editor">{draft.blocks.map((block, index) => block.type === "text"
             ? <article className="content-block text-block" key={`text-${index}`}><header><strong>텍스트 {String(index + 1).padStart(2, "0")}</strong><BlockControls index={index} length={draft.blocks.length} busy={busy} move={moveBlock} remove={removeBlock}/></header><textarea value={block.text} maxLength={20000} disabled={!enabled || busy} onChange={(event) => updateTextBlock(index, event.target.value)} placeholder="이 위치에 들어갈 글을 작성해 주세요" /></article>
             : <article className="content-block image-block" key={sourceKey(block)}><img src={block.contentUrl} alt=""/><div><strong>이미지 {String(index + 1).padStart(2, "0")}</strong><span>{block.name}</span></div><BlockControls index={index} length={draft.blocks.length} busy={busy} move={moveBlock} remove={removeBlock}/></article>)}</div>
-          <button className="add-text-button" type="button" disabled={!enabled || busy || draft.blocks.length >= 25} onClick={addTextBlock}>＋ 텍스트 블록 추가</button>
+          <button className="add-text-button" type="button" disabled={!enabled || busy || draft.blocks.length >= MAX_BLOCKS} onClick={addTextBlock}>＋ 텍스트 블록 추가</button>
           <p className={`autosave-state ${saveState.includes("실패") ? "failed" : ""}`} aria-live="polite">{saveState || "내용을 입력하면 서버 초안에 자동 저장해요."}</p>
         </section>
         <section className="library panel">

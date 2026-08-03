@@ -15,7 +15,8 @@ const MARK_PATTERN = /\p{M}/gu;
 const FINAL_STATUSES = new Set(["posted", "ambiguous"]);
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 const MAX_TEXT_LENGTH = 20_000;
-const MAX_BLOCKS = 25;
+const MAX_IMAGES = 50;
+const MAX_BLOCKS = 101;
 
 function dcError(code, message) { return Object.assign(new Error(message), { code }); }
 function safeId(value) {
@@ -82,7 +83,7 @@ export function createDcComposer({
     const combined = `${title}\n${bodyText}`;
     if ((combined.match(EMOJI_PATTERN) ?? []).length) errors.push("DC에서 거부될 수 있는 그림 이모지를 제거해 주세요.");
     if ((combined.match(MARK_PATTERN) ?? []).length) errors.push("DC에서 사라질 수 있는 결합 문자가 있어요.");
-    if (images.length > 10) errors.push("이미지는 최대 10장까지 첨부할 수 있어요.");
+    if (images.length > MAX_IMAGES) errors.push(`이미지는 최대 ${MAX_IMAGES}장까지 첨부할 수 있어요.`);
     return Object.freeze({ ready: errors.length === 0, errors: Object.freeze(errors) });
   }
 
@@ -156,7 +157,7 @@ export function createDcComposer({
   }
 
   async function normalizedImages(values) {
-    if (!Array.isArray(values) || values.length > 10) throw dcError("INVALID_IMAGES", "이미지는 최대 10장까지 선택할 수 있습니다.");
+    if (!Array.isArray(values) || values.length > MAX_IMAGES) throw dcError("INVALID_IMAGES", `이미지는 최대 ${MAX_IMAGES}장까지 선택할 수 있습니다.`);
     const seen = new Set();
     const result = [];
     for (const value of values) {

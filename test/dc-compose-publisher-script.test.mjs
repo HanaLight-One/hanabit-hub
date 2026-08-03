@@ -30,6 +30,29 @@ test("일반 DC 게시자는 격리 작업 폴더의 정확한 첨부와 내용 
     assert.equal(validateComposeJob(value, jobPath).title, "제목");
     assert.throws(() => validateComposeJob({ ...value, title: "바뀐 제목" }, jobPath), /CONTENT_CHANGED/u);
     assert.throws(() => validateComposeJob({ ...value, media: [{ ...value.media[0], path: path.join(root, "outside.png") }] }, jobPath), /INVALID_MEDIA/u);
+
+    const media = [];
+    for (let index = 1; index <= 50; index += 1) {
+      const filename = `${String(index).padStart(2, "0")}.png`;
+      const target = path.join(mediaRoot, filename);
+      const contents = `image-${index}`;
+      await writeFile(target, contents);
+      media.push({ path: target, filename, contentType: "image/png", sha256: createHash("sha256").update(contents).digest("hex") });
+    }
+    const blocks = [{ type: "text", text: "시작" }];
+    for (let index = 0; index < media.length; index += 1) {
+      blocks.push({ type: "image", mediaIndex: index }, { type: "text", text: `${index + 1}번 설명` });
+    }
+    const fifty = { ...value, schemaVersion: 2, bodyText: blocks.filter((block) => block.type === "text").map((block) => block.text).join("\n\n"), blocks, media };
+    fifty.contentHash = createHash("sha256").update(JSON.stringify({
+      headText: fifty.headTextName,
+      title: fifty.title,
+      bodyText: fifty.bodyText,
+      blocks,
+      media: media.map(({ filename, sha256 }) => ({ filename, sha256 })),
+    })).digest("hex");
+    assert.equal(validateComposeJob(fifty, jobPath).media.length, 50);
+    assert.throws(() => validateComposeJob({ ...fifty, media: [...media, {}] }, jobPath), /INVALID_MEDIA/u);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
