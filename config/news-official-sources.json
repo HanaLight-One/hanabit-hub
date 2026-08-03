@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "intervalMinutes": 15,
+  "sources": [
+    {
+      "id": "openai-codex-releases",
+      "type": "github-releases",
+      "repository": "openai/codex",
+      "limit": 10,
+      "enabled": true
+    },
+    {
+      "id": "openai-python-releases",
+      "type": "github-releases",
+      "repository": "openai/openai-python",
+      "limit": 10,
+      "enabled": true
+    },
+    {
+      "id": "openai-node-releases",
+      "type": "github-releases",
+      "repository": "openai/openai-node",
+      "limit": 10,
+      "enabled": true
+    },
+    {
+      "id": "openai-agents-python-releases",
+      "type": "github-releases",
+      "repository": "openai/openai-agents-python",
+      "limit": 10,
+      "enabled": true
+    },
+    {
+      "id": "openai-agents-js-releases",
+      "type": "github-releases",
+      "repository": "openai/openai-agents-js",
+      "limit": 10,
+      "enabled": true
+    },
+    {
+      "id": "chatgpt-whats-new",
+      "type": "markdown-changelog",
+      "url": "https://learn.chatgpt.com/docs/whats-new.md",
+      "limit": 20,
+      "enabled": true
+    },
+    {
+      "id": "openai-api-changelog",
+      "type": "markdown-changelog",
+      "url": "https://developers.openai.com/api/docs/changelog.md",
+      "limit": 20,
+      "enabled": true
+    }
+  ]
+}

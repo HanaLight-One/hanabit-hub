@@ -2,6 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createNewsSourceProfileIndex, findNewsSourceProfile } from "../src/modules/news/news-source-profiles.mjs";
 
+test("공식 GitHub 릴리스는 OpenAI 확정 출처 프로필을 사용한다", () => {
+  const profile = findNewsSourceProfile({
+    type: "official-github-release",
+    repository: "openai/codex",
+  }, new Map());
+  assert.equal(profile.trustLevel, "official");
+  assert.equal(profile.affiliationConfirmed, true);
+  assert.match(profile.displayName, /openai\/codex/u);
+});
+
 const greg = {
   handle: "gdb",
   displayName: "Greg Brockman",

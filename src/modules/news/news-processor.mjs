@@ -6,7 +6,7 @@ import { NEWS_ANALYSIS_POLICY_VERSION } from "./news-auto-publish-policy.mjs";
 import { createNewsAnalysisNotice } from "./news-analysis-notice.mjs";
 import { auditFreeNewsTranslation } from "./news-translation-audit.mjs";
 
-const OFFICIAL_TYPES = new Set(["discord-announcement"]);
+const OFFICIAL_TYPES = new Set(["discord-announcement", "official-github-release", "official-changelog"]);
 const OFFICIAL_X_ACCOUNTS = new Set(["openai", "openaidevs"]);
 const PROVIDER_REASONS = new Set([
   "rate_limit",

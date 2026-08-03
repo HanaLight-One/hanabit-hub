@@ -78,6 +78,16 @@ test("원문 경계를 통과한 무료 번역은 자동 검증 영수증으로 
   });
 });
 
+test("OpenAI 공식 GitHub 릴리스도 번역 후 반드시 게시 검토로 보낸다", async () => {
+  await fixture({ type: "official-github-release", repository: "openai/codex" }, async () => result("skip"), async ({ processor, store, id }) => {
+    await processor.process(id);
+    const saved = await store.read(id);
+    assert.equal(saved.workflow.status, "pending_review");
+    assert.equal(saved.workflow.triage.decision, "publish");
+    assert.equal(saved.workflow.triage.evidenceTag, "official");
+  });
+});
+
 test("OpenAI 공식 Announcement는 번역 후 반드시 게시 검토로 보낸다", async () => {
   await fixture({ type: "discord-announcement" }, async () => result("skip"), async ({ processor, store, id }) => {
     await processor.process(id);

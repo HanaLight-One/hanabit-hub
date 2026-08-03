@@ -70,6 +70,23 @@ export function createNewsSourceProfileIndex(roster) {
 }
 
 export function findNewsSourceProfile(source, profiles) {
+  if (["official-github-release", "official-changelog"].includes(source?.type)) {
+    const github = source.type === "official-github-release";
+    return Object.freeze({
+      displayName: github ? `OpenAI · ${source.repository}` : "OpenAI 공식 변경 기록",
+      handle: null,
+      affiliation: "OpenAI",
+      affiliationConfirmed: true,
+      roles: Object.freeze([github ? "공식 오픈소스 릴리스" : "공식 제품 변경 기록"]),
+      topics: Object.freeze(github ? ["개발자 도구", "SDK"] : ["제품", "API"]),
+      trustLabel: "공식 출처",
+      trustLevel: "official",
+      verifiedAt: null,
+      whyTracked: github
+        ? "OpenAI 공식 GitHub 저장소가 발행한 릴리스라서 우선 확인해요."
+        : "OpenAI가 직접 관리하는 공식 변경 기록이라서 우선 확인해요.",
+    });
+  }
   if (source?.type === "discord-announcement") {
     return Object.freeze({
       displayName: "OpenAI Announcements",

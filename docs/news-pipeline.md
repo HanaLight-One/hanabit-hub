@@ -176,6 +176,24 @@ OpenAI Developers, Sam Altman, Romain Huet, Greg Brockman 계정만 허용한다
 작업이 현재 사용자 로그인 25초 후 감시기를 실행하며 실패 시 1분 간격으로 최대
 10회 재시작한다.
 
+## 무료 공식 소스
+
+뉴스 감시기는 15분마다 다음 무료 공식 소스를 확인한다.
+
+- `openai/codex`, `openai/openai-python`, `openai/openai-node` GitHub Releases
+- OpenAI Agents SDK Python·JavaScript GitHub Releases
+- ChatGPT·Codex `What's new`
+- OpenAI API changelog
+
+최초 실행에서는 현재 항목을 `state/news/official-sources.json`에 기준선으로만 기록하고 뉴스로
+생성하지 않는다. 이후 처음 발견한 안정 릴리스와 새 변경 기록만 기존 번역·중복·자동 게시 관문으로
+보낸다. GitHub draft와 prerelease는 수집하지 않으며, 한 소스가 실패해도 다른 공식 소스 확인은
+계속한다. 현재 응답과 기준선 후보는 외부 쓰기 없이 확인할 수 있다.
+
+```powershell
+npm.cmd run news:official:preview
+```
+
 ## X 자동 감지 준비
 
 공식 X Filtered Stream 어댑터는 allowlist 계정의 새 게시물을 감지해 해당 링크와

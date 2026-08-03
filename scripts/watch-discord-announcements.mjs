@@ -18,12 +18,14 @@ import { createXStreamStatusNotifier } from "../src/modules/news/x-stream-status
 import { createPushNotificationService } from "../src/modules/notifications/push-notifications.mjs";
 import { createNewsPushNotifier } from "../src/modules/news/news-push-notifier.mjs";
 import { createNewsDcPublicationService } from "../src/modules/news/news-dc-publication.mjs";
+import { createOfficialNewsCollector, loadOfficialNewsSources } from "../src/modules/news/official-news-collector.mjs";
 
 const PROJECT_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const stateRoot = path.join(PROJECT_ROOT, "state", "news");
 const logRoot = path.join(stateRoot, "logs");
 const logPath = path.join(logRoot, "discord-watcher.log");
 const xSourcesPath = path.join(PROJECT_ROOT, "config", "news-x-sources.json");
+const officialSourcesPath = path.join(PROJECT_ROOT, "config", "news-official-sources.json");
 const RECONCILE_INTERVAL_MS = 10 * 60 * 1000;
 
 let client;
@@ -35,7 +37,9 @@ let pushNotifications;
 let autoPublisher;
 let token = "";
 let catchupInFlight = null;
+let officialInFlight = null;
 let xStreamController;
+let officialCollector;
 
 async function finishProcessed(record) {
   await notifier.notify(record);
@@ -86,6 +90,27 @@ async function catchUp(reason) {
   }
 }
 
+async function collectOfficialNews(reason) {
+  if (!officialCollector || !processor || !notifier || !pushNotifier) return;
+  if (officialInFlight) return officialInFlight;
+  officialInFlight = (async () => {
+    const summary = await officialCollector.collectAll();
+    for (const id of summary.ids) {
+      const processed = await processor.process(id);
+      await finishProcessed(processed);
+    }
+    await safeLog(
+      `공식 무료 소스 확인(${reason}): 소스 ${summary.sources}, 조회 ${summary.scanned}, ` +
+      `기준선 ${summary.baselined}, 신규 ${summary.created}, 실패 ${summary.failed}`,
+    );
+  })();
+  try {
+    await officialInFlight;
+  } finally {
+    officialInFlight = null;
+  }
+}
+
 async function reportError(prefix, error) {
   const message = redactSecret(error?.message ?? "알 수 없는 오류", token);
   try {
@@ -106,6 +131,8 @@ try {
   const config = loadDiscordNewsConfig();
   const xStreamConfig = loadXStreamConfig();
   const hubConfig = await loadConfig();
+  const officialNewsConfig = await loadOfficialNewsSources(officialSourcesPath);
+  officialCollector = createOfficialNewsCollector({ stateRoot, sources: officialNewsConfig.sources });
   const runnerPath = hubConfig.integrations?.imageStudio?.generation?.freeTextRunnerPath;
   if (!path.isAbsolute(runnerPath ?? "")) {
     throw new Error("뉴스 번역용 무료 API runner가 준비되지 않았습니다.");
@@ -265,6 +292,10 @@ try {
   setInterval(() => {
     catchUp("주기 확인").catch((error) => reportError("Discord 주기 보충 실패", error));
   }, RECONCILE_INTERVAL_MS);
+  await collectOfficialNews("시작").catch((error) => reportError("공식 무료 소스 시작 확인 실패", error));
+  setInterval(() => {
+    collectOfficialNews("주기 확인").catch((error) => reportError("공식 무료 소스 확인 실패", error));
+  }, officialNewsConfig.intervalMinutes * 60 * 1000);
 
   process.once("SIGINT", () => shutdown("SIGINT"));
   process.once("SIGTERM", () => shutdown("SIGTERM"));
