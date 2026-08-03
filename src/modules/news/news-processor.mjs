@@ -8,6 +8,15 @@ import { auditFreeNewsTranslation } from "./news-translation-audit.mjs";
 
 const OFFICIAL_TYPES = new Set(["discord-announcement"]);
 const OFFICIAL_X_ACCOUNTS = new Set(["openai", "openaidevs"]);
+const PROVIDER_REASONS = new Set([
+  "rate_limit",
+  "authentication",
+  "connection",
+  "timeout",
+  "bad_request",
+  "provider_server",
+  "unknown",
+]);
 
 function isOfficialSource(source) {
   return OFFICIAL_TYPES.has(source?.type) ||
@@ -22,6 +31,11 @@ function failureCode(error) {
     return "provider_error";
   }
   return "unknown";
+}
+
+function providerReason(error) {
+  const reason = String(error?.providerReason ?? "unknown");
+  return PROVIDER_REASONS.has(reason) ? reason : "unknown";
 }
 
 export function createNewsProcessor({
@@ -158,6 +172,7 @@ export function createNewsProcessor({
             contextTranslations: null,
             analysisFailure: {
               code: failureCode(error),
+              providerReason: providerReason(error),
               failedAt: now().toISOString(),
             },
             processedAt: now().toISOString(),

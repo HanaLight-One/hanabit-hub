@@ -105,11 +105,15 @@ test("번역 실패 항목은 사람 요청으로만 한 번 다시 분석한다
   let calls = 0;
   await fixture({ type: "x-post" }, async () => {
     calls += 1;
-    if (calls === 1) throw new Error("무료 API 요청에 실패했습니다.");
+    if (calls === 1) throw Object.assign(
+      new Error("무료 API 요청에 실패했습니다."),
+      { providerReason: "rate_limit" },
+    );
     return result("review");
   }, async ({ processor, store, id }) => {
     await processor.process(id);
     assert.equal((await store.read(id)).workflow.analysisFailure.code, "provider_error");
+    assert.equal((await store.read(id)).workflow.analysisFailure.providerReason, "rate_limit");
     const retried = await processor.retry(id);
     assert.equal(retried.workflow.status, "pending_review");
     assert.equal(retried.workflow.analysisFailure, null);

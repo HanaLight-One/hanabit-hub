@@ -182,6 +182,17 @@ function publicItem(record, sourceProfiles) {
             code: ["timeout", "invalid_response", "provider_error", "unknown"].includes(record?.workflow?.analysisFailure?.code)
               ? record.workflow.analysisFailure.code
               : "unknown",
+            providerReason: [
+              "rate_limit",
+              "authentication",
+              "connection",
+              "timeout",
+              "bad_request",
+              "provider_server",
+              "unknown",
+            ].includes(record?.workflow?.analysisFailure?.providerReason)
+              ? record.workflow.analysisFailure.providerReason
+              : "unknown",
             failedAt: String(record?.workflow?.analysisFailure?.failedAt ?? ""),
           }
         : null,

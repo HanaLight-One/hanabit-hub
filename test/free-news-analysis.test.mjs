@@ -3,7 +3,17 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { invokeFreeNewsAnalysis } from "../src/modules/news/free-news-analysis.mjs";
+import {
+  classifyProviderReason,
+  invokeFreeNewsAnalysis,
+} from "../src/modules/news/free-news-analysis.mjs";
+
+test("무료 API 오류 이름은 비밀값 없이 안전한 원인 코드로 줄인다", () => {
+  assert.equal(classifyProviderReason("OpenAI 요청 실패 (RateLimitError)."), "rate_limit");
+  assert.equal(classifyProviderReason("OpenAI 요청 실패 (AuthenticationError)."), "authentication");
+  assert.equal(classifyProviderReason("OpenAI 요청 실패 (APIConnectionError)."), "connection");
+  assert.equal(classifyProviderReason("민감할 수 있는 알 수 없는 응답"), "unknown");
+});
 
 test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 파일을 정리한다", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-analysis-"));

@@ -321,18 +321,44 @@ function buildContextTranslationPrompt(record) {
 
 function run(command, args, { cwd, timeoutMs = 600_000 } = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd, windowsHide: true, stdio: "ignore" });
+    const child = spawn(command, args, {
+      cwd,
+      windowsHide: true,
+      stdio: ["ignore", "ignore", "pipe"],
+    });
+    let safeErrorOutput = "";
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk) => {
+      safeErrorOutput = `${safeErrorOutput}${chunk}`.slice(-8_192);
+    });
     const timer = setTimeout(() => {
       child.kill();
-      reject(new Error("무료 API 응답 시간이 초과되었습니다."));
+      reject(Object.assign(
+        new Error("무료 API 응답 시간이 초과되었습니다."),
+        { providerReason: "timeout" },
+      ));
     }, timeoutMs);
     child.once("error", (error) => { clearTimeout(timer); reject(error); });
     child.once("exit", (code) => {
       clearTimeout(timer);
       if (code === 0) resolve();
-      else reject(new Error("무료 API 요청에 실패했습니다."));
+      else reject(Object.assign(
+        new Error("무료 API 요청에 실패했습니다."),
+        { providerReason: classifyProviderReason(safeErrorOutput) },
+      ));
     });
   });
+}
+
+export function classifyProviderReason(value) {
+  const errorName = String(value ?? "").match(/\(([A-Za-z]+Error)\)/u)?.[1] ?? "";
+  if (errorName === "RateLimitError") return "rate_limit";
+  if (["AuthenticationError", "PermissionDeniedError"].includes(errorName)) return "authentication";
+  if (errorName === "APIConnectionError") return "connection";
+  if (errorName === "APITimeoutError") return "timeout";
+  if (["BadRequestError", "UnprocessableEntityError"].includes(errorName)) return "bad_request";
+  if (errorName === "InternalServerError") return "provider_server";
+  return "unknown";
 }
 
 export async function invokeFreeNewsAnalysis(

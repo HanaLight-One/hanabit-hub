@@ -49,6 +49,15 @@ const FAILURE_LABELS = {
   provider_error: "무료 텍스트 API 요청이 완료되지 않았어요.",
   unknown: "분석 도중 안전하게 복구하지 못한 오류가 있었어요.",
 };
+const PROVIDER_REASON_LABELS = {
+  rate_limit: "요청이 잠시 몰렸거나 사용 한도에 닿았어요.",
+  authentication: "API 인증 또는 프로젝트 권한을 확인해야 해요.",
+  connection: "무료 API 서버와의 네트워크 연결이 끊겼어요.",
+  timeout: "무료 API가 제한 시간 안에 응답하지 않았어요.",
+  bad_request: "무료 API가 요청 형식을 받아들이지 않았어요.",
+  provider_server: "무료 API 서버에서 일시적인 오류가 발생했어요.",
+  unknown: "제공자 오류 종류를 더 좁히지 못했어요.",
+};
 
 function needsImageReview(item) {
   return item.workflow.status === "ignored" && item.media.length > 0;
@@ -384,6 +393,9 @@ function NewsCard({ item, preview, busy, error, onPreview, onPublish, onRetry, o
           {item.workflow.analysisFailure && (
             <div className="analysis-failure">
               <span>{FAILURE_LABELS[item.workflow.analysisFailure.code] ?? FAILURE_LABELS.unknown}</span>
+              {item.workflow.analysisFailure.code === "provider_error" && (
+                <small>{PROVIDER_REASON_LABELS[item.workflow.analysisFailure.providerReason] ?? PROVIDER_REASON_LABELS.unknown}</small>
+              )}
               {error && <span className="action-error">{error}</span>}
               <button type="button" className="retry-button" disabled={busy} onClick={onRetry}>
                 {busy ? "다시 분석 중…" : "무료 텍스트 API로 다시 분석"}
