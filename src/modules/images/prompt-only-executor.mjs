@@ -12,6 +12,7 @@ const STALE_AFTER_MS = 20 * 60 * 1000;
 const PURPOSES = new Set(["theme-followup", "free-play"]);
 const SINGLE_CONFIRMATION = "generate-one-draft-image";
 const BATCH_CONFIRMATION = "generate-draft-image-batch";
+const HUB_IMAGE_MAX_CONCURRENCY = 4;
 
 function safePublicPrompt(value) {
   const prompt = String(value ?? "").trim().slice(0, 12_000);
@@ -72,6 +73,7 @@ function defaultLaunch({
         env: {
           ...process.env,
           HANABIT_FREE_TEXT_RUNNER: freeTextRunnerPath,
+          HANABIT_IMAGE_MAX_CONCURRENCY: String(HUB_IMAGE_MAX_CONCURRENCY),
           ...(freeTextPythonExecutablePath
             ? { HANABIT_OPENAI_FREE_PYTHON: freeTextPythonExecutablePath }
             : {}),
@@ -395,4 +397,4 @@ export function createPromptOnlyExecutor({
   return Object.freeze({ start, status, list });
 }
 
-export { defaultLaunch };
+export { defaultLaunch, HUB_IMAGE_MAX_CONCURRENCY };

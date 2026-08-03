@@ -4,9 +4,16 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { createGenerationDraftStore } from "../src/modules/images/generation-drafts.mjs";
-import { createPromptOnlyExecutor } from "../src/modules/images/prompt-only-executor.mjs";
+import {
+  createPromptOnlyExecutor,
+  HUB_IMAGE_MAX_CONCURRENCY,
+} from "../src/modules/images/prompt-only-executor.mjs";
 
 const SOURCE_ID = "f".repeat(64);
+
+test("Hub 이미지 worker 동시 실행 상한은 4개다", () => {
+  assert.equal(HUB_IMAGE_MAX_CONCURRENCY, 4);
+});
 
 async function fixture(callback, { now } = {}) {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-prompt-executor-"));
