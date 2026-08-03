@@ -68,7 +68,7 @@ HTTP 라우트는 검증과 응답만 맡고 실제 동작은 같은 기능 폴�
 | 모듈 | 위치 | 책임 |
 | --- | --- | --- |
 | 데이터베이스 | `src/modules/database/` | SQLite 연결과 순차 스키마 마이그레이션 |
-| 이미지 | `src/modules/images/` | 아카이브, 테마, 제작 기록, 화풍, 생성 초안과 1장 실행 |
+| 이미지 | `src/modules/images/` | 아카이브, 테마, 제작 기록, 화풍, 생성 초안과 1~10장 배치 실행 |
 | 운세 | `src/modules/fortune/` | 날짜별 운세와 안전한 게시 상태 읽기 |
 | 뉴스 | `src/modules/news/` | Discord/X 수집, 번역·판정, Codex 심층검토, DC 원고 미리보기·수동 단건 게시와 영수증 |
 | DC 편집실 | `src/modules/dc/` | 전용 업로드, SQLite 블록 초안, 텍스트·이미지 혼합 순서, 일반 글 미리보기·단건 게시 영수증 |
@@ -85,7 +85,7 @@ HTTP 라우트는 검증과 응답만 맡고 실제 동작은 같은 기능 폴�
 | 뉴스 운영 대기함 | `state/news/` | 현재 수집·번역·검토의 원본 저장소 | 제외 |
 | Hub SQLite | `state/hanabit-hub.sqlite` | 뉴스 원장, 이미지 제작 기록과 직접 업로드 출처, DC 혼합 블록 초안(v6) | 제외 |
 | Push 구독·키 | `state/notifications/` | 모바일 Web Push 상태 | 제외 |
-| 이미지 생성 초안·작업 | `state/image-generation-*` | Hub가 만든 초안과 1장 작업 상태 | 제외 |
+| 이미지 생성 초안·작업 | `state/image-generation-*` | Hub가 만든 초안과 1~10장 배치 작업 상태 | 제외 |
 | 직접 업로드 생성 소스 | `state/image-source-uploads/YYYY-MM-DD/` | 사용자가 올린 PNG·JPG·WebP를 오테와 분리해 Responses 주 참조로 보관 | 제외 |
 | 이미지·테마·제작 기록 | 외부 설정 루트 | 기존 저장소를 이동 없이 연결 | 외부 |
 | 이미지 휴지통 | 외부 `stateRoot/trash/hub-v1/` | 추가 생성 파일의 복원 영수증과 격리 파일 | 외부 |
@@ -254,6 +254,9 @@ publication-jobs/` 아래에 격리 사본을 만든 뒤 `scripts/publish-dc-com
 - 오테 완료 manifest -> 이미지 SQLite 제작 기록: `src/modules/images/image-metadata-catalog.mjs`
 - 추가 생성 작업 카드 -> 안전한 프롬프트·선택 인물·최대 3개 저장 화풍 혼합·결과 이미지와 후속 생성 링크:
   `src/modules/images/prompt-only-executor.mjs`, `public/images/create/app.js`
+- 추가 생성 출력 묶음 -> 기존 `함께 한 장`, 최대 10명의 `인물별 배치`, 인물 없는 2~10장
+  변주를 초안에 저장한다. 인물별 배치는 각 worker 슬롯을 한 사람짜리 cast package에 고정하고,
+  완료 결과는 한 작업 카드의 미니 갤러리로 표시한다.
 - 추가 생성 자동 선택은 초안 ID로 결정적으로 인물 관계 그룹과 저장 화풍을 고르고,
   worker 시작 전에 실제 인물·화풍 ID를 작업 JSON과 이미지 제작 기록에 확정한다.
 - 이미지 카드의 같은 조합·인물 유지·화풍 유지 링크는 옵션 목록을 먼저 만든 뒤 제작 기록의

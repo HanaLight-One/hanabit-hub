@@ -7,6 +7,7 @@ import { createGenerationDraftStore } from "../src/modules/images/generation-dra
 
 const SOURCE_ID = "a".repeat(64);
 const CHARACTER_IDS = ["pink-bridge", "헤일라", "리벨라", "세이라", "우리엘", "카시"];
+const AVAILABLE_CHARACTER_IDS = [...CHARACTER_IDS, "루카", "에델리아", "노아", "베리케스"];
 const catalog = {
   async list() {
     return {
@@ -16,7 +17,7 @@ const catalog = {
         { id: "neon", label: "neon" },
         { id: "ink", label: "ink" },
       ],
-      characters: CHARACTER_IDS.map((id) => ({ id, label: id === "pink-bridge" ? "핑크브릿지" : id })),
+      characters: AVAILABLE_CHARACTER_IDS.map((id) => ({ id, label: id === "pink-bridge" ? "핑크브릿지" : id })),
     };
   },
 };
@@ -55,6 +56,49 @@ test("인물과 화풍 없음은 긴 프롬프트 자유 생성 초안으로만 
     assert.equal(saved.status, "draft");
     assert.equal(saved.executionEnabled, false);
     assert.equal(saved.useImageAnchors, false);
+  });
+});
+
+test("인물별 배치는 최대 10명을 한 사람당 한 장으로 보존한다", async () => {
+  await fixture(async ({ store }) => {
+    const result = await store.create({
+      prompt: "모두 서로 다른 자세를 취한다. 콜라주 금지.",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "custom", ids: AVAILABLE_CHARACTER_IDS },
+      style: { mode: "selected", id: "gothic" },
+      batch: { mode: "per-character", count: 10 },
+    });
+    assert.deepEqual(result.batch, { mode: "per-character", count: 10 });
+    assert.equal(result.executionMode, "guided-cast");
+    const saved = await store.get(result.id);
+    assert.equal(saved.schemaVersion, 2);
+    assert.equal(saved.characters.ids.length, 10);
+  });
+});
+
+test("인물 없는 변주 배치는 2~10장만 허용한다", async () => {
+  await fixture(async ({ store }) => {
+    const result = await store.create({
+      prompt: "같은 레퍼런스로 서로 다른 자세",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "none", ids: [] },
+      style: { mode: "auto", id: null },
+      batch: { mode: "variants", count: 10 },
+    });
+    assert.equal(result.batch.count, 10);
+    await assert.rejects(() => store.create({
+      prompt: "잘못된 묶음",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "custom", ids: ["헤일라", "리벨라"] },
+      style: { mode: "auto", id: null },
+      batch: { mode: "variants", count: 2 },
+    }), /등장인물 없음을 선택/);
   });
 });
 

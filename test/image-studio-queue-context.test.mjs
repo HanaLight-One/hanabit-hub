@@ -160,6 +160,26 @@ test("핑크브릿지와 일반 인물을 함께 선택하면 한 cast와 참조
   assert.equal(context.guided_selection.image_anchors_enabled, true);
 });
 
+test("인물별 배치는 각 슬롯에 한 사람짜리 cast를 고정한다", async () => {
+  const { assetIndexPath, outputRoot } = await fixture();
+  const context = await buildImageStudioQueueContext({
+    id: "per-character-batch",
+    prompt: "같은 다과회 요청, 서로 다른 단독 자세, 콜라주 금지",
+    count: 3,
+    batchMode: "per-character",
+    mode: "guided-cast",
+    purpose: "free-play",
+    characters: { mode: "custom", ids: ["pink-bridge", "노아", "리벨라"] },
+    style: { mode: "selected", id: "calm" },
+    useImageAnchors: false,
+  }, { assetIndexPath, outputRoot });
+  assert.equal(context.cast_packages.length, 3);
+  assert.deepEqual(context.cast_packages.map((item) => item.characters.length), [1, 1, 1]);
+  assert.equal(new Set(context.slots.map((item) => item.cast_package_id)).size, 3);
+  assert.equal(context.selected_style.id, "calm");
+  assert.match(context.job.prompt, /Never create a collage/);
+});
+
 test("이미지 앵커를 끄면 일반 인물도 텍스트 외형 앵커만 전달한다", async () => {
   const { assetIndexPath, outputRoot } = await fixture();
   const context = await buildImageStudioQueueContext(

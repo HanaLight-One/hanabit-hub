@@ -51,3 +51,21 @@ test("1장 실행 API는 교차 출처 요청을 거부한다", async () => {
     assert.equal(response.status, 403);
   });
 });
+
+test("배치 실행 API는 별도 확인값을 executor에 전달한다", async () => {
+  let received = null;
+  await withServer({
+    async start(id, options) {
+      received = { id, options };
+      return { id, status: "processing", route: "prompt-only", count: 10 };
+    },
+  }, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/images/generation-drafts/${ID}/execute`, {
+      method: "POST",
+      headers: { origin: baseUrl, "sec-fetch-site": "same-origin", "content-type": "application/json" },
+      body: JSON.stringify({ confirmation: "generate-draft-image-batch" }),
+    });
+    assert.equal(response.status, 202);
+    assert.deepEqual(received, { id: ID, options: { confirmation: "generate-draft-image-batch" } });
+  });
+});

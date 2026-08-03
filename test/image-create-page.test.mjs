@@ -39,6 +39,10 @@ test("/images/create가 안전한 추가생성 초안 화면을 제공한다", a
     assert.match(body, /name="purpose"/);
     assert.match(body, /value="theme-followup"/);
     assert.match(body, /value="free-play"/);
+    assert.match(body, /value="per-character"/);
+    assert.match(body, /value="variants"/);
+    assert.match(body, /id="batch-count"/);
+    assert.match(body, /id="preview-batch"/);
     assert.match(body, /id="jobs-list"/);
     assert.match(body, /id="source-remove"/);
     assert.match(body, /연결 해제/);
@@ -80,6 +84,8 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(scriptBody, /method: "POST"/);
     assert.match(scriptBody, /prompt-only/);
     assert.match(scriptBody, /generate-one-draft-image/);
+    assert.match(scriptBody, /generate-draft-image-batch/);
+    assert.match(scriptBody, /MAX_BATCH_IMAGES = 10/);
     assert.match(scriptBody, /선택 인물로 1장 실제 생성/);
     assert.match(scriptBody, /MAX_CUSTOM_CHARACTERS = 6/);
     assert.match(scriptBody, /MAX_SELECTED_STYLES = 3/);

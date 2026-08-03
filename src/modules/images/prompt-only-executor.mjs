@@ -10,6 +10,8 @@ import { classifyDraftExecution } from "./generation-drafts.mjs";
 const ID_PATTERN = /^[a-f0-9]{32}$/u;
 const STALE_AFTER_MS = 20 * 60 * 1000;
 const PURPOSES = new Set(["theme-followup", "free-play"]);
+const SINGLE_CONFIRMATION = "generate-one-draft-image";
+const BATCH_CONFIRMATION = "generate-draft-image-batch";
 
 function safePublicPrompt(value) {
   const prompt = String(value ?? "").trim().slice(0, 12_000);
@@ -127,12 +129,18 @@ export function createPromptOnlyExecutor({
     };
   }
 
-  async function start(id) {
+  async function start(id, { confirmation = null } = {}) {
     const safeId = validateId(id);
     const draft = await draftStore.get(safeId);
     const executionMode = classifyDraftExecution(draft);
     if (!executionMode || !PURPOSES.has(draft.purpose)) {
       throw executionError("NOT_EXECUTABLE", "이 선택 조합은 아직 실제 생성에 연결되지 않았습니다.");
+    }
+    const batch = draft.batch ?? { mode: "single", count: 1 };
+    const count = Number(batch.count) || 1;
+    const requiredConfirmation = batch.mode === "single" ? SINGLE_CONFIRMATION : BATCH_CONFIRMATION;
+    if (confirmation !== null && confirmation !== requiredConfirmation) {
+      throw executionError("NOT_EXECUTABLE", `${count}장 실제 생성 확인이 필요합니다.`);
     }
 
     let sourceImage = null;
@@ -178,7 +186,8 @@ export function createPromptOnlyExecutor({
       startedAt,
       status: "processing",
       prompt: draft.prompt,
-      count: 1,
+      count,
+      batchMode: batch.mode,
       mode: executionMode === "guided-cast"
         ? "guided-cast"
         : ["auto", "selected"].includes(draft.style?.mode)
@@ -194,14 +203,14 @@ export function createPromptOnlyExecutor({
       sourceImageId: draft.sourceImageId,
       sourceImagePath: sourceImage?.target ?? null,
       outputs: [],
-      progress: { completed: 0, total: 1 },
+      progress: { completed: 0, total: count },
       requestedBy: "hanabit-hub-owner",
     };
 
     try {
       const context = await buildContext(job, { assetIndexPath, outputRoot });
       const resolvedCharacterIds = Array.isArray(context.guided_selection?.character_ids)
-        ? context.guided_selection.character_ids.map(String).slice(0, 6)
+        ? context.guided_selection.character_ids.map(String).slice(0, 10)
         : [];
       const resolvedStyleIds = Array.isArray(context.guided_selection?.style_ids)
         ? context.guided_selection.style_ids.map(String).filter(Boolean).slice(0, 3)
@@ -232,7 +241,7 @@ export function createPromptOnlyExecutor({
         jobPath: target.job,
         contextPath: target.context,
       });
-      return Object.freeze({ id: safeId, status: "processing", route: draft.route, executionMode, count: 1 });
+      return Object.freeze({ id: safeId, status: "processing", route: draft.route, executionMode, count });
     } catch (error) {
       if (receiptHandle) await receiptHandle.close();
       await writeJsonAtomic(target.job, {
@@ -278,8 +287,12 @@ export function createPromptOnlyExecutor({
         };
       } catch {}
     }
+    const count = Math.max(1, Math.min(10, Number(job.count) || 1));
+    const batchMode = ["single", "per-character", "variants"].includes(job.batchMode)
+      ? job.batchMode
+      : "single";
     const characterIds = job.characters?.mode === "custom" && Array.isArray(job.characters.ids)
-      ? job.characters.ids.slice(0, 6).map(String)
+      ? job.characters.ids.slice(0, batchMode === "per-character" ? 10 : 6).map(String)
       : [];
     const characters = characterIds.map((id) => optionLabels.characters.get(id) ?? id);
     const styleIds = job.style?.mode === "selected"
@@ -292,7 +305,7 @@ export function createPromptOnlyExecutor({
       : null;
     const images = [];
     if (archive?.findByTarget && Array.isArray(job.outputs)) {
-      for (const output of job.outputs.slice(0, 4)) {
+      for (const output of job.outputs.slice(0, 10)) {
         if (!path.isAbsolute(output ?? "")) continue;
         const image = await archive.findByTarget(output);
         if (image) images.push(image.record);
@@ -308,9 +321,11 @@ export function createPromptOnlyExecutor({
       completedAt: String(job.completedAt ?? job.failedAt ?? ""),
       durationMs: elapsedMs,
       progress: {
-        completed: Math.max(0, Math.min(1, Number(job.progress?.completed) || 0)),
-        total: 1,
+        completed: Math.max(0, Math.min(count, Number(job.progress?.completed) || 0)),
+        total: count,
       },
+      count,
+      batchMode,
       prompt: safePublicPrompt(job.prompt),
       characters: Object.freeze(characters),
       characterMode: job.characters?.mode ?? "unknown",
@@ -320,13 +335,13 @@ export function createPromptOnlyExecutor({
       images: Object.freeze(images),
       message:
         stage === "complete"
-          ? "이미지 1장 생성 완료"
+          ? `이미지 ${count}장 생성 완료`
           : stage === "failed"
             ? "생성 작업을 완료하지 못했습니다. 내부 상태를 확인해주세요."
             : stage === "stalled"
               ? "20분 이상 갱신되지 않아 확인이 필요합니다."
               : stage === "generating"
-                ? "이미지 1장을 생성하고 있어요."
+                ? `이미지 ${count}장을 생성하고 있어요.`
                 : "무료 API가 장면을 준비하고 있어요.",
     });
   }

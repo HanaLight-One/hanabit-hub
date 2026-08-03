@@ -2,6 +2,7 @@ const EXECUTE_PATTERN = /^\/api\/images\/generation-drafts\/([a-f0-9]{32})\/exec
 const STATUS_PATTERN = /^\/api\/images\/generation-jobs\/([a-f0-9]{32})$/u;
 const LIST_PATH = "/api/images/generation-jobs";
 const CONFIRMATION = "generate-one-draft-image";
+const BATCH_CONFIRMATION = "generate-draft-image-batch";
 
 function sameOrigin(request) {
   const origin = request.headers.origin;
@@ -20,10 +21,14 @@ async function readConfirmation(request) {
   }
   try {
     const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-    if (!body || Object.keys(body).length !== 1 || body.confirmation !== CONFIRMATION) throw new Error();
+    if (
+      !body ||
+      Object.keys(body).length !== 1 ||
+      ![CONFIRMATION, BATCH_CONFIRMATION].includes(body.confirmation)
+    ) throw new Error();
     return body;
   } catch {
-    throw Object.assign(new Error("1장 생성 확인이 필요합니다."), { code: "BAD_BODY" });
+    throw Object.assign(new Error("실제 이미지 생성 확인이 필요합니다."), { code: "BAD_BODY" });
   }
 }
 
@@ -72,8 +77,8 @@ export async function handlePromptOnlyExecutionRoute({ request, response, pathna
     return true;
   }
   try {
-    await readConfirmation(request);
-    sendJson(response, 202, await executor.start(execute[1]));
+    const { confirmation } = await readConfirmation(request);
+    sendJson(response, 202, await executor.start(execute[1], { confirmation }));
   } catch (error) {
     if (error.code === "BAD_BODY") sendJson(response, 400, { error: error.message });
     else failure(response, sendJson, error);
@@ -81,4 +86,4 @@ export async function handlePromptOnlyExecutionRoute({ request, response, pathna
   return true;
 }
 
-export { CONFIRMATION };
+export { BATCH_CONFIRMATION, CONFIRMATION };

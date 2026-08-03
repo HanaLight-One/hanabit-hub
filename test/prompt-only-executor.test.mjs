@@ -155,6 +155,31 @@ test("프롬프트 자유 생성은 모의 worker에 1장으로 한 번만 전�
   });
 });
 
+test("인물 없는 10장 변주 배치는 한 작업으로 worker에 전달한다", async () => {
+  await fixture(async ({ drafts, executor, jobRoot, launches }) => {
+    const draft = await drafts.create({
+      prompt: "같은 소품으로 서로 다른 자세 열 장, 콜라주 금지",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "none", ids: [] },
+      style: { mode: "none", id: null },
+      batch: { mode: "variants", count: 10 },
+    });
+    const started = await executor.start(draft.id, { confirmation: "generate-draft-image-batch" });
+    assert.equal(started.count, 10);
+    assert.equal(launches.length, 1);
+    const job = JSON.parse(await readFile(path.join(jobRoot, `${draft.id}.json`), "utf8"));
+    assert.equal(job.count, 10);
+    assert.equal(job.batchMode, "variants");
+    assert.deepEqual(job.progress, { completed: 0, total: 10 });
+    await assert.rejects(
+      () => executor.start(draft.id, { confirmation: "generate-one-draft-image" }),
+      /10장 실제 생성 확인/,
+    );
+  });
+});
+
 test("완료 작업은 안전한 프롬프트와 선택 자산, 결과 이미지 카드를 제공한다", async () => {
   await fixture(async ({ drafts, executor, jobRoot, outputRoot }) => {
     const draft = await drafts.create({

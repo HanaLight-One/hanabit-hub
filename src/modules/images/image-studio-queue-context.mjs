@@ -261,6 +261,10 @@ export async function buildImageStudioQueueContext(
     },
   };
 
+  if (count > 1) {
+    context.job.prompt += "\n\nBATCH OUTPUT RULE: Each numbered slot is one independent final image. Never create a collage, montage, contact sheet, split screen, or multi-panel layout.";
+  }
+
   if (job.sourceImagePath) {
     if (!path.isAbsolute(job.sourceImagePath)) {
       throw new TypeError("sourceImagePath는 절대경로여야 합니다.");
@@ -278,18 +282,26 @@ export async function buildImageStudioQueueContext(
       : Array.isArray(job.characters?.ids)
         ? job.characters.ids
         : [];
-    if (characterIds.length < 1 || characterIds.length > 6) {
-      throw new Error("실제 생성에는 1명부터 최대 6명의 인물 선택이 필요합니다.");
+    const maximumCharacters = job.batchMode === "per-character" ? 10 : 6;
+    if (characterIds.length < 1 || characterIds.length > maximumCharacters) {
+      throw new Error(`실제 생성에는 1명부터 최대 ${maximumCharacters}명의 인물 선택이 필요합니다.`);
     }
     const imageAnchorsEnabled = job.useImageAnchors === true;
-    const castPackage = guidedCastPackage(characterIds, index, {
-      includeImageAnchors: imageAnchorsEnabled,
-    });
+    const castPackages = job.batchMode === "per-character"
+      ? characterIds.map((characterId, packageIndex) => ({
+          ...guidedCastPackage([characterId], index, {
+            includeImageAnchors: imageAnchorsEnabled,
+          }),
+          id: `guided-cast-${packageIndex + 1}`,
+        }))
+      : [guidedCastPackage(characterIds, index, {
+          includeImageAnchors: imageAnchorsEnabled,
+        })];
     context.job.mode = "cast";
-    context.cast_packages = [castPackage];
+    context.cast_packages = castPackages;
     context.slots = Array.from({ length: count }, (_, indexValue) => ({
       number: indexValue + 1,
-      cast_package_id: castPackage.id,
+      cast_package_id: castPackages[indexValue % castPackages.length].id,
     }));
     const hasDraftStyle = applyGuidedStyle(context, job.style, index, job.id);
     context.guided_selection = {

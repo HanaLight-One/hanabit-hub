@@ -12,6 +12,8 @@ const STYLE_MODES = new Set(["auto", "none", "selected", "prompt", "rendering"])
 const NO_CHARACTER_STYLE_MODES = new Set(["auto", "none", "selected", "prompt", "rendering"]);
 const PURPOSES = new Set(["theme-followup", "free-play"]);
 const MAX_CUSTOM_CHARACTERS = 6;
+const MAX_BATCH_IMAGES = 10;
+const BATCH_MODES = new Set(["single", "per-character", "variants"]);
 const MAX_SELECTED_STYLES = 3;
 
 function draftError(code, message) {
@@ -38,7 +40,25 @@ function normalizePrompt(value) {
   return prompt;
 }
 
-function normalizeCharacters(value, allowedIds) {
+function normalizeBatch(value) {
+  const batch = value == null ? { mode: "single", count: 1 } : value;
+  if (!plainObject(batch) || !BATCH_MODES.has(batch.mode)) {
+    throw draftError("INVALID_BATCH", "생성 묶음이 올바르지 않습니다.");
+  }
+  const count = Number(batch.count);
+  if (!Number.isInteger(count) || count < 1 || count > MAX_BATCH_IMAGES) {
+    throw draftError("INVALID_BATCH", `한 번에 1장부터 ${MAX_BATCH_IMAGES}장까지 생성할 수 있습니다.`);
+  }
+  if (batch.mode === "single" && count !== 1) {
+    throw draftError("INVALID_BATCH", "함께 한 장 모드는 정확히 1장만 생성합니다.");
+  }
+  if (batch.mode !== "single" && count < 2) {
+    throw draftError("INVALID_BATCH", "배치 생성은 2장 이상이어야 합니다.");
+  }
+  return Object.freeze({ mode: batch.mode, count });
+}
+
+function normalizeCharacters(value, allowedIds, maximum = MAX_CUSTOM_CHARACTERS) {
   if (!plainObject(value) || !CHARACTER_MODES.has(value.mode)) {
     throw draftError("INVALID_SELECTION", "등장인물 선택 방식이 올바르지 않습니다.");
   }
@@ -46,12 +66,12 @@ function normalizeCharacters(value, allowedIds) {
   if (value.mode === "custom") {
     if (
       ids.length < 1 ||
-      ids.length > MAX_CUSTOM_CHARACTERS ||
+      ids.length > maximum ||
       ids.some((id) => !allowedIds.has(id))
     ) {
       throw draftError(
         "INVALID_SELECTION",
-        `등장인물은 현재 목록에서 최대 ${MAX_CUSTOM_CHARACTERS}명까지 선택할 수 있습니다.`,
+        `등장인물은 현재 목록에서 최대 ${maximum}명까지 선택할 수 있습니다.`,
       );
     }
   } else if (ids.length > 0) {
@@ -117,10 +137,20 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
     }
 
     const options = await catalog.list();
+    const batch = normalizeBatch(input.batch);
     const characters = normalizeCharacters(
       input.characters,
       new Set(options.characters.map((item) => item.id)),
+      batch.mode === "per-character" ? MAX_BATCH_IMAGES : MAX_CUSTOM_CHARACTERS,
     );
+    if (batch.mode === "per-character" && (
+      characters.mode !== "custom" || characters.ids.length !== batch.count
+    )) {
+      throw draftError("INVALID_BATCH", "인물별 배치는 선택한 인물마다 정확히 한 장씩 생성합니다.");
+    }
+    if (batch.mode === "variants" && characters.mode !== "none") {
+      throw draftError("INVALID_BATCH", "인물 없는 변주 배치는 등장인물 없음을 선택해야 합니다.");
+    }
     const style = normalizeStyle(
       input.style,
       new Set(options.styles.map((item) => item.id)),
@@ -136,7 +166,7 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
     const id = randomUUID().replaceAll("-", "");
     const createdAt = new Date().toISOString();
     const record = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       id,
       createdAt,
       status: "draft",
@@ -149,6 +179,7 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
       characters,
       style,
       useImageAnchors,
+      batch,
     };
     const executionMode = classifyDraftExecution(record);
 
@@ -168,6 +199,7 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
       executionEnabled: false,
       executionMode,
       styleMode: style.mode,
+      batch,
     });
   }
 
@@ -203,11 +235,13 @@ export function classifyDraftExecution(draft) {
       (
         draft.characters?.mode === "custom" &&
         draft.characters.ids?.length >= 1 &&
-        draft.characters.ids.length <= MAX_CUSTOM_CHARACTERS
+        draft.characters.ids.length <= (
+          draft.batch?.mode === "per-character" ? MAX_BATCH_IMAGES : MAX_CUSTOM_CHARACTERS
+        )
       )
     )
   ) return "guided-cast";
   return null;
 }
 
-export { MAX_CUSTOM_CHARACTERS, MAX_PROMPT_LENGTH };
+export { MAX_BATCH_IMAGES, MAX_CUSTOM_CHARACTERS, MAX_PROMPT_LENGTH };

@@ -7,6 +7,7 @@ const MODE_LABELS = Object.freeze({
 const SAFE_SOURCE_ID = /^[a-f0-9]{64}$/;
 const PINK_BRIDGE_ID = "pink-bridge";
 const MAX_CUSTOM_CHARACTERS = 6;
+const MAX_BATCH_IMAGES = 10;
 const MAX_SELECTED_STYLES = 3;
 const BUILTIN_RENDERING_COUNT = 4;
 const PURPOSE_LABELS = Object.freeze({
@@ -40,6 +41,8 @@ const elements = {
   characterGrid: document.querySelector("#character-grid"),
   characterStatus: document.querySelector("#character-status"),
   characterToggle: document.querySelector("#character-toggle"),
+  batchCount: document.querySelector("#batch-count"),
+  batchCountField: document.querySelector("#batch-count-field"),
   useImageAnchors: document.querySelector("#use-image-anchors"),
   styleGrid: document.querySelector("#style-grid"),
   styleStatus: document.querySelector("#style-status"),
@@ -54,6 +57,7 @@ const elements = {
   previewSource: document.querySelector("#preview-source"),
   previewMode: document.querySelector("#preview-mode"),
   previewPurpose: document.querySelector("#preview-purpose"),
+  previewBatch: document.querySelector("#preview-batch"),
   previewCharacters: document.querySelector("#preview-characters"),
   previewStyle: document.querySelector("#preview-style"),
   previewImageAnchors: document.querySelector("#preview-image-anchors"),
@@ -88,6 +92,7 @@ let connectedCharacterCount = 0;
 let previewPayload = null;
 let savedDraftId = null;
 let savedExecutionMode = null;
+let savedBatchCount = 1;
 let purposeTouched = false;
 let sourceImages = null;
 
@@ -192,18 +197,47 @@ function selectedCharacterSummary() {
   return mode?.value === "none" ? "등장인물 없음" : "자동 선택";
 }
 
+function selectedBatchMode() {
+  return elements.form.querySelector('input[name="batch-mode"]:checked')?.value ?? "single";
+}
+
+function selectedBatch() {
+  const mode = selectedBatchMode();
+  const selectedCount = elements.characterGrid.querySelectorAll('input[name="character"]:checked').length;
+  return {
+    mode,
+    count: mode === "single"
+      ? 1
+      : mode === "per-character"
+        ? selectedCount
+        : Math.max(2, Math.min(MAX_BATCH_IMAGES, Number(elements.batchCount.value) || 10)),
+  };
+}
+
+function updateBatchSelection() {
+  const mode = selectedBatchMode();
+  elements.batchCountField.hidden = mode !== "variants";
+  if (mode === "variants") {
+    const none = inputWithValue("character-mode", "none");
+    if (none) none.checked = true;
+    for (const input of elements.characterGrid.querySelectorAll('input[name="character"]')) input.checked = false;
+  }
+  updateCharacterSelection();
+}
+
 function updateCharacterSelection() {
   const selected = [
     ...elements.characterGrid.querySelectorAll('input[name="character"]:checked'),
   ];
-  const reachedLimit = selected.length >= MAX_CUSTOM_CHARACTERS;
+  const maximum = selectedBatchMode() === "per-character" ? MAX_BATCH_IMAGES : MAX_CUSTOM_CHARACTERS;
+  const reachedLimit = selected.length >= maximum;
   for (const input of elements.characterGrid.querySelectorAll(
     'input[name="character"]',
   )) {
     input.disabled = reachedLimit && !input.checked;
   }
   const prefix = connectedCharacterCount
-    ? `${connectedCharacterCount}명 · 최대 ${MAX_CUSTOM_CHARACTERS}명 · `
+    ? `${connectedCharacterCount}명 · 최대 ${maximum}명 · `
     : "";
   elements.characterStatus.textContent = `${prefix}${selectedCharacterSummary()}`;
 }
@@ -701,9 +735,13 @@ elements.form.addEventListener("input", (event) => {
   if (event.target instanceof HTMLInputElement && event.target.name === "purpose") {
     purposeTouched = true;
   }
+  if (event.target instanceof HTMLInputElement && event.target.name === "batch-mode") {
+    updateBatchSelection();
+  }
   previewPayload = null;
   savedDraftId = null;
   savedExecutionMode = null;
+  savedBatchCount = 1;
   elements.draftButton.disabled = true;
   elements.draftButton.textContent = "격리 초안 저장";
   elements.executeButton.hidden = true;
@@ -745,6 +783,15 @@ elements.form.addEventListener("submit", (event) => {
           : { mode: "selected", id: styleValue };
   const sourceImageId = source;
   const useImageAnchors = data.has("use-image-anchors");
+  const batch = selectedBatch();
+  if (batch.mode === "per-character" && batch.count < 2) {
+    window.alert("인물별 배치는 인물을 2명 이상 선택해주세요.");
+    return;
+  }
+  if (batch.mode === "variants" && characterSelection.mode !== "none") {
+    window.alert("인물 없는 변주 배치는 등장인물 없음을 선택해주세요.");
+    return;
+  }
   const route =
     characterSelection.mode === "none" && ["auto", "selected", "prompt", "rendering"].includes(styleSelection.mode)
       ? "prompt-only"
@@ -758,10 +805,16 @@ elements.form.addEventListener("submit", (event) => {
     characters: characterSelection,
     style: styleSelection,
     useImageAnchors,
+    batch,
   };
 
   elements.previewMode.textContent = mode;
   elements.previewPurpose.textContent = PURPOSE_LABELS[purpose] ?? "목적 확인 필요";
+  elements.previewBatch.textContent = batch.mode === "single"
+    ? "함께 한 장"
+    : batch.mode === "per-character"
+      ? `인물별 ${batch.count}장`
+      : `인물 없는 변주 ${batch.count}장`;
   elements.previewCharacters.textContent = characterSummary;
   elements.previewStyle.textContent = style;
   elements.previewImageAnchors.textContent = useImageAnchors
@@ -805,9 +858,12 @@ elements.draftButton.addEventListener("click", async () => {
     elements.draftButton.textContent = "격리 초안 저장 완료";
     savedDraftId = result.id;
     savedExecutionMode = result.executionMode;
+    savedBatchCount = result.batch?.count ?? 1;
     elements.executeButton.hidden = false;
     elements.executeButton.disabled = !result.executionMode;
-    elements.executeButton.textContent = result.executionMode === "prompt-only"
+    elements.executeButton.textContent = savedBatchCount > 1
+      ? `⚡ 독립 이미지 ${savedBatchCount}장 실제 생성`
+      : result.executionMode === "prompt-only"
       ? ["auto", "selected"].includes(result.styleMode)
         ? result.styleMode === "auto"
           ? "⚡ 자동 화풍으로 1장 실제 생성"
@@ -840,7 +896,7 @@ async function pollGeneration(id) {
     elements.previewMessage.textContent = result.message;
     loadJobs();
     if (result.status === "complete") {
-      elements.executeButton.textContent = "✓ 이미지 1장 생성 완료";
+      elements.executeButton.textContent = `✓ 이미지 ${result.count ?? savedBatchCount}장 생성 완료`;
       return;
     }
     if (result.status === "failed") {
@@ -860,26 +916,32 @@ async function pollGeneration(id) {
 elements.executeButton.addEventListener("click", async () => {
   if (!savedDraftId || !savedExecutionMode) return;
   const confirmed = window.confirm(
-    savedExecutionMode === "guided-cast"
+    savedBatchCount > 1
+      ? `같은 프롬프트와 조건으로 독립 이미지 ${savedBatchCount}장을 실제 생성할까요? 각 장은 별도 API 호출이며 콜라주로 합치지 않습니다.`
+      : savedExecutionMode === "guided-cast"
       ? "이 프롬프트와 선택한 인물 외형 앵커로 이미지 1장을 실제 생성할까요? 무료 API와 이미지 worker가 실행됩니다."
       : "이 프롬프트로 이미지 1장을 실제 생성할까요? 무료 API와 이미지 worker가 실행됩니다.",
   );
   if (!confirmed) return;
 
   elements.executeButton.disabled = true;
-  elements.executeButton.textContent = "1장 생성 요청 중…";
+  elements.executeButton.textContent = `${savedBatchCount}장 생성 요청 중…`;
   try {
     const response = await fetch(
       `/api/images/generation-drafts/${encodeURIComponent(savedDraftId)}/execute`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ confirmation: "generate-one-draft-image" }),
+        body: JSON.stringify({
+          confirmation: savedBatchCount > 1
+            ? "generate-draft-image-batch"
+            : "generate-one-draft-image",
+        }),
       },
     );
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "생성을 시작하지 못했습니다.");
-    elements.executeButton.textContent = "이미지 1장 생성 중…";
+    elements.executeButton.textContent = `이미지 ${savedBatchCount}장 생성 중…`;
     elements.previewMessage.textContent = "무료 API가 장면을 준비하고 있어요. 이 요청은 한 번만 실행됩니다.";
     loadJobs();
     pollGeneration(result.id);
@@ -903,15 +965,23 @@ function renderJobs(payload) {
     const card = document.createElement("article");
     card.className = `job-card ${job.status}`;
 
-    const image = job.images?.[0] ?? null;
+    const images = Array.isArray(job.images) ? job.images : [];
+    const image = images[0] ?? null;
     const visual = document.createElement("div");
     visual.className = `job-visual ${image ? "has-image" : "is-placeholder"}`;
     if (image) {
-      const preview = document.createElement("img");
-      preview.src = image.thumbnailUrl;
-      preview.alt = `${image.name} 생성 결과`;
-      preview.loading = "lazy";
-      visual.append(preview);
+      visual.classList.toggle("is-batch", images.length > 1);
+      for (const [index, resultImage] of images.entries()) {
+        const link = document.createElement("a");
+        link.href = resultImage.contentUrl;
+        link.target = "_blank";
+        const preview = document.createElement("img");
+        preview.src = resultImage.thumbnailUrl;
+        preview.alt = `${index + 1}번째 생성 결과`;
+        preview.loading = "lazy";
+        link.append(preview);
+        visual.append(link);
+      }
     } else {
       const pulse = document.createElement("span");
       pulse.className = "job-pulse";
