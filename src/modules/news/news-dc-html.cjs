@@ -47,14 +47,14 @@ function textToHtml(value) {
       const label = sectionLabel(line);
       if (label) return labelHtml(line, label);
       if (line.startsWith("게시자: ")) {
-        return `<p style="margin:0 0 20px;color:#555555;font-size:13px;"><strong>${escapeHtml(line)}</strong></p><hr style="border:0;border-top:1px solid #dddddd;margin:0 0 22px;">`;
+        return `<p style="margin:0 0 22px;color:#555555;font-size:13px;"><strong>${escapeHtml(line)}</strong></p>`;
       }
       if (line.startsWith("주의: ")) {
         return `<p style="margin:24px 0;padding:10px 12px;background-color:#f5f5f5;color:#666666;font-size:12px;line-height:1.6;">${escapeHtml(line)}</p>`;
       }
       const link = safeBodyLink(line);
       if (link) {
-        return `<p style="font-size:14px;"><a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link)}</a></p>`;
+        return `<p><a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link)}</a></p>`;
       }
       return `<p style="margin:0 0 12px;font-size:15px;line-height:1.75;">${escapeHtml(line)}</p>`;
     })
