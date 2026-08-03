@@ -46,7 +46,7 @@ export async function handlePromptOracleRoute({ request, response, pathname, ora
   if (pathname === REROLL_PATH && request.method === "POST") {
     try { sendJson(response, 200, await oracle.reroll(await readJsonBody(request))); }
     catch (error) {
-      const status = error.code === "BUSY" ? 409 : ["INVALID_SETTINGS", "NO_INGREDIENTS", "INVALID_JSON"].includes(error.code) ? 400 : 503;
+      const status = error.code === "BUSY" ? 409 : ["INVALID_SETTINGS", "INVALID_PRESET", "NO_INGREDIENTS", "INVALID_JSON"].includes(error.code) ? 400 : 503;
       sendJson(response, status, { error: error.message });
     }
     return true;

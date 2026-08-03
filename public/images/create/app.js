@@ -46,6 +46,7 @@ const elements = {
   scene: document.querySelector("#scene-request"),
   characterCount: document.querySelector("#character-count"),
   oracleReroll: document.querySelector("#oracle-reroll"),
+  oraclePreset: document.querySelector("#oracle-preset"),
   oracleChaos: document.querySelector("#oracle-chaos"),
   oracleChaosValue: document.querySelector("#oracle-chaos-value"),
   oracleIngredients: document.querySelector("#oracle-ingredients"),
@@ -212,6 +213,17 @@ function renderOracleIngredients() {
   }
 }
 
+function renderOraclePresets() {
+  const presets = Array.isArray(oracleSettings?.presets) ? oracleSettings.presets : [];
+  elements.oraclePreset.replaceChildren(...presets.map((preset) => {
+    const option = document.createElement("option");
+    option.value = preset.id;
+    option.textContent = preset.name;
+    option.dataset.chaos = String(preset.defaultChaos);
+    return option;
+  }));
+}
+
 async function loadOracleSettings() {
   try {
     const response = await fetch("/api/images/prompt-oracle/settings", { cache: "no-store" });
@@ -220,6 +232,7 @@ async function loadOracleSettings() {
     elements.oracleChaos.value = oracleSettings.chaos;
     elements.oracleChaosValue.textContent = oracleSettings.chaos;
     elements.oracleSaveStatus.textContent = "저장됨";
+    renderOraclePresets();
     renderOracleIngredients();
   } catch (error) {
     elements.oracleReroll.disabled = true;
@@ -271,7 +284,10 @@ async function rerollOracle() {
     const response = await fetch("/api/images/prompt-oracle/reroll", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ chaos: Number(elements.oracleChaos.value) }),
+      body: JSON.stringify({
+        chaos: Number(elements.oracleChaos.value),
+        preset: elements.oraclePreset.value,
+      }),
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "신탁을 받아오지 못했어요.");
@@ -281,7 +297,7 @@ async function rerollOracle() {
     }
     elements.scene.value = result.scene;
     elements.scene.dispatchEvent(new Event("input", { bubbles: true }));
-    setOracleMessage(`신탁 완료 · ${result.ingredients.map((item) => item.name).join(" + ")} · 혼돈도 ${result.chaos}%`, "success");
+    setOracleMessage(`신탁 완료 · ${result.preset?.name ?? "완전 무작위"} · ${result.ingredients.map((item) => item.name).join(" + ")} · 혼돈도 ${result.chaos}%`, "success");
   } catch (error) {
     setOracleMessage(error.message, "error");
   } finally {
@@ -946,6 +962,15 @@ elements.oracleChaos.addEventListener("change", () => {
   if (!oracleSettings) return;
   oracleSettings.chaos = Number(elements.oracleChaos.value);
   saveOracleSettings();
+});
+elements.oraclePreset.addEventListener("change", () => {
+  const selected = elements.oraclePreset.selectedOptions[0];
+  const defaultChaos = Number(selected?.dataset.chaos);
+  if (Number.isInteger(defaultChaos)) {
+    elements.oracleChaos.value = String(defaultChaos);
+    elements.oracleChaosValue.textContent = String(defaultChaos);
+  }
+  setOracleMessage(`${selected?.textContent ?? "완전 무작위"} 프리셋을 골랐어요. 주사위를 눌러 장면을 받아보세요.`);
 });
 elements.oracleAdd.addEventListener("click", () => {
   if (!oracleSettings) return;

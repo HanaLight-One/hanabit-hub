@@ -493,6 +493,19 @@
 }
 
 .scene-heading label { color: var(--muted); }
+.oracle-controls { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.oracle-preset-label { font-size: 11px; }
+.oracle-preset {
+  max-width: 220px;
+  padding: 8px 30px 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+}
 .oracle-reroll,
 .oracle-add-row button,
 .oracle-ingredient button {
@@ -561,6 +574,10 @@
 .oracle-result[data-state="error"] { color: #ff8ea0; }
 
 @media (max-width: 560px) {
+  .scene-heading { align-items: stretch; flex-direction: column; }
+  .oracle-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .oracle-preset-label { grid-column: 1 / -1; }
+  .oracle-preset { width: 100%; max-width: none; }
   .oracle-ingredient { grid-template-columns: auto minmax(0, 1fr) 58px auto; }
   .oracle-add-row { grid-template-columns: minmax(0, 1fr) 64px; }
   .oracle-add-row button { grid-column: 1 / -1; }

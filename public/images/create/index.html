@@ -8,10 +8,10 @@
     <meta name="description" content="하나빛 이미지 추가생성 초안실" />
     <title>추가 이미지 생성실 · Hanabit Hub</title>
     <link rel="stylesheet" href="/images/styles.css" />
-    <link rel="stylesheet" href="/images/create/styles.css?v=20260803-prompt-oracle" />
+    <link rel="stylesheet" href="/images/create/styles.css?v=20260803-oracle-presets" />
     <link rel="stylesheet" href="/codex-usage-indicator.css" />
     <script src="/codex-usage-indicator.js" type="module"></script>
-    <script src="/images/create/app.js?v=20260803-prompt-oracle" type="module"></script>
+    <script src="/images/create/app.js?v=20260803-oracle-presets" type="module"></script>
   </head>
   <body>
     <header class="topbar">
@@ -141,7 +141,13 @@
           <section class="scene-field" aria-labelledby="scene-title">
             <div class="scene-heading">
               <label id="scene-title" for="scene-request">원하는 장면</label>
-              <button id="oracle-reroll" class="oracle-reroll" type="button">🎲 혼돈의 신탁</button>
+              <div class="oracle-controls">
+                <label class="oracle-preset-label" for="oracle-preset">분위기</label>
+                <select id="oracle-preset" class="oracle-preset" aria-label="혼돈 프리셋">
+                  <option value="random">완전 무작위</option>
+                </select>
+                <button id="oracle-reroll" class="oracle-reroll" type="button">🎲 혼돈의 신탁</button>
+              </div>
             </div>
             <textarea id="scene-request" maxlength="12000" required
               placeholder="예: 비가 그친 새벽, 두 사람이 오래된 온실에서 작은 빛을 발견한다."></textarea>

@@ -36,8 +36,9 @@ test("/images/create가 안전한 추가생성 초안 화면을 제공한다", a
     assert.match(body, /id="preview-scene-details"/);
     assert.match(body, /id="preview-scene-summary"/);
     assert.match(body, /id="preview-scene-copy"/);
-    assert.match(body, /20260803-prompt-oracle/);
+    assert.match(body, /20260803-oracle-presets/);
     assert.match(body, /id="oracle-reroll"/);
+    assert.match(body, /id="oracle-preset"/);
     assert.match(body, /id="oracle-chaos"/);
     assert.match(body, /id="oracle-ingredients"/);
     assert.match(body, /혼돈의 신탁/);
@@ -118,6 +119,8 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(scriptBody, /JOB_PAGE_SIZE = 10/);
     assert.match(scriptBody, /\/api\/images\/prompt-oracle\/settings/);
     assert.match(scriptBody, /\/api\/images\/prompt-oracle\/reroll/);
+    assert.match(scriptBody, /renderOraclePresets/);
+    assert.match(scriptBody, /preset: elements\.oraclePreset\.value/);
     assert.match(scriptBody, /update-prompt-oracle-settings/);
     assert.match(scriptBody, /현재 프롬프트를 새 신탁으로 바꿀까요/);
     assert.match(scriptBody, /jobDisplayLimit \+= JOB_PAGE_SIZE/);

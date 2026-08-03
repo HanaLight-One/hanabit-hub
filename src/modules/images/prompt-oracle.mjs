@@ -8,6 +8,20 @@ const POWERSHELL = path.join(
   "System32", "WindowsPowerShell", "v1.0", "powershell.exe",
 );
 const MAX_INGREDIENTS = 40;
+const ORACLE_PRESETS = Object.freeze([
+  Object.freeze({ id: "random", name: "완전 무작위", defaultChaos: 68, direction: "Follow the selected ingredients without an extra mood preset." }),
+  Object.freeze({ id: "happy-peace", name: "행복한 평화", defaultChaos: 22, direction: "Create a peaceful, safe scene filled with small visible happiness and relaxed interactions." }),
+  Object.freeze({ id: "warm-sunlight", name: "따스한 햇살 아래 어느 날", defaultChaos: 25, direction: "Center warm sunlight, soft shadows, and an ordinary moment that feels gently cherished." }),
+  Object.freeze({ id: "sentimental-season", name: "센치한 계절감", defaultChaos: 38, direction: "Make the current season emotionally tangible through air, color, texture, and quiet nostalgia." }),
+  Object.freeze({ id: "rainy-day", name: "비가 오는 어느 날", defaultChaos: 34, direction: "Build the scene around rain, wet reflections, shelter, and a memorable action shaped by the weather." }),
+  Object.freeze({ id: "snowy-day", name: "눈이 오는 어느 날", defaultChaos: 34, direction: "Build the scene around falling snow, cold air, accumulated texture, and a warm or striking focal action." }),
+  Object.freeze({ id: "seasonal-downpour", name: "계절이 비처럼 쏟아져", defaultChaos: 66, direction: "Turn recognizable signs of a season into an impossible downpour while keeping the scene visually coherent." }),
+  Object.freeze({ id: "dream-chaos", name: "몽환적 혼돈", defaultChaos: 78, direction: "Use dream logic, fluid scale, strange transitions, and beautiful contradictions that still form one drawable scene." }),
+  Object.freeze({ id: "daily-collapse", name: "일상 붕괴", defaultChaos: 84, direction: "Begin with an ordinary daily place, then let its familiar rules visibly fail in one surprising but coherent event." }),
+  Object.freeze({ id: "cute-disaster", name: "귀여운 재난", defaultChaos: 76, direction: "Create a harmless, non-graphic disaster caused by cute beings or objects; make the scale dramatic but nobody is injured." }),
+  Object.freeze({ id: "cosmic-omen", name: "우주적 불길함", defaultChaos: 88, direction: "Introduce a vast cosmic omen and quiet unease without graphic horror, while preserving a strong readable composition." }),
+  Object.freeze({ id: "why-is-it-there", name: "그게 왜 거기 있어", defaultChaos: 92, direction: "Place one unmistakably impossible and contextually wrong thing at the center, and let the rest of the scene react seriously to it." }),
+]);
 const DEFAULT_SETTINGS = Object.freeze({
   chaos: 68,
   ingredients: Object.freeze([
@@ -62,8 +76,16 @@ function publicSettings(settings) {
   return {
     chaos: settings.chaos,
     ingredients: settings.ingredients.map((item) => ({ ...item })),
+    presets: ORACLE_PRESETS.map(({ id, name, defaultChaos }) => ({ id, name, defaultChaos })),
     limits: { ingredients: MAX_INGREDIENTS },
   };
+}
+
+function findPreset(value) {
+  const id = String(value ?? "random").trim();
+  const preset = ORACLE_PRESETS.find((item) => item.id === id);
+  if (!preset) throw oracleError("INVALID_PRESET", "알 수 없는 혼돈 프리셋이에요.");
+  return preset;
 }
 
 function shuffled(values, random) {
@@ -96,7 +118,7 @@ function responseSchema() {
   };
 }
 
-function buildPrompt({ chaos, ingredients }) {
+function buildPrompt({ chaos, ingredients, preset }) {
   return [
     "You are the scene oracle for an image creation studio.",
     "Write one surprising Korean scene prompt. Return JSON matching the schema.",
@@ -105,6 +127,7 @@ function buildPrompt({ chaos, ingredients }) {
     "Do not choose or describe named characters, identity anchors, art styles, rendering techniques, image ratios, or model settings.",
     "Do not ask questions. Do not make a collage, split screen, text poster, or multiple alternative prompts.",
     `Chaos level: ${chaos}/100. Higher means stranger associations, while the final scene must still be drawable and internally coherent.`,
+    `Mood preset: ${preset.name}. Direction: ${preset.direction}`,
     `Selected ingredients: ${ingredients.map((item) => item.name).join(" + ")}`,
     "Length: 1 to 3 Korean sentences, preferably 80 to 350 Korean characters.",
   ].join("\n");
@@ -171,13 +194,14 @@ export function createPromptOracle({
       const chaos = value.chaos === undefined
         ? settings.chaos
         : boundedInteger(value.chaos, 0, 100, "혼돈도");
+      const preset = findPreset(value.preset);
       const selected = selectOracleIngredients({ ...settings, chaos }, random);
       const promptPath = path.join(workRoot, "prompt.txt");
       const schemaPath = path.join(workRoot, "response-schema.json");
       const outputPath = path.join(workRoot, "output.json");
       await mkdir(workRoot, { recursive: true });
       await Promise.all([
-        writeFile(promptPath, `${buildPrompt({ chaos, ingredients: selected })}\n`, "utf8"),
+        writeFile(promptPath, `${buildPrompt({ chaos, ingredients: selected, preset })}\n`, "utf8"),
         writeFile(schemaPath, `${JSON.stringify(responseSchema(), null, 2)}\n`, "utf8"),
       ]);
       await runProcess(POWERSHELL, [
@@ -196,6 +220,7 @@ export function createPromptOracle({
       return Object.freeze({
         scene,
         chaos,
+        preset: Object.freeze({ id: preset.id, name: preset.name }),
         ingredients: Object.freeze(selected.map(({ id, name, weight }) => ({ id, name, weight }))),
       });
     } finally {

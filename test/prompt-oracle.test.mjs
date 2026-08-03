@@ -37,6 +37,7 @@ test("혼돈 설정을 state에 저장하고 무료 API 결과만 안전하게 �
       const promptPath = args[args.indexOf("-PromptFile") + 1];
       const prompt = await readFile(promptPath, "utf8");
       assert.match(prompt, /Selected ingredients:/u);
+      assert.match(prompt, /Mood preset: 몽환적 혼돈/u);
       assert.match(prompt, /빛/u);
       assert.match(prompt, /판타지/u);
       await mkdir(path.dirname(outputPath), { recursive: true });
@@ -54,9 +55,24 @@ test("혼돈 설정을 state에 저장하고 무료 API 결과만 안전하게 �
     ],
   });
   assert.equal(saved.chaos, 82);
-  const result = await oracle.reroll({ chaos: 91 });
+  const result = await oracle.reroll({ chaos: 91, preset: "dream-chaos" });
   assert.equal(result.chaos, 91);
+  assert.deepEqual(result.preset, { id: "dream-chaos", name: "몽환적 혼돈" });
   assert.deepEqual(result.ingredients.map((item) => item.name).sort(), ["빛", "판타지"].sort());
   assert.match(result.scene, /수상 도서관/u);
   assert.equal("runnerPath" in result, false);
+});
+
+test("혼돈 프리셋 목록을 제공하고 알 수 없는 프리셋을 거절한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-oracle-presets-"));
+  const runnerPath = path.join(root, "runner.ps1");
+  await writeFile(runnerPath, "# mock", "utf8");
+  const oracle = createPromptOracle({
+    settingsPath: path.join(root, "state", "settings.json"),
+    runtimeRoot: path.join(root, "runtime"),
+    runnerPath,
+  });
+  const settings = await oracle.readSettings();
+  assert.equal(settings.presets.some((preset) => preset.name === "그게 왜 거기 있어"), true);
+  await assert.rejects(() => oracle.reroll({ preset: "unknown" }), { code: "INVALID_PRESET" });
 });
