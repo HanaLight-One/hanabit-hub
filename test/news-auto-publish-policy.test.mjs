@@ -25,12 +25,12 @@ function record(evidenceTag, overrides = {}) {
   };
 }
 
-test("공식과 핵심 인물의 고신뢰 유추는 자동 게시 가능 판정만 만든다", () => {
+test("공식과 핵심 인물의 고신뢰 유추 및 중요 사례는 자동 게시 가능 판정만 만든다", () => {
   assert.equal(evaluateNewsAutoPublish(record("official")).decision, "eligible");
   const inferred = evaluateNewsAutoPublish(record("inference"), profile);
   assert.equal(inferred.decision, "eligible");
   assert.equal(inferred.code, "trusted_inference");
-  const useCase = evaluateNewsAutoPublish(record("use_case"), profile);
+  const useCase = evaluateNewsAutoPublish(record("use_case", { importance: "high", confidence: 0.9 }), profile);
   assert.equal(useCase.decision, "eligible");
   assert.equal(useCase.code, "trusted_use_case");
 });
@@ -42,6 +42,9 @@ test("가치 있는 루머·의견은 허용하고 잡담·낮은 중요도는 �
   assert.equal(evaluateNewsAutoPublish(record("use_case", { boardCategory: "chatter" }), profile).decision, "blocked");
   assert.equal(evaluateNewsAutoPublish(record("confirmed", { importance: "low" }), profile).decision, "blocked");
   assert.equal(evaluateNewsAutoPublish(record("inference", { confidence: 0.81 }), profile).decision, "human_review");
+  const routineUseCase = evaluateNewsAutoPublish(record("use_case"), profile);
+  assert.equal(routineUseCase.decision, "blocked");
+  assert.equal(routineUseCase.code, "routine_use_case");
 });
 
 test("기존 승인·게시 영수증이 있으면 자동 처리하지 않는다", () => {
@@ -59,7 +62,7 @@ test("원문 귀속이 검증되지 않은 번역은 자동 게시하지 않는�
 });
 
 test("로컬 원문 경계 검증은 확정·사례만 통과시키고 유추는 심층검토로 보낸다", () => {
-  const useCase = record("use_case");
+  const useCase = record("use_case", { importance: "high", confidence: 0.9 });
   useCase.workflow.translationReview = { status: "local_verified" };
   assert.equal(evaluateNewsAutoPublish(useCase, profile).decision, "eligible");
 

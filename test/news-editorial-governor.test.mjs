@@ -14,6 +14,8 @@ function item(id, {
   sourceUrl = `https://x.com/example/status/${id}`,
   links = [],
   codexStatus = null,
+  processedAt = publishedAt,
+  publicationAt = null,
 } = {}) {
   return {
     id: id.padStart(32, "0"),
@@ -25,6 +27,8 @@ function item(id, {
       contextTranslations: [],
       triage: { evidenceTag, importance, confidence },
       codexReview: codexStatus ? { status: codexStatus } : null,
+      processedAt,
+      dcPublication: publicationAt ? { status: "posted", submittedAt: publicationAt } : null,
       autoPublishGate: { decision: gate, code: gateCode },
     },
   };
@@ -71,6 +75,42 @@ test("중요도 높은 확정 정보는 연속 게시 제한을 통과하지만 
   assert.equal(items[0].workflow.editorialShadow.decision, "ready");
   assert.equal(items[1].workflow.editorialShadow.code, "burst_queue");
   assert.equal(items[1].workflow.editorialShadow.decision, "hold");
+});
+
+test("최근 사례 게시 뒤 6시간 동안 새 사례는 보관하지만 정보성 유추는 계속 후보가 된다", () => {
+  const items = applyNewsEditorialShadow([
+    item("12", {
+      evidenceTag: "use_case",
+      importance: "high",
+      publishedAt: "2026-08-02T04:00:00Z",
+      processedAt: "2026-08-02T04:05:00Z",
+      publicationAt: "2026-08-02T04:05:00Z",
+      gate: "blocked",
+      gateCode: "already_handled",
+      title: "먼저 게시한 구체적 활용 사례",
+      body: "광고 제작과 결제 승인 절차를 자동화했습니다.",
+    }),
+    item("13", {
+      evidenceTag: "use_case",
+      importance: "high",
+      publishedAt: "2026-08-02T06:00:00Z",
+      processedAt: "2026-08-02T06:02:00Z",
+      title: "뒤이어 소개된 또 다른 활용 사례",
+      body: "고객 자료를 분류해 발표 자료를 만들었습니다.",
+    }),
+    item("14", {
+      evidenceTag: "inference",
+      importance: "high",
+      publishedAt: "2026-08-02T06:01:00Z",
+      processedAt: "2026-08-02T06:03:00Z",
+      codexStatus: "complete",
+      title: "새 제품 방향을 보여주는 정보성 신호",
+      body: "새로운 원격 작업 기능과 제공 범위를 암시했습니다.",
+    }),
+  ]);
+  assert.equal(items[1].workflow.editorialShadow.decision, "hold");
+  assert.equal(items[1].workflow.editorialShadow.code, "use_case_cooldown");
+  assert.equal(items[2].workflow.editorialShadow.decision, "ready");
 });
 
 test("유추는 Codex 검토 전에는 대기하고 비게시 항목은 허브에만 남긴다", () => {

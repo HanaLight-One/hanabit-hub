@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 const STORY_WINDOW_MS = 24 * 60 * 60 * 1000;
 const BURST_WINDOW_MS = 15 * 60 * 1000;
+const USE_CASE_WINDOW_MS = 6 * 60 * 60 * 1000;
 const STOP_WORDS = new Set([
   "about", "after", "again", "also", "and", "are", "chatgpt", "for", "from", "has", "have",
   "into", "more", "openai", "that", "the", "their", "this", "using", "with", "your",
@@ -11,7 +12,7 @@ const STOP_WORDS = new Set([
 const EVIDENCE_SCORES = Object.freeze({
   official: 60,
   confirmed: 48,
-  use_case: 38,
+  use_case: 24,
   inference: 30,
   rumor: 12,
   opinion: 6,
@@ -20,6 +21,16 @@ const EVIDENCE_SCORES = Object.freeze({
 function timestamp(item) {
   const value = Date.parse(item?.source?.publishedAt ?? item?.collectedAt ?? "");
   return Number.isFinite(value) ? value : 0;
+}
+
+function activityTimestamp(item) {
+  const value = Date.parse(item?.workflow?.processedAt ?? item?.collectedAt ?? item?.source?.publishedAt ?? "");
+  return Number.isFinite(value) ? value : timestamp(item);
+}
+
+function publicationTimestamp(item) {
+  const value = Date.parse(item?.workflow?.dcPublication?.submittedAt ?? "");
+  return Number.isFinite(value) ? value : null;
 }
 
 function tokenSet(item) {
@@ -131,6 +142,11 @@ export function applyNewsEditorialShadow(items) {
 
   const burstById = new Map();
   const accepted = [];
+  const publishedUseCases = nodes.filter((node) =>
+    node.item?.workflow?.triage?.evidenceTag === "use_case" &&
+    node.item?.workflow?.dcPublication?.status === "posted" &&
+    publicationTimestamp(node.item) !== null,
+  );
   const publishableRepresentatives = nodes
     .filter((node) => {
       const cluster = representativeByIndex.get(node.index);
@@ -141,6 +157,24 @@ export function applyNewsEditorialShadow(items) {
     })
     .sort((left, right) => right.score - left.score || timestamp(left.item) - timestamp(right.item));
   for (const node of publishableRepresentatives) {
+    if (node.item?.workflow?.triage?.evidenceTag === "use_case") {
+      const currentTime = activityTimestamp(node.item);
+      const priorUseCase = publishedUseCases.some((candidate) => {
+        const publishedAt = publicationTimestamp(candidate.item);
+        return publishedAt <= currentTime && currentTime - publishedAt < USE_CASE_WINDOW_MS;
+      }) || accepted.some((candidate) =>
+        candidate.item?.workflow?.triage?.evidenceTag === "use_case" &&
+        Math.abs(activityTimestamp(candidate.item) - currentTime) < USE_CASE_WINDOW_MS,
+      );
+      if (priorUseCase) {
+        burstById.set(node.item.id, result(
+          "hold",
+          "use_case_cooldown",
+          "최근 사례 게시 후 6시간이 지나지 않아 허브에 보관해요.",
+        ));
+        continue;
+      }
+    }
     const competing = accepted.find((candidate) =>
       Math.abs(timestamp(candidate.item) - timestamp(node.item)) <= BURST_WINDOW_MS,
     );
