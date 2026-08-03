@@ -972,6 +972,8 @@ function renderJobs(payload) {
     if (image) {
       visual.classList.toggle("is-batch", images.length > 1);
       for (const [index, resultImage] of images.entries()) {
+        const item = document.createElement("div");
+        item.className = "job-image-item";
         const link = document.createElement("a");
         link.href = resultImage.contentUrl;
         link.target = "_blank";
@@ -980,7 +982,16 @@ function renderJobs(payload) {
         preview.alt = `${index + 1}번째 생성 결과`;
         preview.loading = "lazy";
         link.append(preview);
-        visual.append(link);
+        item.append(link);
+        if (job.regeneratable) {
+          const regenerate = document.createElement("button");
+          regenerate.type = "button";
+          regenerate.className = "job-regenerate";
+          regenerate.textContent = "↻ 그대로 재생성";
+          regenerate.addEventListener("click", () => regenerateJob(job, resultImage.slot ?? index + 1, regenerate));
+          item.append(regenerate);
+        }
+        visual.append(item);
       }
     } else {
       const pulse = document.createElement("span");
@@ -1019,6 +1030,20 @@ function renderJobs(payload) {
     meta.textContent = `${job.progress.completed}/${job.progress.total} · ${formatDuration(job.durationMs)} · ${formatDateTime(job.startedAt)}`;
 
     body.append(top, facts, message, meta);
+    if (job.regeneratable && !images.length) {
+      const failedActions = document.createElement("div");
+      failedActions.className = "job-failed-actions";
+      const slots = job.failedSlots?.length ? job.failedSlots : [1];
+      for (const slot of slots) {
+        const regenerate = document.createElement("button");
+        regenerate.type = "button";
+        regenerate.className = "job-regenerate";
+        regenerate.textContent = slots.length > 1 ? `↻ ${slot}번 그대로 재생성` : "↻ 그대로 재생성";
+        regenerate.addEventListener("click", () => regenerateJob(job, slot, regenerate));
+        failedActions.append(regenerate);
+      }
+      body.append(failedActions);
+    }
     if (job.prompt) {
       const prompt = document.createElement("details");
       prompt.className = "job-prompt";
@@ -1050,6 +1075,34 @@ function renderJobs(payload) {
     }
     card.append(visual, body);
     elements.jobsList.append(card);
+  }
+}
+
+async function regenerateJob(job, slot, button) {
+  const confirmed = window.confirm(
+    "기존 이미지를 레퍼런스로 사용하지 않고, 저장된 프롬프트·인물·화풍 설정 그대로 새 이미지 1장을 생성할까요?",
+  );
+  if (!confirmed) return;
+  button.disabled = true;
+  button.textContent = "재생성 요청 중…";
+  try {
+    const response = await fetch(
+      `/api/images/generation-jobs/${encodeURIComponent(job.id)}/regenerate`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ confirmation: "regenerate-same-settings", slot }),
+      },
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "재생성을 시작하지 못했습니다.");
+    button.textContent = "✓ 새 작업 시작됨";
+    loadJobs();
+    pollGeneration(result.id);
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = "↻ 그대로 재생성";
+    window.alert(error.message);
   }
 }
 

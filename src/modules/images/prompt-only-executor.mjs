@@ -256,6 +256,41 @@ export function createPromptOnlyExecutor({
     }
   }
 
+  async function regenerate(id, { slot = 1 } = {}) {
+    const safeId = validateId(id);
+    const original = await readJob(safeId);
+    if (!["complete", "failed"].includes(original.status) || !PURPOSES.has(original.purpose)) {
+      throw executionError("JOB_NOT_REGENERATABLE", "완료되거나 실패한 작업만 그대로 재생성할 수 있습니다.");
+    }
+    const count = Math.max(1, Math.min(10, Number(original.count) || 1));
+    const safeSlot = Number(slot);
+    if (!Number.isInteger(safeSlot) || safeSlot < 1 || safeSlot > count) {
+      throw executionError("INVALID_SLOT", "재생성할 이미지 번호가 올바르지 않습니다.");
+    }
+    let characters = original.characters;
+    if (
+      original.batchMode === "per-character" &&
+      original.characters?.mode === "custom" &&
+      Array.isArray(original.characters.ids)
+    ) {
+      const characterId = original.characters.ids[safeSlot - 1];
+      if (!characterId) throw executionError("INVALID_SLOT", "재생성할 인물을 찾을 수 없습니다.");
+      characters = { mode: "custom", ids: [characterId] };
+    }
+    const draft = await draftStore.create({
+      prompt: original.prompt,
+      purpose: original.purpose,
+      mode: "new",
+      sourceImageId: null,
+      characters,
+      style: original.style,
+      useImageAnchors: original.useImageAnchors === true,
+      batch: { mode: "single", count: 1 },
+    });
+    const started = await start(draft.id, { confirmation: SINGLE_CONFIRMATION });
+    return Object.freeze({ ...started, regeneratedFrom: safeId, slot: safeSlot });
+  }
+
   async function normalizeJob(job, currentTime = now()) {
     const id = validateId(job.id);
     const startedAtMs = Date.parse(job.startedAt ?? job.createdAt ?? "");
@@ -310,8 +345,21 @@ export function createPromptOnlyExecutor({
       for (const output of job.outputs.slice(0, 10)) {
         if (!path.isAbsolute(output ?? "")) continue;
         const image = await archive.findByTarget(output);
-        if (image) images.push(image.record);
+        if (image) {
+          const numbered = path.basename(output).match(/^(\d{1,2})\./u);
+          const slot = numbered ? Number(numbered[1]) : images.length + 1;
+          images.push(Object.freeze({ ...image.record, slot }));
+        }
       }
+    }
+    const failedSlots = Array.isArray(job.imageMetrics)
+      ? job.imageMetrics
+          .filter((item) => item?.status === "failed")
+          .map((item) => Number(item.number))
+          .filter((number) => Number.isInteger(number) && number >= 1 && number <= count)
+      : [];
+    if (status === "failed" && failedSlots.length === 0 && images.length === 0) {
+      failedSlots.push(...Array.from({ length: count }, (_, index) => index + 1));
     }
     return Object.freeze({
       id,
@@ -335,6 +383,8 @@ export function createPromptOnlyExecutor({
       styleMode: job.style?.mode ?? "unknown",
       useImageAnchors: typeof job.useImageAnchors === "boolean" ? job.useImageAnchors : null,
       images: Object.freeze(images),
+      failedSlots: Object.freeze([...new Set(failedSlots)]),
+      regeneratable: ["complete", "failed"].includes(rawStatus) && PURPOSES.has(job.purpose),
       message:
         stage === "complete"
           ? `이미지 ${count}장 생성 완료`
@@ -394,7 +444,7 @@ export function createPromptOnlyExecutor({
     });
   }
 
-  return Object.freeze({ start, status, list });
+  return Object.freeze({ regenerate, start, status, list });
 }
 
 export { defaultLaunch, HUB_IMAGE_MAX_CONCURRENCY };

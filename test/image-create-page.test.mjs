@@ -85,6 +85,9 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(scriptBody, /prompt-only/);
     assert.match(scriptBody, /generate-one-draft-image/);
     assert.match(scriptBody, /generate-draft-image-batch/);
+    assert.match(scriptBody, /regenerate-same-settings/);
+    assert.match(scriptBody, /그대로 재생성/);
+    assert.match(scriptBody, /기존 이미지를 레퍼런스로 사용하지 않고/);
     assert.match(scriptBody, /MAX_BATCH_IMAGES = 10/);
     assert.match(scriptBody, /선택 인물로 1장 실제 생성/);
     assert.match(scriptBody, /MAX_CUSTOM_CHARACTERS = 6/);

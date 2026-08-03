@@ -187,6 +187,43 @@ test("인물 없는 10장 변주 배치는 한 작업으로 worker에 전달한�
   });
 });
 
+test("인물별 배치의 한 슬롯을 소스 이미지 없이 같은 설정으로 재생성한다", async () => {
+  await fixture(async ({ drafts, executor, jobRoot, launches }) => {
+    const draft = await drafts.create({
+      prompt: "각자 같은 우산을 들고 다른 골목에 선다",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: SOURCE_ID,
+      characters: { mode: "custom", ids: ["pink-bridge", "헤일라"] },
+      style: { mode: "selected", id: "calm" },
+      useImageAnchors: true,
+      batch: { mode: "per-character", count: 2 },
+    });
+    await executor.start(draft.id, { confirmation: "generate-draft-image-batch" });
+    const originalPath = path.join(jobRoot, `${draft.id}.json`);
+    const original = JSON.parse(await readFile(originalPath, "utf8"));
+    await writeFile(originalPath, JSON.stringify({
+      ...original,
+      status: "failed",
+      failedAt: "2026-08-03T10:00:00.000Z",
+      imageMetrics: [{ number: 2, status: "failed" }],
+    }), "utf8");
+
+    const regenerated = await executor.regenerate(draft.id, { slot: 2 });
+    assert.equal(regenerated.regeneratedFrom, draft.id);
+    assert.equal(regenerated.slot, 2);
+    assert.equal(launches.length, 2);
+    const retry = JSON.parse(await readFile(path.join(jobRoot, `${regenerated.id}.json`), "utf8"));
+    assert.equal(retry.count, 1);
+    assert.equal(retry.sourceImageId, null);
+    assert.deepEqual(retry.characters, { mode: "custom", ids: ["헤일라"] });
+    assert.deepEqual(retry.style, { mode: "selected", id: "calm", ids: ["calm"] });
+    assert.equal(retry.prompt, original.prompt);
+    assert.equal(retry.useImageAnchors, true);
+    await assert.rejects(() => executor.regenerate(draft.id, { slot: 3 }), /번호가 올바르지/);
+  });
+});
+
 test("완료 작업은 안전한 프롬프트와 선택 자산, 결과 이미지 카드를 제공한다", async () => {
   await fixture(async ({ drafts, executor, jobRoot, outputRoot }) => {
     const draft = await drafts.create({

@@ -69,3 +69,26 @@ test("배치 실행 API는 별도 확인값을 executor에 전달한다", async 
     assert.deepEqual(received, { id: ID, options: { confirmation: "generate-draft-image-batch" } });
   });
 });
+
+test("동일 설정 재생성 API는 이미지 슬롯과 정확한 확인값을 요구한다", async () => {
+  let received = null;
+  await withServer({
+    async regenerate(id, options) {
+      received = { id, options };
+      return { id: "d".repeat(32), status: "processing", count: 1, regeneratedFrom: id, slot: options.slot };
+    },
+  }, async (baseUrl) => {
+    const headers = { origin: baseUrl, "sec-fetch-site": "same-origin", "content-type": "application/json" };
+    const bad = await fetch(`${baseUrl}/api/images/generation-jobs/${ID}/regenerate`, {
+      method: "POST", headers, body: JSON.stringify({ confirmation: "regenerate-same-settings" }),
+    });
+    assert.equal(bad.status, 400);
+    const response = await fetch(`${baseUrl}/api/images/generation-jobs/${ID}/regenerate`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ confirmation: "regenerate-same-settings", slot: 2 }),
+    });
+    assert.equal(response.status, 202);
+    assert.deepEqual(received, { id: ID, options: { slot: 2 } });
+  });
+});
