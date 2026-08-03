@@ -62,6 +62,57 @@ test("공식 소스는 첫 실행을 기준선으로 삼고 이후 릴리스만 
   }
 });
 
+test("공식 GitHub 릴리스는 제품명을 제목에 붙이고 Markdown을 평문으로 정리한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-official-title-"));
+  const sdkSource = { ...source, id: "openai-agents-js-releases", repository: "openai/openai-agents-js" };
+  let payload = [release(20, "7.3.0")];
+  const collector = createOfficialNewsCollector({
+    stateRoot: root,
+    sources: [sdkSource],
+    now: () => new Date("2026-08-03T02:00:00Z"),
+    async fetchImpl() { return new Response(JSON.stringify(payload), { status: 200 }); },
+  });
+  try {
+    await collector.collectAll();
+    payload = [{ ...release(21, "7.4.0"), name: "7.4.0", body: "### Features\n\n* **agents:** add a new session API" }, ...payload];
+    const result = await collector.collectAll();
+    const saved = await createPendingNewsStore({ root }).read(result.ids[0]);
+    assert.match(saved.original.content, /^OpenAI Agents SDK JavaScript 7\.4\.0/mu);
+    assert.match(saved.original.content, /Features\n\n• agents: add a new session API/u);
+    assert.doesNotMatch(saved.original.content, /###|\*\*/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("의존성과 빌드 설정만 바뀐 공식 릴리스는 대기함에 만들지 않는다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-official-maintenance-"));
+  let payload = [release(30, "7.3.0")];
+  const collector = createOfficialNewsCollector({
+    stateRoot: root,
+    sources: [source],
+    now: () => new Date("2026-08-03T02:00:00Z"),
+    async fetchImpl() { return new Response(JSON.stringify(payload), { status: 200 }); },
+  });
+  try {
+    await collector.collectAll();
+    payload = [{
+      ...release(31, "7.4.0"),
+      name: "7.4.0",
+      body: "### Build System\n\n* **deps-dev:** bump @smithy/hash-node from 4.3.5 to 4.4.15\n* release workflow moved to upstream release-please",
+    }, ...payload];
+    const result = await collector.collectAll();
+    assert.equal(result.created, 0);
+    assert.equal(result.filtered, 1);
+    assert.deepEqual(result.ids, []);
+    const repeated = await collector.collectAll();
+    assert.equal(repeated.filtered, 0);
+    assert.equal(repeated.created, 0);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("공식 Markdown 변경 기록도 최초 항목을 게시하지 않고 기준선에 보관한다", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-official-docs-"));
   const docsSource = {

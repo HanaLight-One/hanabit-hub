@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 const STORY_WINDOW_MS = 24 * 60 * 60 * 1000;
 const BURST_WINDOW_MS = 15 * 60 * 1000;
-const USE_CASE_WINDOW_MS = 6 * 60 * 60 * 1000;
+const USE_CASE_WINDOW_MS = 4 * 60 * 60 * 1000;
 const STOP_WORDS = new Set([
   "about", "after", "again", "also", "and", "are", "chatgpt", "for", "from", "has", "have",
   "into", "more", "openai", "that", "the", "their", "this", "using", "with", "your",
@@ -170,7 +170,7 @@ export function applyNewsEditorialShadow(items) {
         burstById.set(node.item.id, result(
           "hold",
           "use_case_cooldown",
-          "최근 사례 게시 후 6시간이 지나지 않아 허브에 보관해요.",
+          "최근 사례 게시 후 4시간이 지나지 않아 허브에 보관해요.",
         ));
         continue;
       }

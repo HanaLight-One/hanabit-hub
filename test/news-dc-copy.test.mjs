@@ -51,8 +51,8 @@ test("DC 뉴스 원고는 태그·번역·AI 해설·출처를 결정적으로 �
   assert.doesNotMatch(draft.bodyText, /주요 분야:|출처 구분:|소속 확인:/u);
   assert.match(draft.bodyText, /본문 번역\nChatGPT로 반복 작업/u);
   assert.match(draft.bodyText, /관련 글 번역 · OpenAI/u);
-  assert.match(draft.bodyText, /관련 글 첫 문단\n\n- 첫 항목\n\n- 둘째 항목/u);
-  assert.match(draft.bodyHtml, /관련 글 첫 문단<\/p><p><br><\/p><p[^>]*>- 첫 항목<\/p>/u);
+  assert.match(draft.bodyText, /관련 글 첫 문단\n\n• 첫 항목\n\n• 둘째 항목/u);
+  assert.match(draft.bodyHtml, /관련 글 첫 문단<\/p><p><br><\/p><p[^>]*>• 첫 항목<\/p>/u);
   assert.match(draft.bodyText, /왜 중요한가/u);
   assert.match(draft.bodyText, /다른 환경에서도 동일하게 재현되는지는 원문만으로 확인되지 않았습니다/u);
   assert.doesNotMatch(draft.bodyText, /쓰세요|프레이밍하세요/u);
@@ -78,6 +78,29 @@ test("DC 뉴스 원고는 결합문자가 남으면 실제 게시 준비를 막�
   const draft = composeNewsDcCopy(sample);
   assert.equal(draft.preflight.ready, false);
   assert.equal(draft.preflight.combiningMarkCount, 1);
+});
+
+test("DC 뉴스 원고는 번역 응답에 남은 Markdown 표식을 평문으로 정리한다", () => {
+  const sample = record();
+  sample.workflow.translation.title = "### 7.4.0";
+  sample.workflow.translation.body = "### 빌드 시스템\n\n* **deps:** dotenv 업데이트";
+  const draft = composeNewsDcCopy(sample);
+  assert.equal(draft.title, "[사례] 7.4.0");
+  assert.match(draft.bodyText, /빌드 시스템\n\n• deps: dotenv 업데이트/u);
+  assert.doesNotMatch(draft.bodyText, /###|\*\*/u);
+});
+
+test("공식 GitHub 릴리스 제목에는 제품명을 결정적으로 붙인다", () => {
+  const sample = record();
+  sample.source = {
+    type: "official-github-release",
+    repository: "openai/openai-agents-js",
+    url: "https://github.com/openai/openai-agents-js/releases/tag/v7.4.0",
+  };
+  sample.workflow.translation.title = "7.4.0";
+  sample.workflow.triage.evidenceTag = "official";
+  const draft = composeNewsDcCopy(sample);
+  assert.equal(draft.title, "[공식] OpenAI Agents SDK JavaScript 7.4.0");
 });
 
 test("원문 이미지가 없을 때만 기본 커버를 이미지 수에 포함한다", () => {

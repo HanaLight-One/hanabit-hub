@@ -77,7 +77,7 @@ test("중요도 높은 확정 정보는 연속 게시 제한을 통과하지만 
   assert.equal(items[1].workflow.editorialShadow.decision, "hold");
 });
 
-test("최근 사례 게시 뒤 6시간 동안 새 사례는 보관하지만 정보성 유추는 계속 후보가 된다", () => {
+test("최근 사례 게시 뒤 4시간 동안 새 사례는 보관하지만 정보성 유추는 계속 후보가 된다", () => {
   const items = applyNewsEditorialShadow([
     item("12", {
       evidenceTag: "use_case",
@@ -111,6 +111,30 @@ test("최근 사례 게시 뒤 6시간 동안 새 사례는 보관하지만 정�
   assert.equal(items[1].workflow.editorialShadow.decision, "hold");
   assert.equal(items[1].workflow.editorialShadow.code, "use_case_cooldown");
   assert.equal(items[2].workflow.editorialShadow.decision, "ready");
+});
+
+test("최근 사례 게시 후 4시간이 지나면 다음 중요 사례를 게시 후보로 돌린다", () => {
+  const items = applyNewsEditorialShadow([
+    item("15", {
+      evidenceTag: "use_case",
+      importance: "high",
+      publishedAt: "2026-08-02T04:00:00Z",
+      publicationAt: "2026-08-02T04:05:00Z",
+      gate: "blocked",
+      gateCode: "already_handled",
+      title: "이미지 편집 활용 사례",
+      body: "이미지 편집 작업을 자동화했습니다.",
+    }),
+    item("16", {
+      evidenceTag: "use_case",
+      importance: "high",
+      publishedAt: "2026-08-02T08:06:00Z",
+      processedAt: "2026-08-02T08:07:00Z",
+      title: "고객 지원 활용 사례",
+      body: "고객 지원 문서를 자동으로 분류했습니다.",
+    }),
+  ]);
+  assert.equal(items[1].workflow.editorialShadow.decision, "ready");
 });
 
 test("유추는 Codex 검토 전에는 대기하고 비게시 항목은 허브에만 남긴다", () => {

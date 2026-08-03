@@ -24,9 +24,34 @@ const UNCONFIRMED_TEXTS = Object.freeze({
 });
 const EMOJI_PATTERN = /\p{Extended_Pictographic}|\p{Regional_Indicator}|[\u{FE0F}\u{200D}\u{20E3}]/gu;
 const COMBINING_MARK_PATTERN = /\p{M}/gu;
+const OFFICIAL_RELEASE_LABELS = Object.freeze({
+  "openai/codex": "Codex",
+  "openai/openai-python": "OpenAI Python SDK",
+  "openai/openai-node": "OpenAI Node.js SDK",
+  "openai/openai-agents-python": "OpenAI Agents SDK Python",
+  "openai/openai-agents-js": "OpenAI Agents SDK JavaScript",
+});
 
 function safeText(value, maximum = 8_000) {
   return String(value ?? "").replace(/\r\n?/gu, "\n").trim().slice(0, maximum);
+}
+
+function stripMarkdownArtifacts(value) {
+  return String(value ?? "")
+    .replace(/^[ \t]*[-*+][ \t]+/gmu, "• ")
+    .replace(/^#{1,6}\s+/gmu, "")
+    .replace(/\*\*([^*]+)\*\*/gu, "$1")
+    .replace(/__([^_]+)__/gu, "$1")
+    .replace(/`([^`\n]+)`/gu, "$1")
+    .replace(/^[ \t]*[-*_]{3,}[ \t]*$/gmu, "");
+}
+
+function releaseAwareTitle(record, value) {
+  const title = String(value ?? "").trim();
+  if (record?.source?.type !== "official-github-release") return title;
+  const label = OFFICIAL_RELEASE_LABELS[record.source.repository];
+  if (!label || title.toLocaleLowerCase("en-US").includes(label.toLocaleLowerCase("en-US"))) return title;
+  return `${label} ${title}`;
 }
 
 function stripEmoji(value) {
@@ -69,7 +94,7 @@ function sourceLinks(record) {
 }
 
 function cleanLine(value, counter) {
-  const result = stripEmoji(value);
+  const result = stripEmoji(stripMarkdownArtifacts(value));
   counter.removed += result.removed;
   return result.text;
 }
@@ -97,7 +122,10 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
 
   const counter = { removed: 0 };
   const evidenceLabel = EVIDENCE_LABELS[record.workflow.triage.evidenceTag] ?? "확인 필요";
-  const translatedTitle = cleanLine(record.workflow.translation.title || "제목 없음", counter);
+  const translatedTitle = cleanLine(
+    releaseAwareTitle(record, record.workflow.translation.title || "제목 없음"),
+    counter,
+  );
   const title = [...`[${evidenceLabel}] ${translatedTitle}`].slice(0, 80).join("").trim();
   const profile = findNewsSourceProfile(record.source, sourceProfiles);
   const headText = selectNewsDcHeadText(record, profile);

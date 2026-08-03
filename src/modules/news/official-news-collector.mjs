@@ -7,6 +7,16 @@ const SOURCE_ID = /^[a-z0-9][a-z0-9-]{0,79}$/u;
 const REPOSITORY = /^openai\/[A-Za-z0-9._-]{1,80}$/u;
 const SOURCE_TYPES = new Set(["github-releases", "markdown-changelog"]);
 const OFFICIAL_DOC_HOSTS = new Set(["developers.openai.com", "learn.chatgpt.com"]);
+const REPOSITORY_LABELS = Object.freeze({
+  "openai/codex": "Codex",
+  "openai/openai-python": "OpenAI Python SDK",
+  "openai/openai-node": "OpenAI Node.js SDK",
+  "openai/openai-agents-python": "OpenAI Agents SDK Python",
+  "openai/openai-agents-js": "OpenAI Agents SDK JavaScript",
+});
+const MAINTENANCE_HEADING = /^(?:build system|build|dependencies|dependency updates?|deps|chores?|maintenance|internal|ci(?:\/cd)?|tests?)$/iu;
+const GENERIC_RELEASE_HEADING = /^(?:what'?s changed|changelog|release notes?|v?\d+(?:\.\d+){1,3}(?:\s.*)?)$/iu;
+const MAINTENANCE_LINE = /(?:\bdeps(?:-dev)?\b|dependabot|\bbump(?:ed)?\b|\bbuild\b|release workflow|upstream release-please|ecosystem-tests|\bchore\b|\bci\b)/iu;
 
 function safeUrl(value, allowedHosts = null) {
   const target = new URL(String(value ?? ""));
@@ -78,8 +88,36 @@ function cleanMarkdown(value) {
     .replace(/!\[[^\]]*\]\([^)]+\)/gu, "")
     .replace(/\[([^\]]+)\]\([^)]+\)/gu, "$1")
     .replace(/^>\s?/gmu, "")
+    .replace(/^[ \t]*[-*+][ \t]+/gmu, "• ")
+    .replace(/^#{1,6}\s+/gmu, "")
+    .replace(/\*\*([^*]+)\*\*/gu, "$1")
+    .replace(/__([^_]+)__/gu, "$1")
+    .replace(/`([^`\n]+)`/gu, "$1")
+    .replace(/^[ \t]*[-*_]{3,}[ \t]*$/gmu, "")
     .trim()
     .slice(0, 12_000);
+}
+
+function releaseTitle(repository, release) {
+  const rawTitle = String(release.name || release.tag_name || "Release").trim().slice(0, 200);
+  const label = REPOSITORY_LABELS[repository] ?? repository.split("/").at(-1);
+  return rawTitle.toLocaleLowerCase("en-US").includes(label.toLocaleLowerCase("en-US"))
+    ? rawTitle
+    : `${label} ${rawTitle}`.slice(0, 200);
+}
+
+function isMaintenanceOnlyRelease(value) {
+  const raw = String(value ?? "").replace(/\r\n?/gu, "\n");
+  const headings = raw.split("\n")
+    .map((line) => line.match(/^#{2,6}\s+(.+)$/u)?.[1]?.replace(/\[([^\]]+)\]\([^)]+\)/gu, "$1").trim())
+    .filter(Boolean)
+    .filter((heading) => !GENERIC_RELEASE_HEADING.test(heading));
+  if (headings.length && headings.every((heading) => MAINTENANCE_HEADING.test(heading))) return true;
+
+  const contentLines = raw.split("\n")
+    .map((line) => line.replace(/^[ \t]*[-*+][ \t]+/u, "").trim())
+    .filter((line) => line && !/^#{1,6}\s+/u.test(line) && !/^full changelog\s*:/iu.test(line));
+  return contentLines.length >= 2 && contentLines.every((line) => MAINTENANCE_LINE.test(line));
 }
 
 function markdownSections(markdown, source, now) {
@@ -136,8 +174,9 @@ async function fetchEntries(source, fetchImpl, now) {
     if (!Array.isArray(payload)) throw new Error("GitHub Releases 응답 형식이 올바르지 않습니다.");
     return payload.filter((release) => !release?.draft && !release?.prerelease).map((release) => ({
       externalId: String(release.id),
-      title: String(release.name || release.tag_name || "Release").trim().slice(0, 200),
+      title: releaseTitle(source.repository, release),
       content: cleanMarkdown(release.body || `${release.tag_name} release`),
+      maintenanceOnly: isMaintenanceOnlyRelease(release.body),
       url: safeUrl(release.html_url, new Set(["github.com"])),
       publishedAt: new Date(release.published_at || release.created_at || now()).toISOString(),
       links: [safeUrl(release.html_url, new Set(["github.com"]))],
@@ -202,7 +241,7 @@ export function createOfficialNewsCollector({ stateRoot, sources, fetchImpl = fe
 
   async function collectAll({ dryRun = false } = {}) {
     const checkpoint = await readCheckpoint(checkpointPath);
-    const summary = { sources: sources.length, scanned: 0, baselined: 0, existing: 0, created: 0, failed: 0, ids: [] };
+    const summary = { sources: sources.length, scanned: 0, baselined: 0, existing: 0, filtered: 0, created: 0, failed: 0, ids: [] };
     for (const source of sources) {
       try {
         const entries = await fetchEntries(source, fetchImpl, now);
@@ -220,6 +259,11 @@ export function createOfficialNewsCollector({ stateRoot, sources, fetchImpl = fe
         const seen = new Set(previous);
         const unseen = entries.filter((entry) => !seen.has(entry.externalId)).reverse();
         for (const entry of unseen) {
+          if (entry.maintenanceOnly) {
+            summary.filtered += 1;
+            if (!dryRun) seen.add(entry.externalId);
+            continue;
+          }
           const record = recordFor(source, entry, now);
           if (await store.has(record.id)) {
             summary.existing += 1;
