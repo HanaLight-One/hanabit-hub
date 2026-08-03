@@ -1,0 +1,18 @@
+--- a/build_manifest.py
++++ b/build_manifest.py
+@@ -409,8 +409,13 @@ def build_manifest(target_date: date, force: bool) -> tuple[dict[str, Any], bool]:
+         name
+         for name, character in index["characters"].items()
+         if character["source"] == "main"
+     }
+-    text_names = set(index["characters"])
+-    guest_names = text_names - main_names
++    guest_names = {
++        name
++        for name, character in index["characters"].items()
++        if character["source"] == "special_guest"
++        and character.get("guest_scope", "aether") == "aether"
++    }
++    text_names = main_names | guest_names
+     image_names = set(index["image_anchors"]) & main_names
+     relationship_graph = index["relationship_graph"]

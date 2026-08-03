@@ -54,6 +54,8 @@ Image Studio의 코드는 Hanabit Hub 저장소에서 관리하되 운영 데이
 다중 인물 파서는 `patches/daily-image-pipeline-special-guests.patch`로, 같은 세계관·세계관 밖
 파일 분리와 이름별 폴더 자산 연결은 `patches/daily-image-pipeline-guest-scopes.patch`로 재현한다.
 자산 색인은 원본 경로를 외부에 노출하지 않고 `guest_scope`만 허브의 안전한 표시 그룹으로 변환한다.
+세계관 밖 게스트를 기존 오테 자동 추첨에서 제외하는 운영 경계는
+`patches/daily-image-pipeline-outside-guest-guard.patch`로 재현한다.
 | 무료 텍스트 runner | `generation.freeTextRunnerPath` | 장면 JSON 생성 |
 | Responses bridge | `generation.codexResponsesBridgePath` | ChatGPT Codex 이미지 도구 연결 |
 

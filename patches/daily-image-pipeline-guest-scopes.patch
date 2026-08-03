@@ -67,8 +67,8 @@
 +def parse_guest_characters(
 +    text: str,
 +    *,
-+    source_path: Path,
-+    guest_scope: str,
++    source_path: Path = GUEST_ANCHOR_PATHS["aether"],
++    guest_scope: str = "aether",
 +) -> dict[str, Any]:
      name_markers = list(
          re.finditer(r"(?m)^(?:\[[^\n]+\]\s*\n)?이름:\s*(.+?)\s*$", text)
