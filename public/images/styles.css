@@ -381,6 +381,23 @@ h1 em { color: var(--accent); font-style: normal; }
   cursor: pointer;
 }
 
+.prompt-copy {
+  float: right;
+  margin: -5px 0 -5px 12px;
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.prompt-copy:hover,
+.prompt-copy:focus-visible { border-color: var(--accent); color: var(--accent); }
+
 .prompt-record pre {
   max-height: 320px;
   margin: 0;

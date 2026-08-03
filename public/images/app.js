@@ -21,12 +21,39 @@ const elements = {
   productionRecord: document.querySelector("#production-record"),
   promptRecord: document.querySelector("#prompt-record"),
   promptSummary: document.querySelector("#prompt-summary"),
+  promptCopy: document.querySelector("#prompt-copy"),
   promptText: document.querySelector("#prompt-text"),
   createLink: document.querySelector("#create-link"),
   originalLink: document.querySelector("#original-link"),
   downloadLink: document.querySelector("#download-link"),
   trashButton: document.querySelector("#trash-button"),
 };
+
+async function copyText(value, button) {
+  const text = String(value ?? "");
+  if (!text) return;
+  const original = button.textContent;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const helper = document.createElement("textarea");
+      helper.value = text;
+      helper.setAttribute("readonly", "");
+      helper.style.position = "fixed";
+      helper.style.opacity = "0";
+      document.body.append(helper);
+      helper.select();
+      const copied = document.execCommand("copy");
+      helper.remove();
+      if (!copied) throw new Error("copy failed");
+    }
+    button.textContent = "복사됨";
+  } catch {
+    button.textContent = "복사 실패";
+  }
+  setTimeout(() => { button.textContent = original; }, 1_500);
+}
 
 const state = {
   images: [],
@@ -392,6 +419,12 @@ elements.promptRecord.addEventListener("toggle", () => {
   elements.promptSummary.textContent = elements.promptRecord.open
     ? `${length}자 프롬프트 접기`
     : `${length}자 프롬프트 펼치기`;
+});
+
+elements.promptCopy.addEventListener("click", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  copyText(elements.promptText.textContent, elements.promptCopy);
 });
 
 function openPanel(image, trigger) {

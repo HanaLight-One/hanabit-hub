@@ -7,10 +7,10 @@
     <meta name="theme-color" content="#090c10" />
     <meta name="description" content="하나빛 허브의 읽기 전용 이미지 아카이브" />
     <title>이미지 아카이브 · Hanabit Hub</title>
-    <link rel="stylesheet" href="/images/styles.css?v=20260802-upload-trash" />
+    <link rel="stylesheet" href="/images/styles.css?v=20260803-prompt-copy" />
     <link rel="stylesheet" href="/codex-usage-indicator.css" />
     <script src="/codex-usage-indicator.js" type="module"></script>
-    <script src="/images/app.js?v=20260802-upload-trash" type="module"></script>
+    <script src="/images/app.js?v=20260803-prompt-copy" type="module"></script>
   </head>
   <body>
     <header class="topbar">
@@ -106,7 +106,10 @@
         <p id="record-message">제작 기록을 확인하는 중이에요.</p>
         <dl id="production-record" class="record-list"></dl>
         <details id="prompt-record" class="prompt-record" hidden>
-          <summary id="prompt-summary">사용한 프롬프트 펼치기</summary>
+          <summary>
+            <span id="prompt-summary">사용한 프롬프트 펼치기</span>
+            <button id="prompt-copy" class="prompt-copy" type="button">복사</button>
+          </summary>
           <pre id="prompt-text"></pre>
         </details>
       </section>

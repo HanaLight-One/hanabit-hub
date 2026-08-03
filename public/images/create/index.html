@@ -8,10 +8,10 @@
     <meta name="description" content="하나빛 이미지 추가생성 초안실" />
     <title>추가 이미지 생성실 · Hanabit Hub</title>
     <link rel="stylesheet" href="/images/styles.css" />
-    <link rel="stylesheet" href="/images/create/styles.css?v=20260803-regenerate" />
+    <link rel="stylesheet" href="/images/create/styles.css?v=20260803-prompt-copy" />
     <link rel="stylesheet" href="/codex-usage-indicator.css" />
     <script src="/codex-usage-indicator.js" type="module"></script>
-    <script src="/images/create/app.js?v=20260803-regenerate" type="module"></script>
+    <script src="/images/create/app.js?v=20260803-prompt-copy" type="module"></script>
   </head>
   <body>
     <header class="topbar">
@@ -190,7 +190,10 @@
             <dt>장면 요청</dt>
             <dd class="preview-scene-cell">
               <details id="preview-scene-details" class="preview-scene-details">
-                <summary id="preview-scene-summary">프롬프트 펼치기</summary>
+                <summary>
+                  <span id="preview-scene-summary">프롬프트 펼치기</span>
+                  <button id="preview-scene-copy" class="prompt-copy" type="button">복사</button>
+                </summary>
                 <p id="preview-scene">왼쪽에서 장면을 적어주세요.</p>
               </details>
             </dd>

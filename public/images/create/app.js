@@ -69,6 +69,7 @@ const elements = {
   previewImageAnchors: document.querySelector("#preview-image-anchors"),
   previewSceneDetails: document.querySelector("#preview-scene-details"),
   previewSceneSummary: document.querySelector("#preview-scene-summary"),
+  previewSceneCopy: document.querySelector("#preview-scene-copy"),
   previewScene: document.querySelector("#preview-scene"),
   previewRoute: document.querySelector("#preview-route"),
   previewMessage: document.querySelector("#preview-message"),
@@ -101,6 +102,32 @@ let savedExecutionMode = null;
 let savedBatchCount = 1;
 let purposeTouched = false;
 let sourceImages = null;
+
+async function copyText(value, button) {
+  const text = String(value ?? "");
+  if (!text) return;
+  const original = button.textContent;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const helper = document.createElement("textarea");
+      helper.value = text;
+      helper.setAttribute("readonly", "");
+      helper.style.position = "fixed";
+      helper.style.opacity = "0";
+      document.body.append(helper);
+      helper.select();
+      const copied = document.execCommand("copy");
+      helper.remove();
+      if (!copied) throw new Error("copy failed");
+    }
+    button.textContent = "복사됨";
+  } catch {
+    button.textContent = "복사 실패";
+  }
+  setTimeout(() => { button.textContent = original; }, 1_500);
+}
 
 function formatDateTime(value) {
   const date = new Date(value);
@@ -845,6 +872,7 @@ elements.form.addEventListener("submit", (event) => {
     ? `${scene.length.toLocaleString("ko-KR")}자 프롬프트 펼치기`
     : "빈 프롬프트 펼치기";
   elements.previewSceneDetails.open = false;
+  elements.previewSceneCopy.disabled = !scene;
   elements.previewRoute.textContent =
     route === "prompt-only"
       ? styleSelection.mode === "selected"
@@ -904,6 +932,12 @@ elements.previewSceneDetails.addEventListener("toggle", () => {
   elements.previewSceneSummary.textContent = elements.previewSceneDetails.open
     ? `${length.toLocaleString("ko-KR")}자 프롬프트 접기`
     : `${length.toLocaleString("ko-KR")}자 프롬프트 펼치기`;
+});
+
+elements.previewSceneCopy.addEventListener("click", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  copyText(elements.previewScene.textContent, elements.previewSceneCopy);
 });
 
 async function pollGeneration(id) {
@@ -1068,9 +1102,20 @@ function renderJobs(payload) {
       const prompt = document.createElement("details");
       prompt.className = "job-prompt";
       const summary = document.createElement("summary");
-      summary.textContent = `${job.prompt.length.toLocaleString("ko-KR")}자 프롬프트 보기`;
+      const summaryText = document.createElement("span");
+      summaryText.textContent = `${job.prompt.length.toLocaleString("ko-KR")}자 프롬프트 보기`;
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "prompt-copy";
+      copy.textContent = "복사";
+      copy.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        copyText(job.prompt, copy);
+      });
       const text = document.createElement("pre");
       text.textContent = job.prompt;
+      summary.append(summaryText, copy);
       prompt.append(summary, text);
       body.append(prompt);
     }

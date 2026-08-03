@@ -35,6 +35,8 @@ test("/images/create가 안전한 추가생성 초안 화면을 제공한다", a
     assert.match(body, /id="preview-route"/);
     assert.match(body, /id="preview-scene-details"/);
     assert.match(body, /id="preview-scene-summary"/);
+    assert.match(body, /id="preview-scene-copy"/);
+    assert.match(body, /20260803-prompt-copy/);
     assert.match(body, /id="execute-button"/);
     assert.match(body, /name="purpose"/);
     assert.match(body, /value="theme-followup"/);
@@ -104,6 +106,8 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(scriptBody, /자동 선택은 실행 시 확정되어 제작 기록에 남아요/);
     assert.match(scriptBody, /자동 화풍으로 1장 실제 생성/);
     assert.match(scriptBody, /previewSceneDetails\.open = false/);
+    assert.match(scriptBody, /navigator\.clipboard/);
+    assert.match(scriptBody, /복사됨/);
     assert.match(scriptBody, /window\.confirm/);
     assert.match(scriptBody, /\/api\/images\/generation-jobs/);
     assert.match(scriptBody, /같은 조합으로/);

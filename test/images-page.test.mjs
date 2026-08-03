@@ -34,8 +34,9 @@ test("/images가 읽기 전용 이미지 화면을 제공한다", async () => {
     assert.match(body, /자유 추가/);
     assert.match(body, /id="generation-status"/);
     assert.match(body, /id="prompt-record"/);
-    assert.match(body, /styles\.css\?v=20260802-upload-trash/);
-    assert.match(body, /app\.js\?v=20260802-upload-trash/);
+    assert.match(body, /id="prompt-copy"/);
+    assert.match(body, /styles\.css\?v=20260803-prompt-copy/);
+    assert.match(body, /app\.js\?v=20260803-prompt-copy/);
     assert.equal(body.includes("삭제"), false);
   });
 });
@@ -55,6 +56,7 @@ test("이미지 화면의 스크립트와 스타일을 제공한다", async () =
     assert.match(scriptBody, /\/api\/images\/generation-jobs/);
     assert.match(scriptBody, /theme-extra/);
     assert.match(scriptBody, /프롬프트 펼치기/);
+    assert.match(scriptBody, /navigator\.clipboard/);
     assert.match(scriptBody, /이미지 앵커/);
     assert.match(scriptBody, /hydrateImageCard/);
     assert.match(scriptBody, /인물 유지/);
