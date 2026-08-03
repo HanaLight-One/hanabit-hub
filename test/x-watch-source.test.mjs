@@ -140,3 +140,39 @@ test("oEmbed 최종 응답이 공식 호스트를 벗어나면 거부한다", as
     },
   }), /허용된 호스트/);
 });
+
+test("oEmbed 긴 글이 말줄임표로 끝나면 X API note_tweet 원문으로 보강한다", async () => {
+  const statusId = "2091234567890123456";
+  const result = await normalizeXWatchMessage({
+    channelId,
+    type: 0,
+    content: `https://x.com/thsottiaux/status/${statusId}`,
+  }, {
+    channelId,
+    allowedHandles,
+    xApiBearerToken: "test-bearer-token",
+    async fetchImpl(url, init = {}) {
+      if (url.hostname === "api.x.com") {
+        assert.equal(url.pathname, `/2/tweets/${statusId}`);
+        assert.equal(url.searchParams.get("tweet.fields"), "note_tweet");
+        assert.equal(init.headers.authorization, "Bearer test-bearer-token");
+        return new Response(JSON.stringify({
+          data: {
+            id: statusId,
+            text: "Short text...",
+            note_tweet: { text: "This is the complete long-form post with every final paragraph." },
+          },
+        }), { status: 200 });
+      }
+      return new Response(JSON.stringify({
+        author_name: "Tibo",
+        author_url: "https://twitter.com/thsottiaux",
+        html: "<blockquote><p>This is the clipped post...</p></blockquote>",
+      }), { status: 200 });
+    },
+  });
+  assert.equal(
+    result.record.original.content,
+    "This is the complete long-form post with every final paragraph.",
+  );
+});

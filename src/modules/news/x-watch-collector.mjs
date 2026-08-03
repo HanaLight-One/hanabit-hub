@@ -6,6 +6,7 @@ export function createXWatchCollector({
   stateRoot,
   channelId,
   allowedHandles,
+  xApiBearerToken = "",
   mediaDownloader = downloadDiscordMedia,
   resolveMessage = normalizeXWatchMessage,
   identifyMessage = (message) => {
@@ -20,7 +21,12 @@ export function createXWatchCollector({
     if (!identified) return { status: "ignored", id: null, mediaCount: 0 };
     if (await store.has(identified.id)) return { status: "existing", id: identified.id, mediaCount: 0 };
     if (dryRun) return { status: "candidate", id: identified.id, mediaCount: 0 };
-    const normalized = await resolveMessage(message, { channelId, allowedHandles, post: identified.post });
+    const normalized = await resolveMessage(message, {
+      channelId,
+      allowedHandles,
+      post: identified.post,
+      xApiBearerToken,
+    });
     if (!normalized || normalized.id !== identified.id) throw new Error("X 뉴스 식별자가 일치하지 않습니다.");
     const result = await store.create(normalized.record, {
       writeMedia: (destination) => mediaDownloader(normalized.mediaCandidates, { destination }),

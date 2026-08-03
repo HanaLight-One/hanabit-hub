@@ -15,6 +15,30 @@ const HANDLE_PATTERN = /^[A-Za-z0-9_]{1,15}$/u;
 const TOPIC_PATTERN = /^[a-z0-9][a-z0-9-]{0,39}$/u;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 
+function looksTruncated(value) {
+  return /(?:\u2026|\.{3})\s*$/u.test(String(value ?? "").trim());
+}
+
+async function fetchFullXPostText(post, { bearerToken, fetchImpl }) {
+  if (!bearerToken || !/^\d{5,25}$/u.test(String(post?.statusId ?? ""))) return null;
+  const endpoint = new URL(`https://api.x.com/2/tweets/${post.statusId}`);
+  endpoint.searchParams.set("tweet.fields", "note_tweet");
+  try {
+    const response = await fetchImpl(endpoint, {
+      headers: { authorization: `Bearer ${bearerToken}` },
+    });
+    if (!response.ok) return null;
+    const text = await response.text();
+    if (text.length > 256_000) return null;
+    const payload = JSON.parse(text);
+    if (String(payload?.data?.id ?? "") !== String(post.statusId)) return null;
+    const fullText = String(payload?.data?.note_tweet?.text ?? payload?.data?.text ?? "").trim();
+    return fullText && fullText.length <= 16_000 ? fullText : null;
+  } catch {
+    return null;
+  }
+}
+
 function decodeHtml(value) {
   return String(value ?? "")
     .replace(/<br\s*\/?\s*>/giu, "\n")
@@ -188,7 +212,7 @@ export function xPostId(post) {
     .slice(0, 32);
 }
 
-export async function fetchXPost(post, { fetchImpl = fetch } = {}) {
+export async function fetchXPost(post, { fetchImpl = fetch, xApiBearerToken = "" } = {}) {
   const endpoint = new URL("https://publish.twitter.com/oembed");
   endpoint.searchParams.set("url", post.url);
   endpoint.searchParams.set("omit_script", "true");
@@ -202,7 +226,7 @@ export async function fetchXPost(post, { fetchImpl = fetch } = {}) {
   if (text.length > 256_000) throw new Error("X 원문 응답이 너무 큽니다.");
   const payload = JSON.parse(text);
   const paragraph = String(payload.html ?? "").match(/<p[^>]*>([\s\S]*?)<\/p>/iu)?.[1];
-  const content = decodeHtml(paragraph);
+  const oembedContent = decodeHtml(paragraph);
   const author = new URL(String(payload.author_url ?? ""));
   if (author.hostname !== "twitter.com" && author.hostname !== "x.com") {
     throw new Error("X 작성자 주소를 확인할 수 없습니다.");
@@ -214,9 +238,12 @@ export async function fetchXPost(post, { fetchImpl = fetch } = {}) {
   if (post.handle.toLowerCase() !== "i" && resolvedHandle.toLowerCase() !== post.handle.toLowerCase()) {
     throw new Error("X 작성자가 등록된 링크와 다릅니다.");
   }
-  if (!content) throw new Error("X 원문이 비어 있습니다.");
+  if (!oembedContent) throw new Error("X 원문이 비어 있습니다.");
+  const fullContent = looksTruncated(oembedContent)
+    ? await fetchFullXPostText(post, { bearerToken: xApiBearerToken, fetchImpl })
+    : null;
   return {
-    content,
+    content: fullContent ?? oembedContent,
     authorName: String(payload.author_name ?? post.handle).slice(0, 80),
     account: resolvedHandle,
     relatedPosts: await relatedPostsFromHtml(payload.html, { fetchImpl, primary: post }),

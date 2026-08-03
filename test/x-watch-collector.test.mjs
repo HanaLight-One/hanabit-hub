@@ -17,13 +17,19 @@ test("X 수집기는 같은 게시물을 한 번만 대기함에 저장한다", 
     record: { id, source: { type: "x-post" }, original: { content: "news" }, workflow: { status: "pending_translation" } },
   };
   let resolves = 0;
+  let receivedBearerToken = "";
   try {
     const collector = createXWatchCollector({
       stateRoot,
       channelId: "1532598778865914067",
       allowedHandles: new Set(["thsottiaux"]),
+      xApiBearerToken: "test-bearer-token",
       identifyMessage() { return { id, post }; },
-      async resolveMessage() { resolves += 1; return normalized; },
+      async resolveMessage(messageInput, options) {
+        resolves += 1;
+        receivedBearerToken = options.xApiBearerToken;
+        return normalized;
+      },
     });
     assert.equal((await collector.collectMessage(message)).status, "created");
     assert.equal((await collector.collectMessage(message)).status, "existing");
@@ -32,6 +38,7 @@ test("X 수집기는 같은 게시물을 한 번만 대기함에 저장한다", 
     assert.deepEqual(summary.ids, [id]);
     assert.equal(await collector.hasPost(post), true);
     assert.equal(resolves, 1);
+    assert.equal(receivedBearerToken, "test-bearer-token");
   } finally {
     await rm(stateRoot, { recursive: true, force: true });
   }

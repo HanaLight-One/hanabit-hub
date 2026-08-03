@@ -129,6 +129,7 @@ try {
     stateRoot,
     channelId: config.xWatchChannelId,
     allowedHandles: allowedXHandles,
+    xApiBearerToken: xStreamConfig.enabled ? xStreamConfig.bearerToken : "",
   });
   processor = createNewsProcessor({ stateRoot, runnerPath, codexReviewer, sourceProfiles: newsSourceProfiles });
   const dcPublisherConfig = hubConfig.integrations?.news?.dcPublisher;
