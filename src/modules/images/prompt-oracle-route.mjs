@@ -8,7 +8,6 @@ function isSameOriginRequest(request) {
   if (!origin || !host || request.headers["sec-fetch-site"] !== "same-origin") return false;
   try { return new URL(origin).host === host; } catch { return false; }
 }
-
 async function readJsonBody(request) {
   let size = 0;
   const chunks = [];
@@ -55,4 +54,3 @@ export async function handlePromptOracleRoute({ request, response, pathname, ora
   sendJson(response, 405, { error: "Method not allowed" });
   return true;
 }
-

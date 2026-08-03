@@ -50,4 +50,3 @@ test("신탁 설정과 리롤 API는 같은 출처 요청만 처리한다", asyn
     assert.deepEqual(calls.map(([name]) => name), ["settings", "reroll"]);
   });
 });
-

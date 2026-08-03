@@ -23,7 +23,6 @@ const DEFAULT_SETTINGS = Object.freeze({
 function oracleError(code, message) {
   return Object.assign(new Error(message), { code });
 }
-
 function boundedInteger(value, minimum, maximum, label) {
   const number = Number(value);
   if (!Number.isInteger(number) || number < minimum || number > maximum) {
@@ -211,4 +210,3 @@ export function createPromptOracle({
     reroll,
   });
 }
-
