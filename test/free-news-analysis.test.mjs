@@ -12,6 +12,12 @@ test("무료 API 오류 이름은 비밀값 없이 안전한 원인 코드로 �
   assert.equal(classifyProviderReason("OpenAI 요청 실패 (RateLimitError)."), "rate_limit");
   assert.equal(classifyProviderReason("OpenAI 요청 실패 (AuthenticationError)."), "authentication");
   assert.equal(classifyProviderReason("OpenAI 요청 실패 (APIConnectionError)."), "connection");
+  assert.equal(
+    classifyProviderReason("powershell wrapper: HANABIT_PROVIDER_REASON=bad_request"),
+    "bad_request",
+  );
+  assert.equal(classifyProviderReason("APIStatusError status_code=429"), "rate_limit");
+  assert.equal(classifyProviderReason("request failed with HTTP 503"), "provider_server");
   assert.equal(classifyProviderReason("민감할 수 있는 알 수 없는 응답"), "unknown");
 });
 

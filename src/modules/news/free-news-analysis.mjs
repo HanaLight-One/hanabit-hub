@@ -351,13 +351,20 @@ function run(command, args, { cwd, timeoutMs = 600_000 } = {}) {
 }
 
 export function classifyProviderReason(value) {
-  const errorName = String(value ?? "").match(/\(([A-Za-z]+Error)\)/u)?.[1] ?? "";
+  const text = String(value ?? "");
+  const marker = text.match(/HANABIT_PROVIDER_REASON=(rate_limit|authentication|connection|timeout|bad_request|provider_server|unknown)/u)?.[1];
+  if (marker) return marker;
+  const errorName = text.match(/\(([A-Za-z]+Error)\)/u)?.[1] ?? "";
   if (errorName === "RateLimitError") return "rate_limit";
   if (["AuthenticationError", "PermissionDeniedError"].includes(errorName)) return "authentication";
   if (errorName === "APIConnectionError") return "connection";
   if (errorName === "APITimeoutError") return "timeout";
   if (["BadRequestError", "UnprocessableEntityError"].includes(errorName)) return "bad_request";
   if (errorName === "InternalServerError") return "provider_server";
+  if (/\b(?:status(?:_code)?\s*[=:]?\s*|HTTP\s+)?429\b/iu.test(text)) return "rate_limit";
+  if (/\b(?:status(?:_code)?\s*[=:]?\s*|HTTP\s+)?(?:401|403)\b/iu.test(text)) return "authentication";
+  if (/\b(?:status(?:_code)?\s*[=:]?\s*|HTTP\s+)?(?:400|404|409|422)\b/iu.test(text)) return "bad_request";
+  if (/\b(?:status(?:_code)?\s*[=:]?\s*|HTTP\s+)?5\d\d\b/iu.test(text)) return "provider_server";
   return "unknown";
 }
 

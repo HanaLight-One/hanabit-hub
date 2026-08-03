@@ -63,6 +63,32 @@ def usage_value(usage: Any, name: str) -> int | None:
     return int(value) if value is not None else None
 
 
+def provider_error_reason(error: Exception) -> str:
+    if isinstance(error, openai.RateLimitError):
+        return "rate_limit"
+    if isinstance(error, (openai.AuthenticationError, openai.PermissionDeniedError)):
+        return "authentication"
+    if isinstance(error, openai.APIConnectionError):
+        return "connection"
+    if isinstance(error, openai.APITimeoutError):
+        return "timeout"
+    if isinstance(error, (openai.BadRequestError, openai.UnprocessableEntityError)):
+        return "bad_request"
+    if isinstance(error, openai.InternalServerError):
+        return "provider_server"
+
+    status_code = getattr(error, "status_code", None)
+    if status_code == 429:
+        return "rate_limit"
+    if status_code in {401, 403}:
+        return "authentication"
+    if status_code in {400, 404, 409, 422}:
+        return "bad_request"
+    if isinstance(status_code, int) and status_code >= 500:
+        return "provider_server"
+    return "unknown"
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Tool-free OpenAI Responses API text runner")
     source = parser.add_mutually_exclusive_group(required=True)
@@ -80,6 +106,7 @@ def main() -> int:
     args = build_parser().parse_args()
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
+        print("HANABIT_PROVIDER_REASON=authentication", file=sys.stderr)
         print("OPENAI_API_KEY가 없습니다.", file=sys.stderr)
         return 2
 
@@ -174,6 +201,7 @@ def main() -> int:
         if request_id:
             metadata["request_id"] = request_id
         atomic_write_json(metadata_path, metadata)
+        print(f"HANABIT_PROVIDER_REASON={provider_error_reason(error)}", file=sys.stderr)
         print(
             f"OpenAI 요청 실패 ({type(error).__name__}). "
             "모델 접근 권한, 프로젝트 공유 설정, 잔액과 네트워크를 확인하세요.",
