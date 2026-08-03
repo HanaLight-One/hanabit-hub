@@ -79,6 +79,12 @@ function editorialScore(item) {
   return (EVIDENCE_SCORES[triage.evidenceTag] ?? 0) + importance + confidence + review + trust;
 }
 
+function bypassesBurstLimit(item) {
+  const triage = item?.workflow?.triage ?? {};
+  return triage.evidenceTag === "official" ||
+    (triage.evidenceTag === "confirmed" && triage.importance === "high");
+}
+
 function result(decision, code, reason, extra = {}) {
   return Object.freeze({ decision, code, reason, ...extra });
 }
@@ -138,11 +144,17 @@ export function applyNewsEditorialShadow(items) {
     const competing = accepted.find((candidate) =>
       Math.abs(timestamp(candidate.item) - timestamp(node.item)) <= BURST_WINDOW_MS,
     );
-    if (competing) {
+    if (competing && !bypassesBurstLimit(node.item)) {
       burstById.set(node.item.id, result("hold", "burst_queue", "더 강한 독립 뉴스와 가까운 시각에 감지되어 자동 대기해요."));
     } else {
       accepted.push(node);
-      burstById.set(node.item.id, result("ready", "quality_pass", "중복·출처·번역·판정 관문을 통과한 자동 게시 후보예요."));
+      burstById.set(node.item.id, result(
+        "ready",
+        bypassesBurstLimit(node.item) ? "priority_pass" : "quality_pass",
+        bypassesBurstLimit(node.item)
+          ? "서로 다른 공식·확정 속보라 연속 게시 제한 없이 자동 게시해요."
+          : "중복·출처·번역·판정 관문을 통과한 자동 게시 후보예요.",
+      ));
     }
   }
 

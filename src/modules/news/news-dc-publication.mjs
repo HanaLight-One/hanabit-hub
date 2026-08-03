@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { mkdir, open, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createPendingNewsStore } from "./news-item-store.mjs";
 import { composeNewsDcCopy } from "./news-dc-copy.mjs";
 import { isAllowedNewsDcHeadText } from "./news-dc-head-text.mjs";
@@ -9,7 +9,7 @@ import { createNewsDcCoverCatalog } from "./news-dc-covers.mjs";
 import { evaluateNewsAutoPublish } from "./news-auto-publish-policy.mjs";
 import { applyNewsEditorialShadow } from "./news-editorial-governor.mjs";
 import { findNewsSourceProfile } from "./news-source-profiles.mjs";
-import { createXVideoPreviewService } from "./x-video-preview.mjs";
+import { createXVideoPreviewService, xVideoPreviewNotice } from "./x-video-preview.mjs";
 
 const ID_PATTERN = /^[a-f0-9]{32}$/u;
 const POSTED_STATUS = "posted";
@@ -275,8 +275,25 @@ export function createNewsDcPublicationService({
           mediaFiles.unshift(videoPreview);
         }
       }
+      if (!mediaFiles.length) {
+        const fallbackCover = await covers.forHeadText(draft.headText);
+        if (!fallbackCover) {
+          throw publicationError("COVER_MISSING", "영상 미리보기 실패 후 기본 커버를 찾을 수 없습니다.");
+        }
+        mediaFiles = [{
+          target: fallbackCover.target,
+          filename: fallbackCover.filename,
+          contentType: fallbackCover.contentType,
+        }];
+      }
+      const bodyText = videoPreview
+        ? `${draft.bodyText}\n\n영상 미리보기 안내\n${xVideoPreviewNotice(record.internal?.xVideo?.durationMs)}`
+        : draft.bodyText;
+      const contentHash = createHash("sha256")
+        .update(`${draft.title}\0${bodyText}\0${mediaFiles.length}`, "utf8")
+        .digest("hex");
       const intent = await open(intentPath, "wx");
-      await intent.writeFile(`${draft.contentHash}\n`, "utf8");
+      await intent.writeFile(`${contentHash}\n`, "utf8");
       await intent.close();
 
       await writeJsonAtomic(jobPath, {
@@ -285,8 +302,8 @@ export function createNewsDcPublicationService({
         galleryId,
         headTextName: draft.headText,
         title: draft.title,
-        bodyText: draft.bodyText,
-        contentHash: draft.contentHash,
+        bodyText,
+        contentHash,
         resultPath,
         media: mediaFiles.map((media) => ({
           path: media.target,
@@ -305,7 +322,7 @@ export function createNewsDcPublicationService({
             status: "submitting",
             mode: automatic ? "automatic" : "manual",
             submittedAt,
-            contentHash: draft.contentHash,
+            contentHash,
           },
         },
       }));
@@ -332,7 +349,7 @@ export function createNewsDcPublicationService({
         status,
         mode: automatic ? "automatic" : "manual",
         submittedAt,
-        contentHash: draft.contentHash,
+        contentHash,
         ...(status === "posted"
           ? { postId: resultPostId, url: resultUrl }
           : {}),

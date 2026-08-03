@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { createXVideoPreviewService } from "../src/modules/news/x-video-preview.mjs";
+import { createXVideoPreviewService, xVideoPreviewNotice } from "../src/modules/news/x-video-preview.mjs";
 
 function fakeSpawn(_executable, args) {
   const child = new EventEmitter();
@@ -60,4 +60,12 @@ test("허용되지 않은 영상 주소는 변환하지 않고 기존 이미지 
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("GIF 안내는 실제 영상 길이에 따라 전체 또는 최대 20초 미리보기로 구분한다", () => {
+  assert.doesNotMatch(xVideoPreviewNotice(19_000), /최대 20초/u);
+  assert.match(xVideoPreviewNotice(21_000), /앞부분 최대 20초/u);
+  assert.match(xVideoPreviewNotice(0), /앞부분 최대 20초/u);
+  assert.match(xVideoPreviewNotice(19_000), /소리 없는 미리보기/u);
+  assert.match(xVideoPreviewNotice(19_000), /상단 원문 링크/u);
 });

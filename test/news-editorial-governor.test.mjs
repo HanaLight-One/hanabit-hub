@@ -52,6 +52,27 @@ test("가까운 시각의 독립 뉴스는 점수가 높은 하나만 즉시 후
   assert.equal(items[1].workflow.editorialShadow.decision, "ready");
 });
 
+test("서로 다른 공식 속보는 15분 안에 연달아 와도 모두 즉시 후보가 된다", () => {
+  const items = applyNewsEditorialShadow([
+    item("7", { evidenceTag: "official", importance: "high", publishedAt: "2026-08-02T02:00:00Z", title: "공식 모델 공개", body: "새 모델을 공식 공개했습니다." }),
+    item("8", { evidenceTag: "official", importance: "high", publishedAt: "2026-08-02T02:03:00Z", title: "공식 가격 변경", body: "API 가격 정책을 변경했습니다." }),
+    item("9", { evidenceTag: "official", importance: "high", publishedAt: "2026-08-02T02:06:00Z", title: "공식 앱 출시", body: "새 모바일 앱을 출시했습니다." }),
+  ]);
+  assert.deepEqual(items.map((entry) => entry.workflow.editorialShadow.decision), ["ready", "ready", "ready"]);
+  assert.deepEqual(items.map((entry) => entry.workflow.editorialShadow.code), ["priority_pass", "priority_pass", "priority_pass"]);
+});
+
+test("중요도 높은 확정 정보는 연속 게시 제한을 통과하지만 사례는 계속 보호한다", () => {
+  const items = applyNewsEditorialShadow([
+    item("10", { evidenceTag: "confirmed", importance: "high", publishedAt: "2026-08-02T03:00:00Z", title: "확정된 기능 배포", body: "새 기능 배포가 확인됐습니다." }),
+    item("11", { evidenceTag: "use_case", importance: "medium", publishedAt: "2026-08-02T03:02:00Z", title: "개발 활용 사례", body: "한 개발자가 도구를 활용했습니다." }),
+  ]);
+  assert.equal(items[0].workflow.editorialShadow.code, "priority_pass");
+  assert.equal(items[0].workflow.editorialShadow.decision, "ready");
+  assert.equal(items[1].workflow.editorialShadow.code, "burst_queue");
+  assert.equal(items[1].workflow.editorialShadow.decision, "hold");
+});
+
 test("유추는 Codex 검토 전에는 대기하고 비게시 항목은 허브에만 남긴다", () => {
   const items = applyNewsEditorialShadow([
     item("5", { evidenceTag: "inference" }),

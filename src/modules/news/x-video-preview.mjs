@@ -124,6 +124,13 @@ export function createXVideoPreviewService({
   return Object.freeze({ prepare, cleanup });
 }
 
+export function xVideoPreviewNotice(durationMs) {
+  const duration = Number(durationMs) || 0;
+  return duration > MAX_PREVIEW_SECONDS * 1000 || duration <= 0
+    ? "첨부 GIF는 영상 앞부분 최대 20초를 변환한 소리 없는 미리보기입니다. 전체 영상과 음성은 상단 원문 링크에서 확인해 주세요."
+    : "첨부 GIF는 소리 없는 미리보기입니다. 전체 영상과 음성은 상단 원문 링크에서 확인해 주세요.";
+}
+
 export const xVideoPreviewPolicy = Object.freeze({
   maxDownloadBytes: MAX_DOWNLOAD_BYTES,
   maxGifBytes: MAX_GIF_BYTES,

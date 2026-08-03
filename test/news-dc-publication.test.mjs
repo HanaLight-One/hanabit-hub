@@ -149,6 +149,7 @@ test("X 영상 GIF는 embed 미리보기만 교체하고 posted 영수증 뒤 �
     item.internal = { xVideo: { variantUrl: "https://video.twimg.com/a/video.mp4", durationMs: 3_000 } };
     await writeFile(itemPath, JSON.stringify(item), "utf8");
     let publishedMedia;
+    let publishedBody;
     let cleaned = false;
     const service = createNewsDcPublicationService({
       root: sample.newsRoot,
@@ -167,6 +168,7 @@ test("X 영상 GIF는 embed 미리보기만 교체하고 posted 영수증 뒤 �
       async runPublisher({ jobPath }) {
         const job = JSON.parse(await readFile(jobPath, "utf8"));
         publishedMedia = job.media;
+        publishedBody = job.bodyText;
         await writeFile(job.resultPath, JSON.stringify({
           status: "posted",
           postId: "123459",
@@ -177,9 +179,45 @@ test("X 영상 GIF는 embed 미리보기만 교체하고 posted 영수증 뒤 �
     await service.publish(ID);
     assert.equal(publishedMedia.length, 1);
     assert.equal(publishedMedia[0].filename, "x-video-preview.gif");
+    assert.match(publishedBody, /영상 미리보기 안내/u);
+    assert.match(publishedBody, /소리 없는 미리보기/u);
+    assert.doesNotMatch(publishedBody, /최대 20초/u);
     assert.equal(cleaned, true);
     const saved = JSON.parse(await readFile(itemPath, "utf8"));
     assert.equal(saved.media[0].file, "media/01.png");
+  } finally {
+    await rm(sample.root, { recursive: true, force: true });
+  }
+});
+
+test("X 영상 변환 실패 시 기본 커버로 복귀하고 GIF 안내를 넣지 않는다", async () => {
+  const sample = await fixture({ withMedia: false });
+  try {
+    const itemPath = path.join(sample.itemRoot, "item.json");
+    const item = JSON.parse(await readFile(itemPath, "utf8"));
+    item.internal = { xVideo: { variantUrl: "https://video.twimg.com/a/video.mp4", durationMs: 30_000 } };
+    await writeFile(itemPath, JSON.stringify(item), "utf8");
+    let job;
+    const service = createNewsDcPublicationService({
+      root: sample.newsRoot,
+      enabled: true,
+      publisherRoot: sample.publisherRoot,
+      coverRoot: sample.coverRoot,
+      publisherScriptPath: sample.scriptPath,
+      videoPreviewService: { async prepare() { return null; } },
+      async runPublisher({ jobPath }) {
+        job = JSON.parse(await readFile(jobPath, "utf8"));
+        await writeFile(job.resultPath, JSON.stringify({
+          status: "posted",
+          postId: "123460",
+          url: "https://gall.dcinside.com/mgallery/board/view/?id=chatgpt&no=123460",
+        }), "utf8");
+      },
+    });
+    await service.publish(ID);
+    assert.equal(job.media.length, 1);
+    assert.equal(job.media[0].filename, "news.png");
+    assert.doesNotMatch(job.bodyText, /영상 미리보기 안내/u);
   } finally {
     await rm(sample.root, { recursive: true, force: true });
   }
