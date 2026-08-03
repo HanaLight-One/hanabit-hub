@@ -54,7 +54,7 @@ function textToHtml(value) {
       }
       const link = safeBodyLink(line);
       if (link) {
-        return `<p><a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link)}</a></p>`;
+        return `<div><a class="lnk" href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link)}</a></div>`;
       }
       return `<p style="margin:0 0 12px;font-size:15px;line-height:1.75;">${escapeHtml(line)}</p>`;
     })

@@ -88,7 +88,8 @@ test("이미지 워터마크 필드는 빈 값 대신 제출 폼에서 완전히
 test("원고의 안전한 단독 URL 줄만 클릭 가능한 링크로 변환한다", () => {
   const xUrl = "https://x.com/gdb/status/2083773552793465087";
   const html = textToHtml(`원문 링크\n\n${xUrl}`);
-  assert.match(html, new RegExp(`<p><a href="${xUrl}"`, "u"));
+  assert.match(html, new RegExp(`<div><a class="lnk" href="${xUrl}"`, "u"));
+  assert.doesNotMatch(html, /<p><a href=/u);
   assert.doesNotMatch(html, /<p style=[^>]*><a href=/u);
   assert.equal(safeBodyLink(xUrl), xUrl);
   assert.equal(safeBodyLink("https://openai.com/sk/blocked"), null);
