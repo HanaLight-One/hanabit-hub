@@ -57,8 +57,10 @@ function createOgpBlock(link, card) {
   const title = String(card.title ?? "").trim().slice(0, 300);
   const description = String(card.description ?? "").trim().slice(0, 1_000);
   const image = safeOgpImage(card.image);
-  if (!title) return "";
-  return `<div class="og-div"><p class="og-url">${escapeHtml(link)}</p><p class="og-tit">${escapeHtml(title)}</p><p class="og-txt">${escapeHtml(description)}</p><p class="og-img">${escapeHtml(image)}</p></div>`;
+  const values = [link, title, description, image];
+  if (!title || values.some((value) => value.includes("^#^") || value.includes("::OG_END_}"))) return "";
+  const marker = values.map(escapeHtml).join("^#^");
+  return `<div class="og">{{_OG_START::${marker}::OG_END_}}</div>`;
 }
 
 async function fetchDcOgpCard(link, { fetchImpl = fetch } = {}) {
