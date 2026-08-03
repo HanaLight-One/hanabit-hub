@@ -144,6 +144,7 @@ try {
     galleryId: dcPublisherConfig?.galleryId,
     coverRoot: path.join(PROJECT_ROOT, "assets", "news", "dc-covers"),
     publisherScriptPath: path.join(PROJECT_ROOT, "scripts", "publish-news-to-dc.cjs"),
+    xApiBearerToken: xStreamConfig.bearerToken,
   });
   await autoPublisher.initializeAutoPublishing();
   client = new Client({

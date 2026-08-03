@@ -14,6 +14,7 @@ import { createDiscordTokenSetup } from "./modules/news/discord-token-setup.mjs"
 import { handleDiscordTokenSetupRoute } from "./modules/news/discord-token-setup-route.mjs";
 import { createNewsReader } from "./modules/news/news-reader.mjs";
 import { loadXSourceRoster } from "./modules/news/x-watch-source.mjs";
+import { loadXStreamConfig } from "./modules/news/x-stream-config.mjs";
 import { createNewsSourceProfileIndex } from "./modules/news/news-source-profiles.mjs";
 import { createNewsApprovalService } from "./modules/news/news-approval.mjs";
 import { handleNewsApprovalRoute } from "./modules/news/news-approval-route.mjs";
@@ -220,6 +221,7 @@ const newsProcessor = path.isAbsolute(generationConfig?.freeTextRunnerPath ?? ""
   : null;
 const newsApproval = createNewsApprovalService({ root: path.join(APP_ROOT, "state", "news") });
 const newsDcPublisherConfig = config.integrations?.news?.dcPublisher;
+const newsXStreamConfig = loadXStreamConfig();
 const newsDcPublication = createNewsDcPublicationService({
   root: path.join(APP_ROOT, "state", "news"),
   sourceProfiles: newsSourceProfiles,
@@ -231,6 +233,7 @@ const newsDcPublication = createNewsDcPublicationService({
   galleryId: newsDcPublisherConfig?.galleryId,
   coverRoot: path.join(APP_ROOT, "assets", "news", "dc-covers"),
   publisherScriptPath: path.join(APP_ROOT, "scripts", "publish-news-to-dc.cjs"),
+  xApiBearerToken: newsXStreamConfig.bearerToken,
 });
 const pushNotifications = createPushNotificationService({
   root: path.join(APP_ROOT, "state", "notifications"),

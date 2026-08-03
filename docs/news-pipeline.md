@@ -184,6 +184,9 @@ OpenAI Developers, Sam Altman, Romain Huet, Greg Brockman 계정만 허용한다
 DC 게시 잠금은 변경하지 않는다.
 
 X API는 사용량 기반 유료 서비스이므로 기본값은 반드시 비활성이다.
+영상 `variants` 조회는 수집 시점에 실행하지 않는다. 무료 번역·품질 게이트·편집장 대기 또는
+사람 승인을 통과해 실제 게시가 확정된 X 항목만 게시 직전에 한 번 조회한다. 영상 없음과 조회
+실패도 항목 내부 영수증으로 저장해 같은 뉴스의 재시도에서 다시 과금 요청을 만들지 않는다.
 
 ```dotenv
 X_STREAM_ENABLED=false

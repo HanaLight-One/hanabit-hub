@@ -223,6 +223,52 @@ test("X 영상 변환 실패 시 기본 커버로 복귀하고 GIF 안내를 넣
   }
 });
 
+test("X 영상 유료 조회는 승인과 안전 검사를 통과한 실제 게시 직전에 한 번만 실행한다", async () => {
+  const sample = await fixture();
+  try {
+    let metadataCalls = 0;
+    let preparedWithVideo = false;
+    const service = createNewsDcPublicationService({
+      root: sample.newsRoot,
+      enabled: true,
+      publisherRoot: sample.publisherRoot,
+      coverRoot: sample.coverRoot,
+      publisherScriptPath: sample.scriptPath,
+      xApiBearerToken: "test-bearer-token",
+      async videoMetadataResolver() {
+        metadataCalls += 1;
+        return { variantUrl: "https://video.twimg.com/a/deferred.mp4", durationMs: 8_000 };
+      },
+      videoPreviewService: {
+        async prepare(record) {
+          preparedWithVideo = record.internal?.xVideo?.variantUrl.endsWith("/deferred.mp4") === true;
+          return null;
+        },
+      },
+      async runPublisher({ jobPath }) {
+        const job = JSON.parse(await readFile(jobPath, "utf8"));
+        await writeFile(job.resultPath, JSON.stringify({
+          status: "posted",
+          postId: "123461",
+          url: "https://gall.dcinside.com/mgallery/board/view/?id=chatgpt&no=123461",
+        }), "utf8");
+      },
+    });
+    assert.equal(metadataCalls, 0);
+    await service.preview(ID);
+    assert.equal(metadataCalls, 0);
+    await service.publish(ID);
+    assert.equal(metadataCalls, 1);
+    assert.equal(preparedWithVideo, true);
+    const saved = JSON.parse(await readFile(path.join(sample.itemRoot, "item.json"), "utf8"));
+    assert.equal(saved.internal.xVideoLookup.status, "found");
+    await assert.rejects(() => service.publish(ID), { code: "ALREADY_SUBMITTED" });
+    assert.equal(metadataCalls, 1);
+  } finally {
+    await rm(sample.root, { recursive: true, force: true });
+  }
+});
+
 test("자동 게시 시작 뒤 품질 관문을 통과한 새 뉴스만 승인 없이 한 번 게시한다", async () => {
   const sample = await fixture({ approved: false });
   let runs = 0;
@@ -279,6 +325,7 @@ test("자동 게시 시작 뒤 품질 관문을 통과한 새 뉴스만 승인 �
 test("자동 게시 시작 전 뉴스는 소급 게시하지 않는다", async () => {
   const sample = await fixture({ approved: false });
   let runs = 0;
+  let metadataCalls = 0;
   try {
     const itemPath = path.join(sample.itemRoot, "item.json");
     const item = JSON.parse(await readFile(itemPath, "utf8"));
@@ -298,6 +345,8 @@ test("자동 게시 시작 전 뉴스는 소급 게시하지 않는다", async (
       publisherRoot: sample.publisherRoot,
       coverRoot: sample.coverRoot,
       publisherScriptPath: sample.scriptPath,
+      xApiBearerToken: "test-bearer-token",
+      async videoMetadataResolver() { metadataCalls += 1; return null; },
       now: () => new Date("2026-08-02T03:00:00.000Z"),
       async runPublisher() { runs += 1; },
     });
@@ -306,6 +355,7 @@ test("자동 게시 시작 전 뉴스는 소급 게시하지 않는다", async (
     assert.equal(result.status, "hub_only");
     assert.equal(result.code, "before_activation");
     assert.equal(runs, 0);
+    assert.equal(metadataCalls, 0);
   } finally {
     await rm(sample.root, { recursive: true, force: true });
   }
