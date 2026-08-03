@@ -1,7 +1,7 @@
 --- a/pipeline_common.py
 +++ b/pipeline_common.py
 @@ -16,6 +16,9 @@ TOPIC_PATH = ASSET_ROOT / "topic.json"
- 
+
  MAIN_ANCHOR_PATH = ASSET_ROOT / "에테르대예배당_이미지_앵커.txt"
 -GUEST_ANCHOR_PATH = ASSET_ROOT / "에테르대예배당_이미지앵커_특별게스트.txt"
 +GUEST_ANCHOR_PATHS = {
@@ -13,8 +13,8 @@
  RELATIONSHIP_GROUPS_PATH = PIPELINE_ROOT / "relationship_groups.json"
 @@ -96,13 +99,34 @@ def image_anchor_paths() -> list[Path]:
      )
- 
- 
+
+
 +def special_guest_asset_paths() -> list[Path]:
 +    supported_suffixes = {".txt", ".png", ".jpg", ".jpeg", ".webp"}
 +    return sorted(
@@ -51,7 +51,7 @@
 +++ b/build_index.py
 @@ -7,7 +7,8 @@ from typing import Any
  from typing import Any
- 
+
  from pipeline_common import (
 -    GUEST_ANCHOR_PATH,
 +    ASSET_ROOT,
@@ -61,8 +61,8 @@
      MAIN_ANCHOR_PATH,
 @@ -110,7 +111,12 @@ def parse_main_characters(text: str) -> tuple[dict[str, Any], dict[str, str]]:
      return characters, split_sections(shared_text)
- 
- 
+
+
 -def parse_guest_characters(text: str) -> dict[str, Any]:
 +def parse_guest_characters(
 +    text: str,
@@ -110,8 +110,8 @@
 +        )
 +        if image_path:
 +            character["image_anchor_path"] = str(image_path)
- 
- 
+
+
  def build_relationship_graph(
 @@ -199,4 +232,15 @@ def build_index() -> dict[str, Any]:
  def build_index() -> dict[str, Any]:
