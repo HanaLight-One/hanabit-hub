@@ -140,6 +140,51 @@ test("승인된 원고는 게시자를 한 번만 실행하고 게시 영수증�
   }
 });
 
+test("X 영상 GIF는 embed 미리보기만 교체하고 posted 영수증 뒤 정리한다", async () => {
+  const sample = await fixture();
+  try {
+    const itemPath = path.join(sample.itemRoot, "item.json");
+    const item = JSON.parse(await readFile(itemPath, "utf8"));
+    item.media[0].kind = "embed-image";
+    item.internal = { xVideo: { variantUrl: "https://video.twimg.com/a/video.mp4", durationMs: 3_000 } };
+    await writeFile(itemPath, JSON.stringify(item), "utf8");
+    let publishedMedia;
+    let cleaned = false;
+    const service = createNewsDcPublicationService({
+      root: sample.newsRoot,
+      enabled: true,
+      publisherRoot: sample.publisherRoot,
+      coverRoot: sample.coverRoot,
+      publisherScriptPath: sample.scriptPath,
+      videoPreviewService: {
+        async prepare(_record, { jobRoot }) {
+          const target = path.join(jobRoot, "x-video-preview.gif");
+          await writeFile(target, "gif", "utf8");
+          return { target, filename: "x-video-preview.gif", contentType: "image/gif" };
+        },
+        async cleanup() { cleaned = true; },
+      },
+      async runPublisher({ jobPath }) {
+        const job = JSON.parse(await readFile(jobPath, "utf8"));
+        publishedMedia = job.media;
+        await writeFile(job.resultPath, JSON.stringify({
+          status: "posted",
+          postId: "123459",
+          url: "https://gall.dcinside.com/mgallery/board/view/?id=chatgpt&no=123459",
+        }), "utf8");
+      },
+    });
+    await service.publish(ID);
+    assert.equal(publishedMedia.length, 1);
+    assert.equal(publishedMedia[0].filename, "x-video-preview.gif");
+    assert.equal(cleaned, true);
+    const saved = JSON.parse(await readFile(itemPath, "utf8"));
+    assert.equal(saved.media[0].file, "media/01.png");
+  } finally {
+    await rm(sample.root, { recursive: true, force: true });
+  }
+});
+
 test("자동 게시 시작 뒤 품질 관문을 통과한 새 뉴스만 승인 없이 한 번 게시한다", async () => {
   const sample = await fixture({ approved: false });
   let runs = 0;

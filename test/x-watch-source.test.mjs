@@ -154,7 +154,8 @@ test("oEmbed 긴 글이 말줄임표로 끝나면 X API note_tweet 원문으로 
     async fetchImpl(url, init = {}) {
       if (url.hostname === "api.x.com") {
         assert.equal(url.pathname, `/2/tweets/${statusId}`);
-        assert.equal(url.searchParams.get("tweet.fields"), "note_tweet");
+        assert.equal(url.searchParams.get("tweet.fields"), "note_tweet,attachments");
+        assert.equal(url.searchParams.get("expansions"), "attachments.media_keys");
         assert.equal(init.headers.authorization, "Bearer test-bearer-token");
         return new Response(JSON.stringify({
           data: {
@@ -175,4 +176,55 @@ test("oEmbed 긴 글이 말줄임표로 끝나면 X API note_tweet 원문으로 
     result.record.original.content,
     "This is the complete long-form post with every final paragraph.",
   );
+});
+
+test("X 영상 게시물은 안전한 중간 화질 MP4 메타데이터만 내부 기록에 보관한다", async () => {
+  const statusId = "2091234567890123456";
+  const result = await normalizeXWatchMessage({
+    channelId,
+    type: 0,
+    content: `https://x.com/thsottiaux/status/${statusId}`,
+  }, {
+    channelId,
+    allowedHandles,
+    xApiBearerToken: "test-bearer-token",
+    async fetchImpl(url) {
+      if (url.hostname === "api.x.com") {
+        return new Response(JSON.stringify({
+          data: {
+            id: statusId,
+            text: "Video post",
+            attachments: { media_keys: ["7_video"] },
+          },
+          includes: {
+            media: [{
+              media_key: "7_video",
+              type: "video",
+              duration_ms: 42_000,
+              width: 1920,
+              height: 1080,
+              variants: [
+                { bit_rate: 832_000, content_type: "video/mp4", url: "https://video.twimg.com/a/medium.mp4?tag=1" },
+                { bit_rate: 4_500_000, content_type: "video/mp4", url: "https://video.twimg.com/a/high.mp4?tag=1" },
+                { content_type: "application/x-mpegURL", url: "https://video.twimg.com/a/playlist.m3u8" },
+              ],
+            }],
+          },
+        }), { status: 200 });
+      }
+      return new Response(JSON.stringify({
+        author_name: "Tibo",
+        author_url: "https://twitter.com/thsottiaux",
+        html: "<blockquote><p>Video post</p></blockquote>",
+      }), { status: 200 });
+    },
+  });
+  assert.deepEqual(result.record.internal.xVideo, {
+    mediaKey: "7_video",
+    variantUrl: "https://video.twimg.com/a/medium.mp4?tag=1",
+    durationMs: 42_000,
+    width: 1920,
+    height: 1080,
+  });
+  assert.equal(JSON.stringify(result.record.original).includes("video.twimg.com"), false);
 });

@@ -170,3 +170,28 @@ test("게시자는 저장소의 정확한 네 기본 커버 경로만 허용한�
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("게시자는 해당 뉴스 격리 작업 폴더의 고정 X GIF만 추가로 허용한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-publisher-video-"));
+  const id = "d".repeat(32);
+  const jobPath = path.join(root, "state", "news", "dc-publication-jobs", id, "job.json");
+  const previewPath = path.join(path.dirname(jobPath), "x-video-preview.gif");
+  await mkdir(path.dirname(jobPath), { recursive: true });
+  await writeFile(previewPath, "gif", "utf8");
+  try {
+    const sample = job().value;
+    sample.id = id;
+    sample.resultPath = path.join(path.dirname(jobPath), "result.json");
+    sample.media = [{ path: previewPath, filename: "x-video-preview.gif", contentType: "image/gif" }];
+    sample.contentHash = createHash("sha256")
+      .update(`${sample.title}\0${sample.bodyText}\0${sample.media.length}`, "utf8")
+      .digest("hex");
+    assert.equal(validateJob(sample, jobPath).media[0].filename, "x-video-preview.gif");
+    assert.throws(
+      () => validateJob({ ...sample, media: [{ ...sample.media[0], filename: "other.gif" }] }, jobPath),
+      /INVALID_MEDIA/u,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

@@ -9,6 +9,7 @@ import { createNewsDcCoverCatalog } from "./news-dc-covers.mjs";
 import { evaluateNewsAutoPublish } from "./news-auto-publish-policy.mjs";
 import { applyNewsEditorialShadow } from "./news-editorial-governor.mjs";
 import { findNewsSourceProfile } from "./news-source-profiles.mjs";
+import { createXVideoPreviewService } from "./x-video-preview.mjs";
 
 const ID_PATTERN = /^[a-f0-9]{32}$/u;
 const POSTED_STATUS = "posted";
@@ -87,6 +88,7 @@ export function createNewsDcPublicationService({
   coverRoot,
   publisherScriptPath,
   runPublisher = defaultRunPublisher,
+  videoPreviewService = createXVideoPreviewService(),
   now = () => new Date(),
 } = {}) {
   if (!path.isAbsolute(root ?? "") || !path.isAbsolute(publisherScriptPath ?? "") || !path.isAbsolute(coverRoot ?? "")) {
@@ -248,7 +250,7 @@ export function createNewsDcPublicationService({
         throw publicationError("ALREADY_SUBMITTED", "이미 게시 요청 또는 최종 영수증이 있습니다.");
       }
 
-      const mediaFiles = cover
+      let mediaFiles = cover
         ? [{ target: cover.target, filename: cover.filename, contentType: cover.contentType }]
         : await store.mediaFiles(safeId);
       const mediaByName = new Map((record.media ?? []).map((entry) => [path.basename(entry.file), entry]));
@@ -264,6 +266,15 @@ export function createNewsDcPublicationService({
       intentPath = path.join(targetRoot, "submission.intent");
       await rm(targetRoot, { recursive: true, force: true });
       await mkdir(targetRoot, { recursive: true });
+      const videoPreview = await videoPreviewService.prepare(record, { jobRoot: targetRoot });
+      if (videoPreview) {
+        const previewIndex = (record.media ?? []).findIndex((entry) => String(entry?.kind ?? "").startsWith("embed-"));
+        if (previewIndex >= 0 && previewIndex < mediaFiles.length) {
+          mediaFiles.splice(previewIndex, 1, videoPreview);
+        } else if (mediaFiles.length < 10) {
+          mediaFiles.unshift(videoPreview);
+        }
+      }
       const intent = await open(intentPath, "wx");
       await intent.writeFile(`${draft.contentHash}\n`, "utf8");
       await intent.close();
@@ -298,7 +309,6 @@ export function createNewsDcPublicationService({
           },
         },
       }));
-
       await runPublisher({ publisherRoot, scriptPath: publisherScriptPath, jobPath }).catch(() => {});
       let result;
       try {
@@ -335,6 +345,9 @@ export function createNewsDcPublicationService({
           dcPublication: publication,
         },
       }));
+      if (status === "posted") {
+        await videoPreviewService.cleanup?.({ jobRoot: targetRoot }).catch(() => {});
+      }
       if (status === "failed-preflight") {
         await rm(intentPath, { force: true });
       }

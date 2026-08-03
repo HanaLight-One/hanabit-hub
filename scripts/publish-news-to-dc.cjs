@@ -53,15 +53,18 @@ function validateJob(value, jobPath) {
   if (value.contentHash !== expectedHash) throw new Error("CONTENT_CHANGED");
   const newsRoot = path.dirname(path.dirname(path.dirname(jobPath)));
   const mediaRoot = path.resolve(newsRoot, "pending", value.id, "media");
+  const videoPreviewPath = path.resolve(path.dirname(jobPath), "x-video-preview.gif");
   const coverRoot = path.resolve(path.dirname(path.dirname(newsRoot)), "assets", "news", "dc-covers");
   for (const media of value.media) {
     const mediaPath = path.resolve(media.path ?? "");
     const sourceMedia = mediaPath.startsWith(`${mediaRoot}${path.sep}`);
+    const generatedVideoPreview = mediaPath === videoPreviewPath &&
+      media.filename === "x-video-preview.gif" && media.contentType === "image/gif";
     const coverMedia = path.dirname(mediaPath) === coverRoot &&
       COVER_FOR_HEAD_TEXT.get(value.headTextName) === path.basename(mediaPath) &&
       path.basename(mediaPath) === String(media.filename ?? "");
     if (!path.isAbsolute(media.path ?? "") ||
-        (!sourceMedia && !coverMedia) ||
+        (!sourceMedia && !coverMedia && !generatedVideoPreview) ||
         !/^[a-zA-Z0-9_-]+\.(gif|jpe?g|png|webp)$/u.test(String(media.filename ?? "")) ||
         !MEDIA_TYPES.has(media.contentType)) {
       throw new Error("INVALID_MEDIA");

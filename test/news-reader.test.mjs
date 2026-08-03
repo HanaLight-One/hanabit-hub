@@ -17,6 +17,7 @@ test("뉴스 리더는 내부 경로와 Discord ID 없이 공개 계약을 반�
       id,
       source: { type: "discord-announcement", channelId: "secret-channel", messageId: "secret-message", url: "https://discord.com/channels/1/2/3", publishedAt: "2026-07-31T00:00:00Z" },
       original: { language: "en", content: "Hello", embeds: [], links: ["https://openai.com/news"], contexts: [{ relation: "linked-post", account: "OpenAI", content: "Parent context", url: "https://x.com/OpenAI/status/12345" }] },
+      internal: { xVideo: { variantUrl: "https://video.twimg.com/private/video.mp4", mediaKey: "7_secret" } },
       workflow: {
         status: "pending_review",
         translation: { title: "한글 제목", body: "한글 본문" },
@@ -71,6 +72,8 @@ test("뉴스 리더는 내부 경로와 Discord ID 없이 공개 계약을 반�
     assert.equal(serialized.includes(root), false);
     assert.equal(serialized.includes("secret-channel"), false);
     assert.equal(serialized.includes("secret-message"), false);
+    assert.equal(serialized.includes("video.twimg.com"), false);
+    assert.equal(serialized.includes("7_secret"), false);
     const media = await reader.findMedia(id, "01-news.png");
     assert.equal(media.contentType, "image/png");
   } finally {

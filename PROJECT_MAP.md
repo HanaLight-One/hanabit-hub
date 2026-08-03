@@ -119,6 +119,12 @@ X Filtered Stream ─> #x-watch ┘                         │
                                                 DC 원고 미리보기 ─> 사람 확인 ─> 수동 단건 게시
 ```
 
+X 영상 게시물은 공식 API의 내부 미디어 메타데이터만 대기함에 보관한다. DC 게시 직전에
+`src/modules/news/x-video-preview.mjs`가 허용된 `video.twimg.com` MP4 한 개를 격리 작업
+폴더에 내려받아 프로젝트 고정 ffmpeg로 최대 20초 GIF를 만든다. 변환 성공 시 X 미리보기
+이미지 한 장만 GIF로 교체하고, 실패하면 기존 스크린샷으로 복귀해 뉴스 처리를 막지 않는다.
+`posted` 영수증의 게시 번호와 URL이 확인된 경우에만 임시 MP4와 GIF를 즉시 삭제한다.
+
 실행 진입점은 `scripts/watch-discord-announcements.mjs`다. 실시간 이벤트와
 10분 보충 확인이 같은 중복 방지 저장소를 사용한다. X 인물 명부는
 `config/news-x-sources.json`이고 비밀 토큰은 코드나 지도에 기록하지 않는다.

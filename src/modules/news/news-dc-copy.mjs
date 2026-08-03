@@ -145,7 +145,8 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
   const bodyText = bodyParts.join("\n").replace(/\n{3,}/gu, "\n\n").trim();
   const combiningMarkCount = (bodyText.match(COMBINING_MARK_PATTERN) ?? []).length +
     (title.match(COMBINING_MARK_PATTERN) ?? []).length;
-  const sourceImageCount = Array.isArray(record.media) ? record.media.length : 0;
+  const storedImageCount = Array.isArray(record.media) ? record.media.length : 0;
+  const sourceImageCount = storedImageCount || (record?.internal?.xVideo ? 1 : 0);
   const usesFallbackCover = sourceImageCount === 0 && fallbackCover === true;
   const imageCount = sourceImageCount + (usesFallbackCover ? 1 : 0);
   const warnings = [

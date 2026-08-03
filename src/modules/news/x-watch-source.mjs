@@ -19,10 +19,47 @@ function looksTruncated(value) {
   return /(?:\u2026|\.{3})\s*$/u.test(String(value ?? "").trim());
 }
 
-async function fetchFullXPostText(post, { bearerToken, fetchImpl }) {
+function safeXVideoVariant(value) {
+  try {
+    const target = new URL(String(value ?? ""));
+    if (target.protocol !== "https:" || target.hostname !== "video.twimg.com" || !target.pathname.endsWith(".mp4")) {
+      return null;
+    }
+    return target.href;
+  } catch {
+    return null;
+  }
+}
+
+function selectXVideo(media) {
+  if (media?.type !== "video" || !Array.isArray(media.variants)) return null;
+  const variants = media.variants
+    .map((variant) => ({
+      bitRate: Number(variant?.bit_rate) || 0,
+      url: safeXVideoVariant(variant?.url),
+    }))
+    .filter((variant) => variant.url)
+    .sort((left, right) => left.bitRate - right.bitRate);
+  if (!variants.length) return null;
+  const preferred = [...variants].reverse().find((variant) => variant.bitRate <= 2_176_000)
+    ?? variants[0];
+  return {
+    mediaKey: String(media.media_key ?? "").slice(0, 80),
+    variantUrl: preferred.url,
+    durationMs: Math.max(0, Math.min(Number(media.duration_ms) || 0, 60 * 60 * 1000)),
+    width: Math.max(0, Math.min(Number(media.width) || 0, 7680)),
+    height: Math.max(0, Math.min(Number(media.height) || 0, 7680)),
+  };
+}
+
+async function fetchXPostDetails(post, { bearerToken, fetchImpl, includeVideo = false }) {
   if (!bearerToken || !/^\d{5,25}$/u.test(String(post?.statusId ?? ""))) return null;
   const endpoint = new URL(`https://api.x.com/2/tweets/${post.statusId}`);
-  endpoint.searchParams.set("tweet.fields", "note_tweet");
+  endpoint.searchParams.set("tweet.fields", includeVideo ? "note_tweet,attachments" : "note_tweet");
+  if (includeVideo) {
+    endpoint.searchParams.set("expansions", "attachments.media_keys");
+    endpoint.searchParams.set("media.fields", "type,variants,duration_ms,width,height");
+  }
   try {
     const response = await fetchImpl(endpoint, {
       headers: { authorization: `Bearer ${bearerToken}` },
@@ -33,7 +70,17 @@ async function fetchFullXPostText(post, { bearerToken, fetchImpl }) {
     const payload = JSON.parse(text);
     if (String(payload?.data?.id ?? "") !== String(post.statusId)) return null;
     const fullText = String(payload?.data?.note_tweet?.text ?? payload?.data?.text ?? "").trim();
-    return fullText && fullText.length <= 16_000 ? fullText : null;
+    const attachedKeys = new Set(payload?.data?.attachments?.media_keys ?? []);
+    const video = includeVideo
+      ? (payload?.includes?.media ?? [])
+          .filter((media) => attachedKeys.has(media?.media_key))
+          .map(selectXVideo)
+          .find(Boolean) ?? null
+      : null;
+    return {
+      fullText: fullText && fullText.length <= 16_000 ? fullText : null,
+      video,
+    };
   } catch {
     return null;
   }
@@ -212,7 +259,11 @@ export function xPostId(post) {
     .slice(0, 32);
 }
 
-export async function fetchXPost(post, { fetchImpl = fetch, xApiBearerToken = "" } = {}) {
+export async function fetchXPost(post, {
+  fetchImpl = fetch,
+  xApiBearerToken = "",
+  includeVideo = false,
+} = {}) {
   const endpoint = new URL("https://publish.twitter.com/oembed");
   endpoint.searchParams.set("url", post.url);
   endpoint.searchParams.set("omit_script", "true");
@@ -239,13 +290,18 @@ export async function fetchXPost(post, { fetchImpl = fetch, xApiBearerToken = ""
     throw new Error("X 작성자가 등록된 링크와 다릅니다.");
   }
   if (!oembedContent) throw new Error("X 원문이 비어 있습니다.");
-  const fullContent = looksTruncated(oembedContent)
-    ? await fetchFullXPostText(post, { bearerToken: xApiBearerToken, fetchImpl })
+  const details = includeVideo || looksTruncated(oembedContent)
+    ? await fetchXPostDetails(post, {
+        bearerToken: xApiBearerToken,
+        fetchImpl,
+        includeVideo,
+      })
     : null;
   return {
-    content: fullContent ?? oembedContent,
+    content: details?.fullText ?? oembedContent,
     authorName: String(payload.author_name ?? post.handle).slice(0, 80),
     account: resolvedHandle,
+    video: details?.video ?? null,
     relatedPosts: await relatedPostsFromHtml(payload.html, { fetchImpl, primary: post }),
   };
 }
@@ -281,7 +337,7 @@ async function fetchContextPosts(message, primary, relatedPosts, options) {
 export async function normalizeXWatchMessage(message, options) {
   const post = options.post ?? findAllowedXPost(message, options);
   if (!post) return null;
-  const resolved = await fetchXPost(post, options);
+  const resolved = await fetchXPost(post, { ...options, includeVideo: true });
   const contexts = await fetchContextPosts(message, post, resolved.relatedPosts, options);
   const id = xPostId(post);
   const publishedAt = new Date(message.createdTimestamp ?? message.createdAt ?? Date.now());
@@ -300,6 +356,7 @@ export async function normalizeXWatchMessage(message, options) {
         publishedAt: publishedAt.toISOString(),
       },
       original: { language: "en", content: resolved.content, embeds: [], links: [post.url], contexts },
+      ...(resolved.video ? { internal: { xVideo: resolved.video } } : {}),
       workflow: { status: "pending_translation", translation: null, triage: null, dcPublication: null },
       collectedAt: new Date().toISOString(),
     },
