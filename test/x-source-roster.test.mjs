@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { loadXSourceAllowlist, loadXSourceRoster } from "../src/modules/news/x-watch-source.mjs";
+import { loadXSourceAllowlist, loadXSourceRoster, loadXStreamPolicy } from "../src/modules/news/x-watch-source.mjs";
 
 async function withRoster(payload, callback) {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-x-roster-"));
@@ -28,6 +28,35 @@ const source = {
   verifiedAt: "2026-08-01",
   enabled: true,
 };
+
+test("X stream policy groups enabled sources by lane", async () => {
+  const second = { ...source, handle: "OpenAIDevs", displayName: "OpenAI Developers" };
+  const payload = {
+    schemaVersion: 1,
+    streamPolicies: {
+      official: { mode: "all", includeReplies: false, terms: [], phrases: [], urlDomains: [] },
+    },
+    sources: [
+      { ...source, streamLane: "official" },
+      { ...second, streamLane: "official" },
+    ],
+  };
+  await withRoster(payload, async (target) => {
+    const policy = await loadXStreamPolicy(target);
+    assert.deepEqual(policy.groups, [{
+      id: "official",
+      handles: ["OpenAI", "OpenAIDevs"],
+      mode: "all",
+      includeReplies: false,
+      terms: [],
+      phrases: [],
+      urlDomains: [],
+      evidenceTerms: [],
+      evidencePhrases: [],
+      evidenceUrlDomains: [],
+    }]);
+  });
+});
 
 test("X 인물 명부는 소속·분야·신뢰등급·마지막 확인일을 보존한다", async () => {
   await withRoster({ schemaVersion: 1, sources: [source] }, async (target) => {

@@ -8,6 +8,34 @@ import {
   xLinksFromStreamEvent,
 } from "../src/modules/news/x-filtered-stream.mjs";
 
+test("X stream rule applies lane keywords before delivery", () => {
+  const rule = buildXStreamRule({ groups: [
+    {
+      id: "official",
+      handles: ["OpenAI", "OpenAIDevs"],
+      mode: "all",
+      includeReplies: false,
+      terms: [],
+      phrases: [],
+      urlDomains: [],
+    },
+    {
+      id: "practice",
+      handles: ["thsottiaux"],
+      mode: "keywords",
+      includeReplies: true,
+      terms: ["Codex", "Windows"],
+      phrases: ["rolling out"],
+      urlDomains: ["github.com"],
+      evidenceTerms: ["released"],
+      evidencePhrases: [],
+      evidenceUrlDomains: [],
+    },
+  ] });
+  assert.equal(rule.value,
+    "(((from:OpenAI OR from:OpenAIDevs) -is:reply) OR ((from:thsottiaux) (Codex OR Windows OR \"rolling out\" OR url:github.com) (released))) -is:retweet");
+});
+
 test("X 스트림 규칙은 allowlist 계정과 리포스트 제외만 포함한다", () => {
   assert.deepEqual(buildXStreamRule(new Set(["thsottiaux", "OpenAI"])), {
     value: "(from:thsottiaux OR from:OpenAI) -is:retweet",

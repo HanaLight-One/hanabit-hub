@@ -9,7 +9,40 @@ function apiError(status) {
   return error;
 }
 
+function groupedRule(policy) {
+  if (!Array.isArray(policy?.groups) || !policy.groups.length) {
+    throw new TypeError("X stream policy groups are required.");
+  }
+  const clauses = policy.groups.map((group) => {
+    const handles = group.handles.map((handle) => String(handle).trim());
+    if (!handles.length || handles.some((handle) => !/^[A-Za-z0-9_]{1,15}$/u.test(handle))) {
+      throw new TypeError("X stream source handle is invalid.");
+    }
+    const authors = handles.map((handle) => `from:${handle}`).join(" OR ");
+    const filters = [
+      ...group.terms,
+      ...group.phrases.map((phrase) => `"${phrase}"`),
+      ...group.urlDomains.map((domain) => `url:${domain}`),
+    ];
+    const evidenceFilters = [
+      ...(group.evidenceTerms ?? []),
+      ...(group.evidencePhrases ?? []).map((phrase) => `"${phrase}"`),
+      ...(group.evidenceUrlDomains ?? []).map((domain) => `url:${domain}`),
+    ];
+    const keywordFilter = group.mode === "keywords" ? ` (${filters.join(" OR ")})` : "";
+    const evidenceFilter = evidenceFilters.length ? ` (${evidenceFilters.join(" OR ")})` : "";
+    const replyFilter = group.includeReplies ? "" : " -is:reply";
+    return `((${authors})${keywordFilter}${evidenceFilter}${replyFilter})`;
+  });
+  return `(${clauses.join(" OR ")}) -is:retweet`;
+}
+
 export function buildXStreamRule(handles) {
+  if (handles && !(handles instanceof Set)) {
+    const value = groupedRule(handles);
+    if (value.length > 1_024) throw new Error("X stream rule is longer than 1024 characters.");
+    return Object.freeze({ value, tag: HANABIT_X_RULE_TAG });
+  }
   const normalized = [...handles].map((handle) => String(handle).trim());
   if (!normalized.length || normalized.some((handle) => !/^[A-Za-z0-9_]{1,15}$/u.test(handle))) {
     throw new TypeError("X 스트림 출처가 올바르지 않습니다.");

@@ -1,5 +1,41 @@
 {
   "schemaVersion": 1,
+  "streamPolicies": {
+    "official-confirmed": {
+      "mode": "all",
+      "includeReplies": false,
+      "terms": [],
+      "phrases": [],
+      "urlDomains": []
+    },
+    "product-practice": {
+      "mode": "keywords",
+      "includeReplies": true,
+      "terms": ["Codex", "ChatGPT", "API", "SDK", "Windows", "WSL", "sandbox", "CLI", "IDE", "terminal", "plugin", "plugins", "usage", "limits", "available", "live", "shipped", "released"],
+      "phrases": ["rolling out", "how to", "usage limits"],
+      "urlDomains": ["developers.openai.com", "github.com", "openai.com"]
+    },
+    "case-promotion": {
+      "mode": "keywords",
+      "includeReplies": false,
+      "terms": ["Codex", "ChatGPT", "API", "SDK"],
+      "phrases": [],
+      "urlDomains": [],
+      "evidenceTerms": ["repo", "workflow", "tutorial", "plugin", "skill", "available", "shipped", "released"],
+      "evidencePhrases": ["built with", "how to", "rolling out"],
+      "evidenceUrlDomains": ["developers.openai.com", "github.com", "openai.com"]
+    },
+    "observation-hype": {
+      "mode": "keywords",
+      "includeReplies": false,
+      "terms": ["OpenAI", "ChatGPT", "Codex", "API", "model"],
+      "phrases": [],
+      "urlDomains": [],
+      "evidenceTerms": ["release", "released", "shipped", "available", "rollout"],
+      "evidencePhrases": ["rolling out"],
+      "evidenceUrlDomains": ["openai.com", "developers.openai.com"]
+    }
+  },
   "sources": [
     {
       "handle": "OpenAI",
@@ -11,6 +47,7 @@
       "topics": ["company", "models", "products", "research"],
       "trustLevel": "official",
       "verifiedAt": "2026-08-01",
+      "streamLane": "official-confirmed",
       "enabled": true
     },
     {
@@ -23,6 +60,7 @@
       "topics": ["api", "codex", "developer-platform"],
       "trustLevel": "official",
       "verifiedAt": "2026-08-01",
+      "streamLane": "official-confirmed",
       "enabled": true
     },
     {
@@ -35,6 +73,7 @@
       "topics": ["company", "models", "products"],
       "trustLevel": "high",
       "verifiedAt": "2026-08-02",
+      "streamLane": "observation-hype",
       "enabled": true
     },
     {
@@ -47,6 +86,7 @@
       "topics": ["engineering", "models", "research"],
       "trustLevel": "high",
       "verifiedAt": "2026-08-02",
+      "streamLane": "case-promotion",
       "enabled": true
     },
     {
@@ -59,6 +99,7 @@
       "topics": ["chatgpt", "codex", "usage"],
       "trustLevel": "high",
       "verifiedAt": "2026-08-01",
+      "streamLane": "product-practice",
       "enabled": true
     },
     {
@@ -71,6 +112,46 @@
       "topics": ["api", "developer-platform", "products"],
       "trustLevel": "standard",
       "verifiedAt": null,
+      "streamLane": "case-promotion",
+      "enabled": true
+    },
+    {
+      "handle": "embirico",
+      "displayName": "Embirico",
+      "sourceKind": "person",
+      "affiliation": "OpenAI",
+      "affiliationStatus": "confirmed",
+      "roles": ["codex-product"],
+      "topics": ["codex", "developer-platform", "products"],
+      "trustLevel": "high",
+      "verifiedAt": "2026-08-03",
+      "streamLane": "product-practice",
+      "enabled": true
+    },
+    {
+      "handle": "ajambrosino",
+      "displayName": "@ajambrosino",
+      "sourceKind": "candidate",
+      "affiliation": "OpenAI",
+      "affiliationStatus": "review_required",
+      "roles": ["codex-practice-candidate"],
+      "topics": ["codex", "sandbox", "windows", "wsl"],
+      "trustLevel": "candidate",
+      "verifiedAt": null,
+      "streamLane": "product-practice",
+      "enabled": true
+    },
+    {
+      "handle": "derrickcchoi",
+      "displayName": "@derrickcchoi",
+      "sourceKind": "candidate",
+      "affiliation": "OpenAI",
+      "affiliationStatus": "review_required",
+      "roles": ["codex-practice-candidate"],
+      "topics": ["codex", "developer-platform", "workflow"],
+      "trustLevel": "candidate",
+      "verifiedAt": null,
+      "streamLane": "product-practice",
       "enabled": true
     }
   ]

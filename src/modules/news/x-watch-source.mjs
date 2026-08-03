@@ -14,6 +14,10 @@ const TRUST_LEVELS = new Set(["official", "high", "standard", "candidate"]);
 const HANDLE_PATTERN = /^[A-Za-z0-9_]{1,15}$/u;
 const TOPIC_PATTERN = /^[a-z0-9][a-z0-9-]{0,39}$/u;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
+const STREAM_LANE_PATTERN = /^[a-z0-9][a-z0-9-]{0,39}$/u;
+const STREAM_TERM_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._+/-]{0,49}$/u;
+const STREAM_PHRASE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 ._+/-]{0,79}$/u;
+const STREAM_DOMAIN_PATTERN = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,20}$/u;
 
 function looksTruncated(value) {
   return /(?:\u2026|\.{3})\s*$/u.test(String(value ?? "").trim());
@@ -240,6 +244,67 @@ export async function loadXSourceAllowlist(target) {
   return new Set(roster.sources
     .filter((source) => source.enabled && source.affiliationStatus !== "former")
     .map((source) => source.handle.toLowerCase()));
+}
+
+export async function loadXStreamPolicy(target) {
+  if (!path.isAbsolute(target)) throw new TypeError("X stream config path must be absolute.");
+  const parsed = JSON.parse(await readFile(target, "utf8"));
+  const roster = await loadXSourceRoster(target);
+  const policies = parsed.streamPolicies;
+  if (!policies || typeof policies !== "object" || Array.isArray(policies)) {
+    throw new TypeError("X streamPolicies config is required.");
+  }
+
+  const groups = new Map();
+  for (const source of roster.sources.filter((entry) => entry.enabled && entry.affiliationStatus !== "former")) {
+    const rawSource = parsed.sources.find((entry) => entry.handle.toLowerCase() === source.handle.toLowerCase());
+    const lane = String(rawSource?.streamLane ?? "");
+    if (!STREAM_LANE_PATTERN.test(lane) || !policies[lane]) {
+      throw new TypeError(`X stream lane is invalid: ${source.handle}`);
+    }
+    if (!groups.has(lane)) groups.set(lane, []);
+    groups.get(lane).push(source.handle);
+  }
+
+  return Object.freeze({
+    groups: Object.freeze([...groups].map(([id, handles]) => {
+      const policy = policies[id];
+      const mode = String(policy?.mode ?? "");
+      const terms = Array.isArray(policy?.terms) ? [...new Set(policy.terms)] : [];
+      const phrases = Array.isArray(policy?.phrases) ? [...new Set(policy.phrases)] : [];
+      const urlDomains = Array.isArray(policy?.urlDomains) ? [...new Set(policy.urlDomains)] : [];
+      const evidenceTerms = Array.isArray(policy?.evidenceTerms) ? [...new Set(policy.evidenceTerms)] : [];
+      const evidencePhrases = Array.isArray(policy?.evidencePhrases) ? [...new Set(policy.evidencePhrases)] : [];
+      const evidenceUrlDomains = Array.isArray(policy?.evidenceUrlDomains)
+        ? [...new Set(policy.evidenceUrlDomains)] : [];
+      if (!["all", "keywords"].includes(mode) || typeof policy?.includeReplies !== "boolean") {
+        throw new TypeError(`X stream policy is invalid: ${id}`);
+      }
+      if (terms.some((term) => !STREAM_TERM_PATTERN.test(term))
+        || phrases.some((phrase) => !STREAM_PHRASE_PATTERN.test(phrase) || !phrase.includes(" "))
+        || urlDomains.some((domain) => !STREAM_DOMAIN_PATTERN.test(domain))
+        || evidenceTerms.some((term) => !STREAM_TERM_PATTERN.test(term))
+        || evidencePhrases.some((phrase) => !STREAM_PHRASE_PATTERN.test(phrase) || !phrase.includes(" "))
+        || evidenceUrlDomains.some((domain) => !STREAM_DOMAIN_PATTERN.test(domain))) {
+        throw new TypeError(`X stream filter token is invalid: ${id}`);
+      }
+      if (mode === "keywords" && !terms.length && !phrases.length && !urlDomains.length) {
+        throw new TypeError(`X keyword stream policy is empty: ${id}`);
+      }
+      return Object.freeze({
+        id,
+        handles: Object.freeze(handles),
+        mode,
+        includeReplies: policy.includeReplies,
+        terms: Object.freeze(terms),
+        phrases: Object.freeze(phrases),
+        urlDomains: Object.freeze(urlDomains),
+        evidenceTerms: Object.freeze(evidenceTerms),
+        evidencePhrases: Object.freeze(evidencePhrases),
+        evidenceUrlDomains: Object.freeze(evidenceUrlDomains),
+      });
+    })),
+  });
 }
 
 export function findAllowedXPost(message, { channelId, allowedHandles }) {
