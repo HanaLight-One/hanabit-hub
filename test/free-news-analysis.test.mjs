@@ -18,6 +18,14 @@ test("무료 API 오류 이름은 비밀값 없이 안전한 원인 코드로 �
   );
   assert.equal(classifyProviderReason("APIStatusError status_code=429"), "rate_limit");
   assert.equal(classifyProviderReason("request failed with HTTP 503"), "provider_server");
+  assert.equal(
+    classifyProviderReason("전용 Python 가상환경이 없습니다. README의 설치 명령을 실행하세요."),
+    "local_configuration",
+  );
+  assert.equal(
+    classifyProviderReason("OPENAI_API_KEY가 없고 DPAPI 키 저장소도 없습니다."),
+    "local_configuration",
+  );
   assert.equal(classifyProviderReason("민감할 수 있는 알 수 없는 응답"), "unknown");
 });
 

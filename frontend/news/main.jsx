@@ -57,6 +57,7 @@ const PROVIDER_REASON_LABELS = {
   timeout: "무료 API가 제한 시간 안에 응답하지 않았어요.",
   bad_request: "무료 API가 요청 형식을 받아들이지 않았어요.",
   provider_server: "무료 API 서버에서 일시적인 오류가 발생했어요.",
+  local_configuration: "뉴스 감시기의 Python 또는 키 저장소 연결을 확인해야 해요.",
   unknown: "제공자 오류 종류를 더 좁히지 못했어요.",
 };
 

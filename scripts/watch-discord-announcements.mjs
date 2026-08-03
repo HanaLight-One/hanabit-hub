@@ -156,7 +156,10 @@ try {
   const shadowNewsConfig = await loadShadowNewsSources(shadowSourcesPath);
   officialCollector = createOfficialNewsCollector({ stateRoot, sources: officialNewsConfig.sources });
   shadowCollector = createShadowNewsCollector({ stateRoot, sources: shadowNewsConfig.sources });
-  const runnerPath = hubConfig.integrations?.imageStudio?.generation?.freeTextRunnerPath;
+  const generationConfig = hubConfig.integrations?.imageStudio?.generation;
+  const runnerPath = generationConfig?.freeTextRunnerPath;
+  const pythonExecutablePath = generationConfig?.freeTextPythonExecutablePath;
+  const keyStorePath = generationConfig?.freeTextKeyStorePath;
   if (!path.isAbsolute(runnerPath ?? "")) {
     throw new Error("뉴스 번역용 무료 API runner가 준비되지 않았습니다.");
   }
@@ -181,7 +184,14 @@ try {
     allowedHandles: allowedXHandles,
     xApiBearerToken: xStreamConfig.enabled ? xStreamConfig.bearerToken : "",
   });
-  processor = createNewsProcessor({ stateRoot, runnerPath, codexReviewer, sourceProfiles: newsSourceProfiles });
+  processor = createNewsProcessor({
+    stateRoot,
+    runnerPath,
+    pythonExecutablePath,
+    keyStorePath,
+    codexReviewer,
+    sourceProfiles: newsSourceProfiles,
+  });
   const dcPublisherConfig = hubConfig.integrations?.news?.dcPublisher;
   autoPublisher = createNewsDcPublicationService({
     root: stateRoot,

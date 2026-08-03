@@ -352,8 +352,11 @@ function run(command, args, { cwd, timeoutMs = 600_000 } = {}) {
 
 export function classifyProviderReason(value) {
   const text = String(value ?? "");
-  const marker = text.match(/HANABIT_PROVIDER_REASON=(rate_limit|authentication|connection|timeout|bad_request|provider_server|unknown)/u)?.[1];
+  const marker = text.match(/HANABIT_PROVIDER_REASON=(rate_limit|authentication|connection|timeout|bad_request|provider_server|local_configuration|unknown)/u)?.[1];
   if (marker) return marker;
+  if (/전용 Python 가상환경이 없습니다|DPAPI 키 저장소도 없습니다|키 저장소는 절대경로|Python 실행 (?:파일|환경변수)는 절대경로/iu.test(text)) {
+    return "local_configuration";
+  }
   const errorName = text.match(/\(([A-Za-z]+Error)\)/u)?.[1] ?? "";
   if (errorName === "RateLimitError") return "rate_limit";
   if (["AuthenticationError", "PermissionDeniedError"].includes(errorName)) return "authentication";

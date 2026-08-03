@@ -189,6 +189,7 @@ function publicItem(record, sourceProfiles) {
               "timeout",
               "bad_request",
               "provider_server",
+              "local_configuration",
               "unknown",
             ].includes(record?.workflow?.analysisFailure?.providerReason)
               ? record.workflow.analysisFailure.providerReason

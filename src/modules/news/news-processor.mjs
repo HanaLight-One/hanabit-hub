@@ -15,6 +15,7 @@ const PROVIDER_REASONS = new Set([
   "timeout",
   "bad_request",
   "provider_server",
+  "local_configuration",
   "unknown",
 ]);
 
