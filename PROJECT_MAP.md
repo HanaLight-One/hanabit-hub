@@ -110,6 +110,7 @@ Discord Announcement ─┐
 X Filtered Stream ─> #x-watch ┘                         │
 OpenAI 공식 문서 링크 ─> 제한된 본문 보강 ──────────────┘
 무료 공식 소스 ────────────────────────> 같은 번역·판정·게시 관문
+OpenAI Status JSON ─> 20초 스냅샷·중복 판정 ─> 장애/현황/부분복구/복구완료 후보
 외신 RSS ─> 제목·설명·링크만 수집 ────> shadow_radar ─> /news 외신 레이더만
                          원문 번역 + 관련 글별 번역을 분리 + 게시가치·정보 성격 태그
                                       애매한 X만 ─> Codex 번역 귀속 감사·심층검토(일 4건)
@@ -138,6 +139,14 @@ OGP 조회 실패 시 일반 링크를 유지해 게시 자체는 막지 않는�
 실행 진입점은 `scripts/watch-discord-announcements.mjs`다. 실시간 이벤트와
 10분 보충 확인이 같은 중복 방지 저장소를 사용한다. X 인물 명부는
 `config/news-x-sources.json`이고 비밀 토큰은 코드나 지도에 기록하지 않는다.
+같은 감시기는 `status.openai.com/api/v2/summary.json`을 20초마다 읽고
+`src/modules/news/openai-status-monitor.mjs`의 상태 영수증으로 공식 업데이트 ID와 활성 장애
+묶음을 비교한다. 첫 실행의 진행 중 장애는 기준선으로만 저장해 과거 속보를 재게시하지 않는다.
+새 장애·확대·현황 변경·부분 복구는 새 파딱 글을 먼저 게시하고 `posted`와 `postId`가 확인된
+뒤에만 직전 자동 상태 글을 한 번 삭제한다. 전체 활성 장애가 사라지면 `[복구완료]` 원고를
+같은 방식으로 게시한다. 수동 글과 감시기 영수증 밖의 글은 삭제하지 않으며, 삭제 결과가
+불명확하면 `ambiguous-no-retry`로 끝내고 사람 확인 알림을 보낸다. 삭제 실행 경계는
+`src/modules/news/openai-status-post-replacer.mjs`와 `scripts/delete-news-dc-post.cjs`다.
 뉴스 재분석은 `POST /api/news/:id/analysis-retry`에서 명시적 확인값을 받은
 `translation_failed` 항목에만 허용하며 이미지 분석 API는 호출하지 않는다.
 무료 API 뉴스 분석은 공용 Responses API 텍스트 실행기에 요청별 strict JSON Schema를

@@ -10,7 +10,12 @@ import {
 } from "./news-translation-audit.mjs";
 import { enrichOfficialDocument } from "./official-document-enricher.mjs";
 
-const OFFICIAL_TYPES = new Set(["discord-announcement", "official-github-release", "official-changelog"]);
+const OFFICIAL_TYPES = new Set([
+  "discord-announcement",
+  "official-github-release",
+  "official-changelog",
+  "openai-status-snapshot",
+]);
 const OFFICIAL_X_ACCOUNTS = new Set(["openai", "openaidevs"]);
 const PROVIDER_REASONS = new Set([
   "rate_limit",

@@ -17,7 +17,7 @@ export function selectNewsDcHeadText(record, sourceProfile = null) {
   const source = record?.source ?? {};
   const triage = record?.workflow?.triage ?? {};
   const account = String(source.account ?? "").toLowerCase();
-  const official = source.type === "discord-announcement" ||
+  const official = ["discord-announcement", "openai-status-snapshot"].includes(source.type) ||
     OFFICIAL_ACCOUNTS.has(account) ||
     triage.evidenceTag === "official";
   if (official) return NEWS_DC_HEAD_TEXTS.news;

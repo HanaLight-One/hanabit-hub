@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "node --watch src/server.mjs",
     "start": "node src/server.mjs",
-    "check": "npm run news:build && npm run notifications:build && npm run dc:build && node --check src/server.mjs && node --check src/config.mjs && node --check public/notification-sw.js && node --check scripts/collect-discord-announcements.mjs && node --check scripts/watch-discord-announcements.mjs && node --check scripts/configure-x-filtered-stream.mjs && node --check scripts/preview-official-news.mjs && node --check scripts/preview-shadow-news.mjs && node --check scripts/initialize-hub-database.mjs && node --check scripts/publish-news-to-dc.cjs && node --check scripts/publish-dc-compose.cjs && node --test",
+    "check": "npm run news:build && npm run notifications:build && npm run dc:build && node --check src/server.mjs && node --check src/config.mjs && node --check public/notification-sw.js && node --check scripts/collect-discord-announcements.mjs && node --check scripts/watch-discord-announcements.mjs && node --check scripts/configure-x-filtered-stream.mjs && node --check scripts/preview-official-news.mjs && node --check scripts/preview-shadow-news.mjs && node --check scripts/initialize-hub-database.mjs && node --check scripts/publish-news-to-dc.cjs && node --check scripts/delete-news-dc-post.cjs && node --check scripts/publish-dc-compose.cjs && node --test",
     "news:build": "vite build --config vite.news.config.mjs",
     "notifications:build": "vite build --config vite.notifications.config.mjs",
     "dc:build": "vite build --config vite.dc.config.mjs",

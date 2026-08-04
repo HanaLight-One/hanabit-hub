@@ -172,6 +172,18 @@ export function createNewsDcPublicationService({
         workflow: { ...record.workflow, autoPublishGate: gate },
       };
     });
+    const statusTarget = candidates.find((record) => record.id === id);
+    if (
+      statusTarget?.source?.type === "openai-status-snapshot" &&
+      statusTarget.workflow?.autoPublishGate?.decision === "eligible"
+    ) {
+      return {
+        decision: "ready",
+        code: "openai_status_update",
+        gate: statusTarget.workflow.autoPublishGate,
+        shadow: null,
+      };
+    }
     const target = applyNewsEditorialShadow(candidates).find((record) => record.id === id);
     if (!target) return { decision: "blocked", code: "not_found" };
     return {

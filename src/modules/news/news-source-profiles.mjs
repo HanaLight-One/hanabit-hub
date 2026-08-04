@@ -74,6 +74,20 @@ export function createNewsSourceProfileIndex(roster) {
 }
 
 export function findNewsSourceProfile(source, profiles) {
+  if (source?.type === "openai-status-snapshot") {
+    return Object.freeze({
+      displayName: "OpenAI Status",
+      handle: null,
+      affiliation: "OpenAI",
+      affiliationConfirmed: true,
+      roles: Object.freeze(["공식 서비스 상태 안내"]),
+      topics: Object.freeze(["서비스 상태", "장애", "복구"]),
+      trustLabel: "공식 출처",
+      trustLevel: "official",
+      verifiedAt: null,
+      whyTracked: "OpenAI가 직접 운영하는 공식 상태 페이지의 장애와 복구 소식이에요.",
+    });
+  }
   if (["official-github-release", "official-changelog"].includes(source?.type)) {
     const github = source.type === "official-github-release";
     return Object.freeze({

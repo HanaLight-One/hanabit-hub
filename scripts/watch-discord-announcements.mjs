@@ -20,6 +20,12 @@ import { createNewsPushNotifier } from "../src/modules/news/news-push-notifier.m
 import { createNewsDcPublicationService } from "../src/modules/news/news-dc-publication.mjs";
 import { createOfficialNewsCollector, loadOfficialNewsSources } from "../src/modules/news/official-news-collector.mjs";
 import { createShadowNewsCollector, loadShadowNewsSources } from "../src/modules/news/shadow-news-collector.mjs";
+import {
+  createOpenAIStatusMonitor,
+  OPENAI_STATUS_INTERVAL_MS,
+} from "../src/modules/news/openai-status-monitor.mjs";
+import { createOpenAIStatusPostReplacer } from "../src/modules/news/openai-status-post-replacer.mjs";
+import { createPendingNewsStore } from "../src/modules/news/news-item-store.mjs";
 
 const PROJECT_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const stateRoot = path.join(PROJECT_ROOT, "state", "news");
@@ -44,11 +50,23 @@ let shadowInFlight = null;
 let xStreamController;
 let officialCollector;
 let shadowCollector;
+let statusMonitor;
+let statusPostReplacer;
+let statusInFlight = null;
+const newsStore = createPendingNewsStore({ root: stateRoot });
+
+const STATUS_TITLES = Object.freeze({
+  outage: "[장애발생] OpenAI 서비스 장애 발생",
+  expanded: "[장애확대] OpenAI 서비스 장애 확대",
+  updated: "[장애현황] OpenAI 서비스 장애 업데이트",
+  "partial-recovery": "[부분복구] OpenAI 서비스 일부 장애 지속",
+  recovered: "[복구완료] OpenAI 서비스 정상화",
+});
 
 async function finishProcessed(record) {
   await notifier.notify(record);
   await pushNotifier.notify(record);
-  if (!autoPublisher) return;
+  if (!autoPublisher) return null;
   try {
     const result = await autoPublisher.autoPublish(record.id);
     if (result.status === "posted") {
@@ -58,9 +76,58 @@ async function finishProcessed(record) {
       await pushNotifications.publish("news.publication-review").catch(() => {});
       await safeLog(`뉴스 DC 자동 게시 확인 필요: ${record.id} (${result.status})`);
     }
+    return result;
   } catch (error) {
     await pushNotifications.publish("news.publication-review").catch(() => {});
     await reportError("뉴스 DC 자동 게시 실패", error);
+    return { id: record.id, status: "failed" };
+  }
+}
+
+async function replacePreviousStatusPost(previousPost) {
+  if (!previousPost || !statusPostReplacer) return;
+  const result = await statusPostReplacer.replace(previousPost);
+  await statusMonitor.recordReplacement(previousPost, result);
+  if (result.status !== "deleted") {
+    await pushNotifications.publish("news.publication-review").catch(() => {});
+    await safeLog(`OpenAI 상태 이전 글 삭제 확인 필요: ${previousPost.postId} (${result.status})`);
+  } else {
+    await safeLog(`OpenAI 상태 이전 글 삭제 완료: ${previousPost.postId}`);
+  }
+}
+
+async function collectOpenAIStatus(reason) {
+  if (!statusMonitor || !processor || !notifier || !pushNotifier) return;
+  if (statusInFlight) return statusInFlight;
+  statusInFlight = (async () => {
+    const result = await statusMonitor.poll();
+    if (!["created", "existing"].includes(result.status)) {
+      if (result.status !== "unchanged") {
+        await safeLog(`OpenAI 상태 확인(${reason}): ${result.status}, 활성 장애 ${result.activeCount}`);
+      }
+      return;
+    }
+    let processed = await processor.process(result.id);
+    const title = STATUS_TITLES[result.phase];
+    if (title && processed.workflow?.translation) {
+      processed = await newsStore.update(result.id, (current) => ({
+        ...current,
+        workflow: {
+          ...current.workflow,
+          translation: { ...current.workflow.translation, title },
+        },
+      }));
+    }
+    const publication = await finishProcessed(processed);
+    if (publication?.status !== "posted" || !publication.publication?.postId) return;
+    const confirmed = await statusMonitor.confirmPublished(result.snapshotHash, publication.publication);
+    await replacePreviousStatusPost(confirmed.previousPost);
+    await safeLog(`OpenAI 상태 새 글 게시 완료: ${result.phase} (${publication.publication.postId})`);
+  })();
+  try {
+    await statusInFlight;
+  } finally {
+    statusInFlight = null;
   }
 }
 
@@ -207,6 +274,12 @@ try {
     xApiBearerToken: xStreamConfig.bearerToken,
   });
   await autoPublisher.initializeAutoPublishing();
+  statusMonitor = createOpenAIStatusMonitor({ stateRoot });
+  statusPostReplacer = createOpenAIStatusPostReplacer({
+    root: stateRoot,
+    publisherRoot: dcPublisherConfig?.publisherRoot,
+    deleteScriptPath: path.join(PROJECT_ROOT, "scripts", "delete-news-dc-post.cjs"),
+  });
   client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -333,6 +406,15 @@ try {
   setInterval(() => {
     collectShadowNews("주기 확인").catch((error) => reportError("외신 그림자 레이더 확인 실패", error));
   }, shadowNewsConfig.intervalMinutes * 60 * 1000);
+  const pendingReplacement = (await statusMonitor.readState())?.pendingReplacement;
+  if (pendingReplacement) {
+    await replacePreviousStatusPost(pendingReplacement)
+      .catch((error) => reportError("OpenAI 상태 이전 글 삭제 복구 실패", error));
+  }
+  await collectOpenAIStatus("시작").catch((error) => reportError("OpenAI 상태 시작 확인 실패", error));
+  setInterval(() => {
+    collectOpenAIStatus("주기 확인").catch((error) => reportError("OpenAI 상태 확인 실패", error));
+  }, OPENAI_STATUS_INTERVAL_MS);
 
   process.once("SIGINT", () => shutdown("SIGINT"));
   process.once("SIGTERM", () => shutdown("SIGTERM"));

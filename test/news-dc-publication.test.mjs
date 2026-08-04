@@ -390,6 +390,53 @@ test("자동 게시 시작 전 뉴스는 소급 게시하지 않는다", async (
   }
 });
 
+test("OpenAI 상태 업데이트는 일반 뉴스 게시 간격과 별도로 즉시 게시한다", async () => {
+  const sample = await fixture({ approved: false });
+  let runs = 0;
+  try {
+    const itemPath = path.join(sample.itemRoot, "item.json");
+    const item = JSON.parse(await readFile(itemPath, "utf8"));
+    item.source = {
+      type: "openai-status-snapshot",
+      provider: "openai-status",
+      url: "https://status.openai.com/",
+      publishedAt: "2026-08-02T03:00:30.000Z",
+    };
+    item.workflow.processedAt = "2026-08-02T03:01:00.000Z";
+    item.workflow.translationReview = { status: "local_verified" };
+    item.workflow.triage = {
+      ...item.workflow.triage,
+      confidence: 0.95,
+      importance: "high",
+      boardCategory: "news",
+    };
+    await writeFile(itemPath, JSON.stringify(item), "utf8");
+    const service = createNewsDcPublicationService({
+      root: sample.newsRoot,
+      enabled: true,
+      autoPublishEnabled: true,
+      publisherRoot: sample.publisherRoot,
+      coverRoot: sample.coverRoot,
+      publisherScriptPath: sample.scriptPath,
+      now: () => new Date("2026-08-02T03:00:00.000Z"),
+      async runPublisher({ jobPath }) {
+        runs += 1;
+        const job = JSON.parse(await readFile(jobPath, "utf8"));
+        await writeFile(job.resultPath, JSON.stringify({
+          status: "posted",
+          postId: "123459",
+          url: "https://gall.dcinside.com/mgallery/board/view/?id=chatgpt&no=123459",
+        }), "utf8");
+      },
+    });
+    await service.initializeAutoPublishing();
+    assert.equal((await service.autoPublish(ID)).status, "posted");
+    assert.equal(runs, 1);
+  } finally {
+    await rm(sample.root, { recursive: true, force: true });
+  }
+});
+
 test("승인 없는 뉴스와 비활성 게시자는 실제 실행을 거부한다", async () => {
   const sample = await fixture({ approved: false });
   try {
