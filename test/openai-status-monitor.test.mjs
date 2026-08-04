@@ -83,3 +83,27 @@ test("보호된 수동 장애 글은 삭제 대상이 아니면서 복구완료 
   assert.equal(recovered.status, "created");
   assert.equal(recovered.phase, "recovered");
 });
+
+test("사용자가 지정한 보호 글만 다음 상태 글의 교체 대상으로 전환한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-status-"));
+  const monitor = createOpenAIStatusMonitor({
+    stateRoot: root,
+    fetchImpl: responder([[incident()], [incident({ update: "update-2", status: "monitoring" })]]),
+  });
+  await monitor.poll();
+  await monitor.adoptProtectedPost({
+    postId: "120497",
+    url: "https://m.dcinside.com/board/chatgpt/120497",
+  });
+  const authorized = await monitor.authorizeAdoptedPostReplacement("120497");
+  assert.equal(authorized.status, "authorized");
+  assert.equal(authorized.currentPost.ownership, "adopted-replaceable");
+  await assert.rejects(() => monitor.authorizeAdoptedPostReplacement("120498"), /일치하지 않습니다/u);
+  const update = await monitor.poll();
+  const confirmed = await monitor.confirmPublished(update.snapshotHash, {
+    postId: "120700",
+    url: "https://gall.dcinside.com/example",
+  });
+  assert.equal(confirmed.previousPost.postId, "120497");
+  assert.equal((await monitor.readState()).pendingReplacement.postId, "120497");
+});

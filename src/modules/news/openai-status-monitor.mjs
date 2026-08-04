@@ -225,7 +225,9 @@ export function createOpenAIStatusMonitor({
       ...state,
       currentPost,
       pendingSnapshot: null,
-      pendingReplacement: previousPost?.ownership === "automatic" ? previousPost : null,
+      pendingReplacement: ["automatic", "adopted-replaceable"].includes(previousPost?.ownership)
+        ? previousPost
+        : null,
       history: [...state.history.slice(-99), { event: "posted", ...currentPost }],
     });
     return { currentPost, previousPost };
@@ -257,6 +259,34 @@ export function createOpenAIStatusMonitor({
     return { status: "adopted", currentPost };
   }
 
+  async function authorizeAdoptedPostReplacement(postIdValue) {
+    const postId = String(postIdValue ?? "");
+    if (!/^\d{4,}$/u.test(postId)) {
+      throw new TypeError("교체를 허용할 상태 글 번호가 올바르지 않습니다.");
+    }
+    const state = await readState();
+    if (!state || state.currentPost?.postId !== postId) {
+      throw new Error("현재 상태 글 영수증과 교체 허용 글 번호가 일치하지 않습니다.");
+    }
+    if (state.currentPost.ownership === "adopted-replaceable") {
+      return { status: "already-authorized", currentPost: state.currentPost };
+    }
+    if (state.currentPost.ownership !== "manual-protected") {
+      throw new Error("보호된 수동 상태 글만 교체 대상으로 전환할 수 있습니다.");
+    }
+    const currentPost = { ...state.currentPost, ownership: "adopted-replaceable" };
+    await saveState({
+      ...state,
+      currentPost,
+      history: [...state.history.slice(-99), {
+        event: "replacement-authorized",
+        postId,
+        authorizedAt: now().toISOString(),
+      }],
+    });
+    return { status: "authorized", currentPost };
+  }
+
   async function recordReplacement(previousPost, result) {
     const state = await readState();
     if (!state) throw new Error("OpenAI 상태 감시 영수증이 없습니다.");
@@ -272,5 +302,12 @@ export function createOpenAIStatusMonitor({
     });
   }
 
-  return Object.freeze({ poll, readState, confirmPublished, adoptProtectedPost, recordReplacement });
+  return Object.freeze({
+    poll,
+    readState,
+    confirmPublished,
+    adoptProtectedPost,
+    authorizeAdoptedPostReplacement,
+    recordReplacement,
+  });
 }

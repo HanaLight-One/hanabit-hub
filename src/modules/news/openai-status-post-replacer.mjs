@@ -30,7 +30,10 @@ export function createOpenAIStatusPostReplacer({
   const jobsRoot = path.join(root, "openai-status-delete-jobs");
 
   async function replace(previousPost) {
-    if (previousPost?.ownership !== "automatic" || !/^\d{4,}$/u.test(String(previousPost?.postId ?? ""))) {
+    if (
+      !["automatic", "adopted-replaceable"].includes(previousPost?.ownership) ||
+      !/^\d{4,}$/u.test(String(previousPost?.postId ?? ""))
+    ) {
       return { status: "protected", postId: String(previousPost?.postId ?? "") };
     }
     const postId = String(previousPost.postId);
@@ -70,4 +73,3 @@ export function createOpenAIStatusPostReplacer({
 
   return Object.freeze({ replace });
 }
-
