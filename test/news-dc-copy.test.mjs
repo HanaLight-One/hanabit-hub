@@ -129,3 +129,21 @@ test("Discord 공식 글은 직접 미디어 주소를 빼고 외부 원문 링�
   assert.match(draft.bodyText, /https:\/\/openai\.com\/index\/ten-advances-in-mathematics\//u);
   assert.doesNotMatch(draft.bodyText, /video\.twimg\.com|\.mp4|discord\.com\/channels/u);
 });
+
+test("공식 문서 보강은 관련 글과 구분한 주요 내용으로 표시한다", () => {
+  const sample = record();
+  sample.original.contexts = [{
+    relation: "official-document",
+    account: "OpenAI",
+    label: "OpenAI 공식 문서",
+    content: "Official source",
+    url: "https://openai.com/index/example",
+  }];
+  sample.workflow.contextTranslations = [{
+    index: 1,
+    body: "문제 일부는 해결했고 나머지는 상당한 진전을 이뤘습니다.",
+  }];
+  const draft = composeNewsDcCopy(sample);
+  assert.match(draft.bodyText, /공식 문서 주요 내용 · OpenAI 공식 문서/u);
+  assert.doesNotMatch(draft.bodyText, /관련 글 번역 · OpenAI 공식 문서/u);
+});

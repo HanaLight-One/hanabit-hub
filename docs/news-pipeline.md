@@ -10,6 +10,12 @@
 
 ## 현재 단계
 
+OpenAI 공식 Announcement 또는 추적 X 게시물에 `https://openai.com/index/` 링크가 있으면
+분석 전에 공식 문서 본문 한 건을 보강한다. 공개 URL만 Jina Reader로 전달하고 응답이 같은
+OpenAI 원문을 가리키는지 확인하며, 15초·128KB·12,000자 제한을 적용한다. 문서는 원문 발언과
+섞지 않고 `공식 문서 주요 내용`으로 별도 요약한다. Reader 실패는 뉴스 수집 실패로 승격하지
+않으며 기존 공지 번역을 계속한다.
+
 Discord Gateway 감시기가 `#openai-announcements`와 `#x-watch`를 함께 감시한다.
 OpenAI 공지의 글, Embed, 링크와 Discord CDN 이미지를 보존하고, `#x-watch`에서는
 등록된 X 계정의 `/status/<ID>` 링크만 공식 X oEmbed를 통해 원문으로 보충한다.

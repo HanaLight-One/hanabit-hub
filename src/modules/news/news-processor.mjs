@@ -5,6 +5,7 @@ import { findNewsSourceProfile } from "./news-source-profiles.mjs";
 import { NEWS_ANALYSIS_POLICY_VERSION } from "./news-auto-publish-policy.mjs";
 import { createNewsAnalysisNotice } from "./news-analysis-notice.mjs";
 import { auditFreeNewsTranslation } from "./news-translation-audit.mjs";
+import { enrichOfficialDocument } from "./official-document-enricher.mjs";
 
 const OFFICIAL_TYPES = new Set(["discord-announcement", "official-github-release", "official-changelog"]);
 const OFFICIAL_X_ACCOUNTS = new Set(["openai", "openaidevs"]);
@@ -46,6 +47,7 @@ export function createNewsProcessor({
   keyStorePath = null,
   analyze = invokeFreeNewsAnalysis,
   codexReviewer = null,
+  officialDocumentEnricher = enrichOfficialDocument,
   sourceProfiles = new Map(),
   now = () => new Date(),
 }) {
@@ -64,9 +66,13 @@ export function createNewsProcessor({
   async function process(id) {
     if (inFlight.has(id)) return inFlight.get(id);
     const task = (async () => {
-      const record = await store.read(id);
+      let record = await store.read(id);
       if (record.workflow?.status !== "pending_translation") return record;
       try {
+        const enriched = await officialDocumentEnricher(record);
+        if (enriched !== record) {
+          record = await store.update(id, () => enriched);
+        }
         const profile = findNewsSourceProfile(record.source, sourceProfiles);
         const analysisRecord = profile
           ? { ...record, source: { ...record.source, profile } }

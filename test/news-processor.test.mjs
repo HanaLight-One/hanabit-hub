@@ -7,7 +7,11 @@ import { createPendingNewsStore } from "../src/modules/news/news-item-store.mjs"
 import { createNewsProcessor } from "../src/modules/news/news-processor.mjs";
 import { NEWS_ANALYSIS_POLICY_VERSION } from "../src/modules/news/news-auto-publish-policy.mjs";
 
-async function fixture(source, analyze, callback, { codexReviewer = null, sourceProfiles = new Map() } = {}) {
+async function fixture(source, analyze, callback, {
+  codexReviewer = null,
+  sourceProfiles = new Map(),
+  officialDocumentEnricher = async (record) => record,
+} = {}) {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-processor-"));
   const runnerPath = path.join(root, "runner.ps1");
   const pythonExecutablePath = path.join(root, "free-python.exe");
@@ -24,6 +28,7 @@ async function fixture(source, analyze, callback, { codexReviewer = null, source
       keyStorePath,
       analyze,
       codexReviewer,
+      officialDocumentEnricher,
       sourceProfiles,
       now: () => new Date("2026-08-01T04:00:00Z"),
     });
@@ -222,4 +227,37 @@ test("승인 전 기존 뉴스는 분석 세대를 올려 새 정책으로 다�
     }));
     await assert.rejects(() => processor.reprocess(id), /승인·게시 전/);
   });
+});
+
+test("분석 전에 공식 문서 보강 결과를 저장하고 번역기에 함께 전달한다", async () => {
+  let analyzedContext;
+  await fixture(
+    { type: "discord-announcement" },
+    async (record) => {
+      analyzedContext = record.original.contexts[0];
+      return { ...result("publish"), contextTranslations: [{ index: 1, body: "공식 문서 주요 내용" }] };
+    },
+    async ({ processor, store, id }) => {
+      await processor.process(id);
+      const saved = await store.read(id);
+      assert.equal(analyzedContext.relation, "official-document");
+      assert.equal(saved.original.contexts[0].content, "Official document body");
+      assert.equal(saved.workflow.contextTranslations[0].body, "공식 문서 주요 내용");
+    },
+    {
+      officialDocumentEnricher: async (record) => ({
+        ...record,
+        original: {
+          ...record.original,
+          contexts: [{
+            relation: "official-document",
+            account: "OpenAI",
+            label: "OpenAI 공식 문서",
+            content: "Official document body",
+            url: "https://openai.com/index/example",
+          }],
+        },
+      }),
+    },
+  );
 });

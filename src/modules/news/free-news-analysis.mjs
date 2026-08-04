@@ -283,6 +283,7 @@ function buildPrompt(record) {
     "translation.body must contain the complete Korean translation of the meaningful SOURCE TEXT. Do not move the translation only into title, and omit URLs from translated text.",
     "Preserve meaningful paragraph breaks and list-item line breaks from SOURCE and CONTEXT in every translated body. Do not flatten a multi-line post into one paragraph.",
     "The contextTranslations array must contain a separate Korean translation for every CONTEXT. Preserve its 1-based CONTEXT index and never attribute it to SOURCE ACCOUNT.",
+    "When CONTEXT RELATION is official-document, write a faithful Korean key-point digest rather than a line-by-line full translation. Preserve every explicit distinction between resolution and partial progress, important names, numbers, result lists, availability, and limitations. Do not invent details.",
     "Do not omit CONTEXT translations. Keeping them separate from the translation object does not mean discarding them.",
     "Each contextTranslations body must translate the meaningful CONTEXT text and omit URLs and media addresses.",
     "A short reply can still be newsworthy when its parent or quoted CONTEXT reveals a meaningful product direction, capability, policy, or industry signal.",

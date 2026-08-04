@@ -161,7 +161,10 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
       const index = Math.max(1, Math.min(3, Number(translation?.index) || 1));
       const context = record.original?.contexts?.[index - 1];
       const owner = context?.label || context?.account || `관련 글 ${index}`;
-      return section(`관련 글 번역 · ${owner}`, translation?.body, counter);
+      const label = context?.relation === "official-document"
+        ? `공식 문서 주요 내용 · ${owner}`
+        : `관련 글 번역 · ${owner}`;
+      return section(label, translation?.body, counter);
     }),
     section("왜 중요한가", record.workflow.triage.reason, counter),
     section(

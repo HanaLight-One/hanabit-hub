@@ -8160,13 +8160,17 @@ function ue({ item: e }) {
 			e.original.contexts.map((e, t) => /* @__PURE__ */ (0, x.jsxs)("section", {
 				className: "context-box",
 				children: [
-					/* @__PURE__ */ (0, x.jsxs)("strong", { children: ["관련 글 문맥 · ", e.label || e.account || "작성자 미상"] }),
+					/* @__PURE__ */ (0, x.jsxs)("strong", { children: [
+						e.relation === "official-document" ? "공식 문서 원문" : "관련 글 문맥",
+						" · ",
+						e.label || e.account || "작성자 미상"
+					] }),
 					/* @__PURE__ */ (0, x.jsx)("p", { children: e.content }),
 					e.url && /* @__PURE__ */ (0, x.jsx)("a", {
 						href: e.url,
 						target: "_blank",
 						rel: "noopener noreferrer",
-						children: "관련 X 글 ↗"
+						children: e.relation === "official-document" ? "공식 문서 ↗" : "관련 X 글 ↗"
 					})
 				]
 			}, `${e.url ?? e.account}-${t}`)),
@@ -8235,22 +8239,22 @@ function fe({ item: e }) {
 		children: [
 			/* @__PURE__ */ (0, x.jsx)("p", {
 				className: "section-label",
-				children: "관련 글 번역"
+				children: "관련 자료"
 			}),
 			t.map((t) => {
-				let n = e.original.contexts?.[t.index - 1];
+				let n = e.original.contexts?.[t.index - 1], r = n?.relation === "official-document";
 				return /* @__PURE__ */ (0, x.jsxs)("article", { children: [
-					/* @__PURE__ */ (0, x.jsx)("strong", { children: n?.label || n?.account || `관련 글 ${t.index}` }),
+					/* @__PURE__ */ (0, x.jsxs)("strong", { children: [r && "공식 문서 주요 내용 · ", n?.label || n?.account || `관련 글 ${t.index}`] }),
 					/* @__PURE__ */ (0, x.jsx)("p", { children: t.body }),
 					n?.url && /* @__PURE__ */ (0, x.jsx)("a", {
 						href: n.url,
 						target: "_blank",
 						rel: "noopener noreferrer",
-						children: "관련 X 원문 ↗"
+						children: r ? "공식 문서 원문 ↗" : "관련 X 원문 ↗"
 					})
 				] }, t.index);
 			}),
-			/* @__PURE__ */ (0, x.jsx)("small", { children: "각 문장은 위 작성자의 관련 글을 별도로 번역한 내용이며, 본문 작성자의 발언이 아닙니다." })
+			/* @__PURE__ */ (0, x.jsx)("small", { children: "공식 문서는 주요 내용을 요약하며, 관련 X 글은 작성자별 발언을 분리해 번역합니다." })
 		]
 	}) : null;
 }
@@ -8292,7 +8296,7 @@ function D({ bodyText: e }) {
 				"왜 중요한가",
 				"아직 확인되지 않은 점",
 				"원문 링크"
-			].includes(e) || e.startsWith("관련 글 번역 · ") ? /* @__PURE__ */ (0, x.jsx)("h4", {
+			].includes(e) || e.startsWith("관련 글 번역 · ") || e.startsWith("공식 문서 주요 내용 · ") ? /* @__PURE__ */ (0, x.jsx)("h4", {
 				className: e === "아직 확인되지 않은 점" ? "dc-copy-section caution" : "dc-copy-section",
 				children: e
 			}, n) : e.startsWith("주의: ") ? /* @__PURE__ */ (0, x.jsx)("p", {

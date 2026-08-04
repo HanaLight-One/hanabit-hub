@@ -117,9 +117,16 @@ function Original({ item }) {
       {item.original.content && <p className="original-content">{item.original.content}</p>}
       {item.original.contexts.map((context, index) => (
         <section className="context-box" key={`${context.url ?? context.account}-${index}`}>
-          <strong>관련 글 문맥 · {context.label || context.account || "작성자 미상"}</strong>
+          <strong>
+            {context.relation === "official-document" ? "공식 문서 원문" : "관련 글 문맥"}
+            {" · "}{context.label || context.account || "작성자 미상"}
+          </strong>
           <p>{context.content}</p>
-          {context.url && <a href={context.url} target="_blank" rel="noopener noreferrer">관련 X 글 ↗</a>}
+          {context.url && (
+            <a href={context.url} target="_blank" rel="noopener noreferrer">
+              {context.relation === "official-document" ? "공식 문서 ↗" : "관련 X 글 ↗"}
+            </a>
+          )}
         </section>
       ))}
       {item.original.embeds.map((embed, index) => (
@@ -199,18 +206,26 @@ function ContextTranslations({ item }) {
   if (!translations.length) return null;
   return (
     <section className="context-translations">
-      <p className="section-label">관련 글 번역</p>
+      <p className="section-label">관련 자료</p>
       {translations.map((translation) => {
         const context = item.original.contexts?.[translation.index - 1];
+        const officialDocument = context?.relation === "official-document";
         return (
           <article key={translation.index}>
-            <strong>{context?.label || context?.account || `관련 글 ${translation.index}`}</strong>
+            <strong>
+              {officialDocument && "공식 문서 주요 내용 · "}
+              {context?.label || context?.account || `관련 글 ${translation.index}`}
+            </strong>
             <p>{translation.body}</p>
-            {context?.url && <a href={context.url} target="_blank" rel="noopener noreferrer">관련 X 원문 ↗</a>}
+            {context?.url && (
+              <a href={context.url} target="_blank" rel="noopener noreferrer">
+                {officialDocument ? "공식 문서 원문 ↗" : "관련 X 원문 ↗"}
+              </a>
+            )}
           </article>
         );
       })}
-      <small>각 문장은 위 작성자의 관련 글을 별도로 번역한 내용이며, 본문 작성자의 발언이 아닙니다.</small>
+      <small>공식 문서는 주요 내용을 요약하며, 관련 X 글은 작성자별 발언을 분리해 번역합니다.</small>
     </section>
   );
 }
@@ -252,7 +267,8 @@ function DcBodyPreview({ bodyText }) {
         if (!line) return <span className="dc-copy-space" aria-hidden="true" key={key} />;
         if (line.startsWith("게시자: ")) return <p className="dc-copy-publisher" key={key}>{line}</p>;
         if (["본문 번역", "왜 중요한가", "아직 확인되지 않은 점", "원문 링크"].includes(line) ||
-            line.startsWith("관련 글 번역 · ")) {
+            line.startsWith("관련 글 번역 · ") ||
+            line.startsWith("공식 문서 주요 내용 · ")) {
           return <h4 className={line === "아직 확인되지 않은 점" ? "dc-copy-section caution" : "dc-copy-section"} key={key}>{line}</h4>;
         }
         if (line.startsWith("주의: ")) return <p className="dc-copy-notice" key={key}>{line}</p>;

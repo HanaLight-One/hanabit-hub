@@ -108,6 +108,7 @@ Hub 생성 메타데이터를 웹 제작 기록에 연결한다.
 Discord Announcement ─┐
                       ├─> Discord watcher ─> JSON 대기함 ─> 무료 API 원문 번역·판정
 X Filtered Stream ─> #x-watch ┘                         │
+OpenAI 공식 문서 링크 ─> 제한된 본문 보강 ──────────────┘
 무료 공식 소스 ────────────────────────> 같은 번역·판정·게시 관문
 외신 RSS ─> 제목·설명·링크만 수집 ────> shadow_radar ─> /news 외신 레이더만
                          원문 번역 + 관련 글별 번역을 분리 + 게시가치·정보 성격 태그
@@ -142,6 +143,13 @@ OGP 조회 실패 시 일반 링크를 유지해 게시 자체는 막지 않는�
 무료 API 뉴스 분석은 공용 Responses API 텍스트 실행기에 요청별 strict JSON Schema를
 전달해 원문 번역·관련 글 번역·판정 필드의 구조를 고정한다. 스키마 파일은 실행별 임시
 상태에만 만들고 종료 시 제거하며, 스키마를 생략하는 다른 공용 실행기 호출은 종전과 같다.
+Discord 또는 X 원문에 `openai.com/index/` 공식 발표 링크가 있으면
+`src/modules/news/official-document-enricher.mjs`가 문서 한 건만 읽어 별도
+`official-document` 문맥으로 보강한다. OpenAI 페이지의 자동 요청 차단을 우회하기 위해
+공개 URL만 Jina Reader에 전달하며, 허용 호스트·경로·응답 출처·크기·시간을 고정 검증한다.
+키·쿠키·내부 주소는 전달하지 않고 실패하면 기존 짧은 공지만 그대로 처리한다. 무료 API는
+이 문맥을 줄단위 전체 번역이 아닌 ‘공식 문서 주요 내용’으로 정리하며, 해결과 부분 진전,
+수치·기능·제공 범위와 제한을 구분해 보존한다.
 판정 완료 항목의 새 정책 재판정은 `POST /api/news/:id/reanalysis`, 결정론적 자동 게시
 가능성 표시는 `src/modules/news/news-auto-publish-policy.mjs`가 담당한다. 게이트는
 원문 전용 번역의 귀속 검증과 AI 해설 주의 문구가 없으면 자동 게시 가능으로 판정하지
