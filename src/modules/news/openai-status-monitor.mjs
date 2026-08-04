@@ -67,14 +67,15 @@ function normalizeComponent(value) {
 }
 
 export function normalizeOpenAIStatusSummary(value) {
-  if (!value || !Array.isArray(value.incidents) || !Array.isArray(value.components)) {
+  const incidentValues = value?.incidents ?? [];
+  if (!value || !Array.isArray(incidentValues) || !Array.isArray(value.components)) {
     throw new TypeError("OpenAI 상태 응답에 장애 또는 구성요소 목록이 없습니다.");
   }
-  const incidents = value.incidents.map(normalizeIncident).filter((entry) => (
+  const incidents = incidentValues.map(normalizeIncident).filter((entry) => (
     entry.id && entry.name && entry.status && entry.createdAt && entry.updatedAt
   ));
   incidents.sort((left, right) => left.id.localeCompare(right.id));
-  if (incidents.length !== value.incidents.length || incidents.length > 20) {
+  if (incidents.length !== incidentValues.length || incidents.length > 20) {
     throw new TypeError("OpenAI 상태 응답의 장애 항목이 올바르지 않습니다.");
   }
   const components = value.components.map(normalizeComponent);

@@ -3,7 +3,11 @@ import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { createOpenAIStatusMonitor, OPENAI_STATUS_SUMMARY_URL } from "../src/modules/news/openai-status-monitor.mjs";
+import {
+  createOpenAIStatusMonitor,
+  normalizeOpenAIStatusSummary,
+  OPENAI_STATUS_SUMMARY_URL,
+} from "../src/modules/news/openai-status-monitor.mjs";
 
 function incident({ id = "incident-1", update = "update-1", status = "investigating" } = {}) {
   return {
@@ -71,6 +75,15 @@ test("상태 API 요청마다 CDN 캐시를 우회한다", async () => {
   assert.notEqual(urls[0], urls[1]);
   assert.equal(new URL(urls[0]).searchParams.get("hanabit"), "1785888000000");
   assert.equal(new URL(urls[1]).searchParams.get("hanabit"), "1785888020000");
+});
+
+test("정상화 응답에서 생략된 incidents는 활성 장애 0건으로 해석한다", () => {
+  const snapshot = normalizeOpenAIStatusSummary({
+    status: { indicator: "none" },
+    components: [component()],
+  });
+  assert.equal(snapshot.incidents.length, 0);
+  assert.equal(snapshot.degradedComponents.length, 0);
 });
 
 test("새 공식 업데이트를 한 번만 뉴스 후보로 만든다", async () => {
