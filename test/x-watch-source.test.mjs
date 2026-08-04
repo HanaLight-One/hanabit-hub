@@ -363,6 +363,7 @@ test("X Article 링크는 필요한 글에서만 API 본문을 별도 문맥으�
             article: {
               title: "A useful developer update",
               preview_text: "What changed and why it matters.",
+              plain_text: "The complete article continues after its preview.",
               content_state: { blocks: [{ text: "The full article body." }] },
             },
           },
@@ -377,5 +378,6 @@ test("X Article 링크는 필요한 글에서만 API 본문을 별도 문맥으�
   });
   assert.equal(result.record.original.contexts[0].relation, "x-article");
   assert.equal(result.record.original.contexts[0].url, articleUrl);
+  assert.match(result.record.original.contexts[0].content, /continues after its preview/u);
   assert.match(result.record.original.contexts[0].content, /full article body/u);
 });

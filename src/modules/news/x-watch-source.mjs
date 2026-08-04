@@ -63,6 +63,7 @@ function xArticleContent(article) {
     .find(Array.isArray) ?? [];
   const parts = [
     article.title,
+    article.plain_text,
     article.preview_text,
     typeof article.body === "string" ? article.body : null,
     typeof article.content === "string" ? article.content : null,
