@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -8,6 +9,13 @@ import test from "node:test";
 
 const require = createRequire(import.meta.url);
 const { validateComposeJob, composeInlineContent } = require("../scripts/publish-dc-compose.cjs");
+
+test("DC 편집기는 기존 하나빛 계정 변수를 유지한다", () => {
+  const source = readFileSync(new URL("../scripts/publish-dc-compose.cjs", import.meta.url), "utf8");
+  assert.match(source, /process\.env\.DC_ID/u);
+  assert.match(source, /process\.env\.DC_PW/u);
+  assert.doesNotMatch(source, /DC_ADMIN_BLUE_BADGE/u);
+});
 
 test("일반 DC 게시자는 격리 작업 폴더의 정확한 첨부와 내용 해시만 허용한다", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-dc-job-"));

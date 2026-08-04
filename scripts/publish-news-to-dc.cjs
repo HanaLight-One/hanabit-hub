@@ -20,6 +20,12 @@ function argumentValue(name) {
   return index >= 0 ? process.argv[index + 1] : undefined;
 }
 
+function automatedDcCredentials(env = process.env) {
+  const id = env.DC_ADMIN_BLUE_BADGE_ID?.trim();
+  const password = env.DC_ADMIN_BLUE_BADGE_PW;
+  return id && password ? Object.freeze({ id, password }) : null;
+}
+
 function writeResult(target, value) {
   const resolved = path.resolve(target);
   const temporary = `${resolved}.${process.pid}.tmp`;
@@ -123,13 +129,12 @@ async function publishNews({ jobPath, publisherRoot }) {
   const headText = headTexts.find((entry) => String(entry.name ?? "") === job.headTextName);
   if (!headText) throw new Error("HEAD_TEXT_UNAVAILABLE");
 
-  const id = process.env.DC_ID?.trim();
-  const password = process.env.DC_PW;
+  const credentials = automatedDcCredentials();
   const userAgent = process.env.DC_USER_AGENT?.trim() || undefined;
-  if (!id || !password) throw new Error("CREDENTIALS_UNAVAILABLE");
+  if (!credentials) throw new Error("CREDENTIALS_UNAVAILABLE");
   const login = await dc.mobileLogin({
-    code: id,
-    password,
+    code: credentials.id,
+    password: credentials.password,
     keepLoggedIn: process.env.DC_KEEP_LOGGED_IN !== "false",
     userAgent,
   });
@@ -206,4 +211,12 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { validateJob, safeDcUrl, safeBodyLink, textToHtml, textToHtmlWithCards, withoutDcWatermarkField };
+module.exports = {
+  automatedDcCredentials,
+  validateJob,
+  safeDcUrl,
+  safeBodyLink,
+  textToHtml,
+  textToHtmlWithCards,
+  withoutDcWatermarkField,
+};

@@ -8,6 +8,7 @@ import test from "node:test";
 
 const require = createRequire(import.meta.url);
 const {
+  automatedDcCredentials,
   validateJob,
   safeDcUrl,
   safeBodyLink,
@@ -15,6 +16,16 @@ const {
   textToHtmlWithCards,
   withoutDcWatermarkField,
 } = require("../scripts/publish-news-to-dc.cjs");
+
+test("뉴스 게시자는 파딱 전용 계정만 선택한다", () => {
+  assert.deepEqual(automatedDcCredentials({
+    DC_ID: "owner",
+    DC_PW: "owner-password",
+    DC_ADMIN_BLUE_BADGE_ID: " blue-badge ",
+    DC_ADMIN_BLUE_BADGE_PW: "blue-password",
+  }), { id: "blue-badge", password: "blue-password" });
+  assert.equal(automatedDcCredentials({ DC_ID: "owner", DC_PW: "owner-password" }), null);
+});
 
 function job() {
   const jobPath = path.resolve("state", "test-news", "job.json");
