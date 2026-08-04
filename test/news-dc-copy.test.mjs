@@ -107,6 +107,18 @@ test("관련 글 작성자 이름의 이모지도 DC 소제목에서 제거한�
   assert.equal(draft.preflight.ready, true);
 });
 
+test("사용자 코멘트는 표찰 없이 관련 번역과 해설 사이에 넣는다", () => {
+  const sample = record();
+  sample.workflow.dcEditorNote = "ㅋㅋㅋ 뭐라는 거야 🚀\n그래도 흥미롭네";
+  const draft = composeNewsDcCopy(sample);
+
+  assert.equal(draft.editorNote, "ㅋㅋㅋ 뭐라는 거야\n그래도 흥미롭네");
+  assert.equal(draft.bodyText.includes("작성자 한마디"), false);
+  assert.equal(draft.bodyText.indexOf("관련 글 첫 문단") < draft.bodyText.indexOf("ㅋㅋㅋ 뭐라는 거야"), true);
+  assert.equal(draft.bodyText.indexOf("ㅋㅋㅋ 뭐라는 거야") < draft.bodyText.indexOf("왜 중요한가"), true);
+  assert.doesNotMatch(draft.bodyText, /\p{Extended_Pictographic}/u);
+});
+
 test("DC 뉴스 원고는 번역 응답에 남은 Markdown 표식을 평문으로 정리한다", () => {
   const sample = record();
   sample.workflow.translation.title = "### 7.4.0";

@@ -179,7 +179,7 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
     profile?.trustLabel,
   ].filter(Boolean).map((part) => cleanLine(part, counter)).join(" · ");
 
-  const sections = [
+  const translationSections = [
     section("본문 번역", record.workflow.translation.body, counter),
     ...(record.workflow.contextTranslations ?? []).slice(0, 3).map((translation) => {
       const index = Math.max(1, Math.min(3, Number(translation?.index) || 1));
@@ -190,6 +190,9 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
         : `관련 글 번역 · ${owner}`;
       return section(label, translation?.body, counter);
     }),
+  ].filter(Boolean);
+  const editorNote = cleanLine(record.workflow.dcEditorNote, counter);
+  const analysisSections = [
     section("왜 중요한가", record.workflow.triage.reason, counter),
     section(
       "아직 확인되지 않은 점",
@@ -197,6 +200,7 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
       counter,
     ),
   ].filter(Boolean);
+  const sections = [...translationSections, ...analysisSections];
 
   const notice = cleanLine(
     record.workflow.analysisNotice || createNewsAnalysisNotice({
@@ -209,7 +213,9 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
     ...(links.included.length ? ["원문 링크", ...links.included, ""] : []),
     profileLine,
     "",
-    ...sections.flatMap(({ label, body }) => [label, body, ""]),
+    ...translationSections.flatMap(({ label, body }) => [label, body, ""]),
+    ...(editorNote ? [editorNote, ""] : []),
+    ...analysisSections.flatMap(({ label, body }) => [label, body, ""]),
     notice,
   ];
   const bodyText = bodyParts.join("\n").replace(/\n{3,}/gu, "\n\n").trim();
@@ -236,6 +242,7 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
     bodyText,
     bodyHtml: textToDcHtml(bodyText),
     sections: Object.freeze(sections),
+    editorNote,
     imageCount,
     sourceImageCount,
     usesFallbackCover,

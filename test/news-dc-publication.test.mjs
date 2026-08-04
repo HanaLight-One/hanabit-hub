@@ -66,6 +66,35 @@ test("미리보기는 실제 게시 없이 안전한 공개 원고만 반환한�
   }
 });
 
+test("게시 코멘트 저장은 이전 실패 승인과 영수증을 지우고 새 미리보기를 만든다", async () => {
+  const sample = await fixture();
+  try {
+    const itemPath = path.join(sample.itemRoot, "item.json");
+    const item = JSON.parse(await readFile(itemPath, "utf8"));
+    item.workflow.dcPublication = { status: "failed-preflight", submittedAt: "2026-08-02T00:02:00Z" };
+    await writeFile(itemPath, JSON.stringify(item), "utf8");
+    const service = createNewsDcPublicationService({
+      root: sample.newsRoot,
+      enabled: true,
+      publisherRoot: sample.publisherRoot,
+      coverRoot: sample.coverRoot,
+      publisherScriptPath: sample.scriptPath,
+    });
+
+    const preview = await service.saveEditorNote(ID, "ㅋㅋㅋ 뭐라는 거야 🚀");
+    const saved = JSON.parse(await readFile(itemPath, "utf8"));
+    assert.equal(preview.editorNote, "ㅋㅋㅋ 뭐라는 거야 🚀");
+    assert.match(preview.bodyText, /ㅋㅋㅋ 뭐라는 거야/u);
+    assert.doesNotMatch(preview.bodyText, /\p{Extended_Pictographic}/u);
+    assert.equal(preview.canPublish, true);
+    assert.equal(saved.workflow.status, "pending_review");
+    assert.equal(saved.workflow.dcApproval, null);
+    assert.equal(saved.workflow.dcPublication, null);
+  } finally {
+    await rm(sample.root, { recursive: true, force: true });
+  }
+});
+
 test("원문 이미지가 없으면 말머리 기본 커버를 미리보기와 게시 작업에만 추가한다", async () => {
   const sample = await fixture({ withMedia: false });
   try {

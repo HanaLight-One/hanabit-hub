@@ -66,6 +66,25 @@ test("실제 DC 게시 API는 같은 출처와 정확한 확인값을 모두 요
   });
 });
 
+test("게시 코멘트 저장 API는 같은 출처와 정확한 확인값을 요구한다", async () => {
+  let stored = null;
+  await withServer({
+    async preview() { return {}; },
+    async saveEditorNote(id, note) { stored = { id, note }; return { id, editorNote: note }; },
+  }, async (baseUrl) => {
+    const target = `${baseUrl}/api/news/${ID}/dc-editor-note`;
+    const body = JSON.stringify({ confirmation: "save-news-dc-editor-note", note: "ㅋㅋㅋ 뭐라는 거야" });
+    assert.equal((await fetch(target, { method: "POST", headers: { "content-type": "application/json" }, body })).status, 403);
+    const response = await fetch(target, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: baseUrl, "sec-fetch-site": "same-origin" },
+      body,
+    });
+    assert.equal(response.status, 200);
+    assert.deepEqual(stored, { id: ID, note: "ㅋㅋㅋ 뭐라는 거야" });
+  });
+});
+
 test("DC 기본 커버 API는 고정된 커버만 읽기 전용으로 제공한다", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-cover-route-"));
   const target = path.join(root, "news.png");

@@ -8318,7 +8318,7 @@ function D({ bodyText: e }) {
 		})
 	});
 }
-function O({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a }) {
+function O({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a, onNoteChange: o, onNoteSave: s }) {
 	return e.workflow.publishedToDc ? /* @__PURE__ */ (0, x.jsxs)("div", {
 		className: "approval approved",
 		children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: "DC 게시 완료" }), e.workflow.dcPublication?.url && /* @__PURE__ */ (0, x.jsx)("a", {
@@ -8355,6 +8355,31 @@ function O({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a 
 				"장 · 본문 최상단 첨부",
 				t.fallbackCover?.used ? " · 기본 커버 자동 추가" : ""
 			] })] })] }),
+			/* @__PURE__ */ (0, x.jsxs)("div", {
+				className: "dc-editor-note",
+				children: [
+					/* @__PURE__ */ (0, x.jsxs)("label", {
+						htmlFor: `dc-editor-note-${e.id}`,
+						children: ["게시글에 덧붙일 말 ", /* @__PURE__ */ (0, x.jsx)("span", { children: "선택 · DC에는 표찰 없이 들어가요" })]
+					}),
+					/* @__PURE__ */ (0, x.jsx)("textarea", {
+						id: `dc-editor-note-${e.id}`,
+						value: t.editorNote ?? "",
+						onChange: (e) => o(e.target.value),
+						maxLength: 1e3,
+						rows: 3,
+						placeholder: "ㅋㅋㅋ 뭐라는 거야",
+						disabled: n
+					}),
+					/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsxs)("small", { children: [[...t.editorNote ?? ""].length.toLocaleString("ko-KR"), " / 1,000"] }), /* @__PURE__ */ (0, x.jsx)("button", {
+						type: "button",
+						className: "note-save-button",
+						onClick: s,
+						disabled: n || !t.noteDirty,
+						children: t.noteDirty ? "저장하고 미리보기 반영" : "저장됨"
+					})] })
+				]
+			}),
 			/* @__PURE__ */ (0, x.jsxs)("div", {
 				className: "dc-copy-preview",
 				children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "본문" }), /* @__PURE__ */ (0, x.jsx)(D, { bodyText: t.bodyText })]
@@ -8405,8 +8430,8 @@ function O({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a 
 		]
 	});
 }
-function he({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a, onRetry: o, onReanalyze: s }) {
-	let c = e.workflow.triage, l = e.workflow.freeTriage, u = e.workflow.codexReview, d = e.workflow.status === "shadow_radar";
+function he({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a, onNoteChange: o, onNoteSave: s, onRetry: c, onReanalyze: l }) {
+	let u = e.workflow.triage, d = e.workflow.freeTriage, f = e.workflow.codexReview, p = e.workflow.status === "shadow_radar";
 	return /* @__PURE__ */ (0, x.jsxs)("article", {
 		className: "news-card",
 		children: [
@@ -8419,19 +8444,19 @@ function he({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 							className: "status",
 							children: ee[e.workflow.status] ?? "상태 확인 필요"
 						}),
-						c && /* @__PURE__ */ (0, x.jsx)("span", {
-							className: `decision decision-${c.decision}`,
-							children: S[c.decision]
+						u && /* @__PURE__ */ (0, x.jsx)("span", {
+							className: `decision decision-${u.decision}`,
+							children: S[u.decision]
 						}),
-						c?.evidenceTag && /* @__PURE__ */ (0, x.jsxs)("span", {
-							className: `evidence evidence-${c.evidenceTag}`,
+						u?.evidenceTag && /* @__PURE__ */ (0, x.jsxs)("span", {
+							className: `evidence evidence-${u.evidenceTag}`,
 							children: [
 								"[",
-								te[c.evidenceTag],
+								te[u.evidenceTag],
 								"]"
 							]
 						}),
-						u?.status === "complete" && /* @__PURE__ */ (0, x.jsx)("span", {
+						f?.status === "complete" && /* @__PURE__ */ (0, x.jsx)("span", {
 							className: "decision codex-badge",
 							children: "Codex 검토 완료"
 						})
@@ -8445,11 +8470,11 @@ function he({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 					children: [
 						e.source.label ?? e.source.account,
 						" · ",
-						e.source.type === "x-post" ? "X" : d ? "외신 RSS" : "Discord"
+						e.source.type === "x-post" ? "X" : p ? "외신 RSS" : "Discord"
 					]
 				}), /* @__PURE__ */ (0, x.jsx)(de, { profile: e.source.profile })]
 			}),
-			d ? /* @__PURE__ */ (0, x.jsxs)("section", {
+			p ? /* @__PURE__ */ (0, x.jsxs)("section", {
 				className: "shadow-radar-box",
 				children: [
 					/* @__PURE__ */ (0, x.jsx)("p", {
@@ -8467,7 +8492,7 @@ function he({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 						className: "section-label",
 						children: "제목"
 					}),
-					/* @__PURE__ */ (0, x.jsxs)("h2", { children: [c?.evidenceTag && `[${te[c.evidenceTag]}] `, e.workflow.translation.title || "제목 없음"] }),
+					/* @__PURE__ */ (0, x.jsxs)("h2", { children: [u?.evidenceTag && `[${te[u.evidenceTag]}] `, e.workflow.translation.title || "제목 없음"] }),
 					/* @__PURE__ */ (0, x.jsx)("p", {
 						className: "section-label body-label",
 						children: "본문 번역"
@@ -8502,7 +8527,7 @@ function he({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 								type: "button",
 								className: "retry-button",
 								disabled: n,
-								onClick: o,
+								onClick: c,
 								children: n ? "다시 분석 중…" : "무료 텍스트 API로 다시 분석"
 							})
 						]
@@ -8510,37 +8535,37 @@ function he({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 				]
 			}),
 			/* @__PURE__ */ (0, x.jsx)(fe, { item: e }),
-			l && /* @__PURE__ */ (0, x.jsx)(E, {
-				triage: l,
+			d && /* @__PURE__ */ (0, x.jsx)(E, {
+				triage: d,
 				label: "무료 API 1차 판정",
-				advice: l.advice || "애매함을 감지해 Codex 하나빛에게 전달했어요.",
+				advice: d.advice || "애매함을 감지해 Codex 하나빛에게 전달했어요.",
 				className: "free-triage"
 			}),
-			c && /* @__PURE__ */ (0, x.jsx)("p", {
+			u && /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "analysis-notice",
 				children: e.workflow.analysisNotice
 			}),
-			c && /* @__PURE__ */ (0, x.jsx)(E, {
-				triage: c,
-				label: u?.status === "complete" ? "Codex 하나빛 심층검토" : "무료 API 판정",
-				advice: oe(e) ? T(e) : c.advice || T(e),
-				className: u?.status === "complete" ? "codex-triage" : ""
+			u && /* @__PURE__ */ (0, x.jsx)(E, {
+				triage: u,
+				label: f?.status === "complete" ? "Codex 하나빛 심층검토" : "무료 API 판정",
+				advice: oe(e) ? T(e) : u.advice || T(e),
+				className: f?.status === "complete" ? "codex-triage" : ""
 			}),
-			u?.status === "daily_limit" && /* @__PURE__ */ (0, x.jsx)("p", {
+			f?.status === "daily_limit" && /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "codex-review-note",
 				children: "오늘의 Codex 심층검토 상한에 도달해 사람 확인으로 남겼어요."
 			}),
-			u?.status === "failed" && /* @__PURE__ */ (0, x.jsx)("p", {
+			f?.status === "failed" && /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "codex-review-note",
 				children: "Codex 심층검토를 완료하지 못해 무료 API 판정을 보존했어요."
 			}),
-			!d && /* @__PURE__ */ (0, x.jsx)(pe, { gate: e.workflow.autoPublishGate }),
-			!d && /* @__PURE__ */ (0, x.jsx)(me, { shadow: e.workflow.editorialShadow }),
+			!p && /* @__PURE__ */ (0, x.jsx)(pe, { gate: e.workflow.autoPublishGate }),
+			!p && /* @__PURE__ */ (0, x.jsx)(me, { shadow: e.workflow.editorialShadow }),
 			e.workflow.canReanalyze && /* @__PURE__ */ (0, x.jsx)("button", {
 				type: "button",
 				className: "reanalysis-button",
 				disabled: n,
-				onClick: s,
+				onClick: l,
 				children: n ? "새 정책으로 판정 중…" : "↻ 새 정책으로 다시 판정"
 			}),
 			e.media.length > 0 && /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [oe(e) && /* @__PURE__ */ (0, x.jsx)("p", {
@@ -8555,28 +8580,36 @@ function he({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 				}, e.url))
 			})] }),
 			/* @__PURE__ */ (0, x.jsx)(ue, { item: e }),
-			!d && /* @__PURE__ */ (0, x.jsx)(O, {
+			!p && /* @__PURE__ */ (0, x.jsx)(O, {
 				item: e,
 				preview: t,
 				busy: n,
 				error: r,
 				onPreview: i,
-				onPublish: a
+				onPublish: a,
+				onNoteChange: o,
+				onNoteSave: s
 			})
 		]
 	});
 }
 function ge() {
 	let [e, t] = (0, y.useState)(null), [n, r] = (0, y.useState)(""), [i, a] = (0, y.useState)({}), [o, s] = (0, y.useState)(null), [c, l] = (0, y.useState)(""), [u, d] = (0, y.useState)(null), [f, p] = (0, y.useState)("action");
-	async function m() {
+	function m(e) {
+		return {
+			...e,
+			noteDirty: !1
+		};
+	}
+	async function h() {
 		let e = await fetch("/api/news", { cache: "no-store" });
 		if (!e.ok) throw Error("대기함 요청 실패");
 		t(await e.json());
 	}
 	(0, y.useEffect)(() => {
-		m().catch(() => r("뉴스 대기함을 불러오지 못했어요."));
+		h().catch(() => r("뉴스 대기함을 불러오지 못했어요."));
 	}, []);
-	let h = (0, y.useMemo)(() => {
+	let g = (0, y.useMemo)(() => {
 		let t = e?.items ?? [];
 		return {
 			total: e?.total ?? 0,
@@ -8585,18 +8618,18 @@ function ge() {
 			media: t.reduce((e, t) => e + t.media.length, 0),
 			shadow: t.filter((e) => e.workflow.status === "shadow_radar").length
 		};
-	}, [e]), g = (0, y.useMemo)(() => {
+	}, [e]), _ = (0, y.useMemo)(() => {
 		let t = se.find((e) => e.id === f) ?? se[0];
 		return (e?.items ?? []).filter(t.matches);
 	}, [e, f]);
-	async function _(e) {
+	async function v(e) {
 		s(e.id), l(""), d(null);
 		try {
 			let t = await fetch(`/api/news/${e.id}/dc-preview`, { cache: "no-store" }), n = await t.json();
 			if (!t.ok) throw Error(n.error || "DC 원고를 만들지 못했어요.");
 			a((t) => ({
 				...t,
-				[e.id]: n
+				[e.id]: m(n)
 			}));
 		} catch (t) {
 			l(t.message), d(e.id);
@@ -8604,42 +8637,79 @@ function ge() {
 			s(null);
 		}
 	}
-	async function v(e) {
+	function b(e, t) {
+		a((n) => ({
+			...n,
+			[e.id]: {
+				...n[e.id],
+				editorNote: t,
+				noteDirty: !0
+			}
+		}));
+	}
+	async function ee(e) {
+		let t = i[e.id];
+		if (!t?.noteDirty) return t;
+		let n = await fetch(`/api/news/${e.id}/dc-editor-note`, {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({
+				confirmation: "save-news-dc-editor-note",
+				note: t.editorNote ?? ""
+			})
+		}), r = await n.json();
+		if (!n.ok) throw Error(r.error || "덧붙일 말을 저장하지 못했어요.");
+		let o = m(r);
+		return a((t) => ({
+			...t,
+			[e.id]: o
+		})), o;
+	}
+	async function S(e) {
+		s(e.id), l(""), d(null);
+		try {
+			await ee(e), await h();
+		} catch (t) {
+			l(t.message), d(e.id);
+		} finally {
+			s(null);
+		}
+	}
+	async function C(e) {
 		if (window.confirm("이 원고를 실제 DCInside 챗갤에 한 번 게시할까요?\n제출 결과가 불명확하면 자동으로 다시 시도하지 않습니다.")) {
 			s(e.id), l(""), d(null);
 			try {
-				if (!e.workflow.dcApproval) {
-					let t = await fetch(`/api/news/${e.id}/dc-approval`, {
-						method: "POST",
-						headers: { "content-type": "application/json" },
-						body: JSON.stringify({ confirmation: "approve-dc-publication" })
-					}), n = await t.json();
-					if (!t.ok) throw Error(n.error || "게시 승인을 저장하지 못했어요.");
-				}
-				let t = await fetch(`/api/news/${e.id}/dc-publication`, {
+				await ee(e);
+				let t = await fetch(`/api/news/${e.id}/dc-approval`, {
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify({ confirmation: "approve-dc-publication" })
+				}), n = await t.json();
+				if (!t.ok) throw Error(n.error || "게시 승인을 저장하지 못했어요.");
+				let r = await fetch(`/api/news/${e.id}/dc-publication`, {
 					method: "POST",
 					headers: { "content-type": "application/json" },
 					body: JSON.stringify({ confirmation: "publish-news-to-dc-now" })
-				}), n = await t.json();
-				if (!t.ok) throw Error(n.error || "DC 게시 요청을 완료하지 못했어요.");
-				await m();
-				let r = await fetch(`/api/news/${e.id}/dc-preview`, { cache: "no-store" });
-				if (r.ok) {
-					let t = await r.json();
+				}), i = await r.json();
+				if (!r.ok) throw Error(i.error || "DC 게시 요청을 완료하지 못했어요.");
+				await h();
+				let o = await fetch(`/api/news/${e.id}/dc-preview`, { cache: "no-store" });
+				if (o.ok) {
+					let t = await o.json();
 					a((n) => ({
 						...n,
-						[e.id]: t
+						[e.id]: m(t)
 					}));
 				}
-				if (n.publication?.status === "failed-preflight") throw Error("DC 로그인·말머리·금칙어 검사 단계에서 게시가 중단됐어요. 원고를 확인한 뒤 다시 시도할 수 있어요.");
+				if (i.publication?.status === "failed-preflight") throw Error("DC 로그인·말머리·금칙어 검사 단계에서 게시가 중단됐어요. 원고를 확인한 뒤 다시 시도할 수 있어요.");
 			} catch (t) {
-				l(t.message), d(e.id), await m().catch(() => {});
+				l(t.message), d(e.id), await h().catch(() => {});
 			} finally {
 				s(null);
 			}
 		}
 	}
-	async function b(e) {
+	async function te(e) {
 		s(e.id), l(""), d(null);
 		try {
 			let t = await fetch(`/api/news/${e.id}/analysis-retry`, {
@@ -8648,14 +8718,14 @@ function ge() {
 				body: JSON.stringify({ confirmation: "retry-news-analysis" })
 			}), n = await t.json();
 			if (!t.ok) throw Error(n.error || "다시 분석하지 못했어요.");
-			await m();
+			await h();
 		} catch (t) {
 			l(t.message), d(e.id);
 		} finally {
 			s(null);
 		}
 	}
-	async function ee(e) {
+	async function ne(e) {
 		if (window.confirm("번역과 판정을 새 정책으로 다시 실행할까요? 무료 API와 필요한 경우 Codex 토큰을 사용합니다.")) {
 			s(e.id), l(""), d(null);
 			try {
@@ -8665,7 +8735,7 @@ function ge() {
 					body: JSON.stringify({ confirmation: "reclassify-news-item" })
 				}), n = await t.json();
 				if (!t.ok) throw Error(n.error || "새 정책으로 다시 판정하지 못했어요.");
-				await m();
+				await h();
 			} catch (t) {
 				l(t.message), d(e.id);
 			} finally {
@@ -8694,11 +8764,11 @@ function ge() {
 			className: "summary",
 			"aria-label": "뉴스 현황",
 			children: [
-				/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: h.total.toLocaleString("ko-KR") }), /* @__PURE__ */ (0, x.jsx)("span", { children: "전체 대기" })] }),
-				/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: h.review.toLocaleString("ko-KR") }), /* @__PURE__ */ (0, x.jsx)("span", { children: "승인 가능" })] }),
-				/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: h.approved.toLocaleString("ko-KR") }), /* @__PURE__ */ (0, x.jsx)("span", { children: "승인 완료" })] }),
-				/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: h.media.toLocaleString("ko-KR") }), /* @__PURE__ */ (0, x.jsx)("span", { children: "보존 이미지" })] }),
-				/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: h.shadow.toLocaleString("ko-KR") }), /* @__PURE__ */ (0, x.jsx)("span", { children: "외신 그림자" })] })
+				/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: g.total.toLocaleString("ko-KR") }), /* @__PURE__ */ (0, x.jsx)("span", { children: "전체 대기" })] }),
+				/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: g.review.toLocaleString("ko-KR") }), /* @__PURE__ */ (0, x.jsx)("span", { children: "승인 가능" })] }),
+				/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: g.approved.toLocaleString("ko-KR") }), /* @__PURE__ */ (0, x.jsx)("span", { children: "승인 완료" })] }),
+				/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: g.media.toLocaleString("ko-KR") }), /* @__PURE__ */ (0, x.jsx)("span", { children: "보존 이미지" })] }),
+				/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: g.shadow.toLocaleString("ko-KR") }), /* @__PURE__ */ (0, x.jsx)("span", { children: "외신 그림자" })] })
 			]
 		}),
 		/* @__PURE__ */ (0, x.jsx)("nav", {
@@ -8728,22 +8798,24 @@ function ge() {
 			className: "notice",
 			children: "아직 수집된 뉴스가 없어요. 새 소식을 기다리는 중이에요."
 		}),
-		e?.items.length > 0 && g.length === 0 && /* @__PURE__ */ (0, x.jsx)("p", {
+		e?.items.length > 0 && _.length === 0 && /* @__PURE__ */ (0, x.jsx)("p", {
 			className: "notice",
 			children: "이 필터에 해당하는 뉴스가 없어요."
 		}),
 		/* @__PURE__ */ (0, x.jsx)("section", {
 			className: "news-list",
 			"aria-label": "수집된 뉴스",
-			children: g.map((e) => /* @__PURE__ */ (0, x.jsx)(he, {
+			children: _.map((e) => /* @__PURE__ */ (0, x.jsx)(he, {
 				item: e,
 				preview: i[e.id],
 				busy: o === e.id,
 				error: u === e.id ? c : "",
-				onPreview: () => _(e),
-				onPublish: () => v(e),
-				onRetry: () => b(e),
-				onReanalyze: () => ee(e)
+				onPreview: () => v(e),
+				onPublish: () => C(e),
+				onNoteChange: (t) => b(e, t),
+				onNoteSave: () => S(e),
+				onRetry: () => te(e),
+				onReanalyze: () => ne(e)
 			}, e.id))
 		})
 	] })] });

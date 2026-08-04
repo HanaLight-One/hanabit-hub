@@ -159,6 +159,15 @@ h1 em { color: var(--accent); font-style: normal; }
 .dc-preview dl div { display: grid; grid-template-columns: 70px 1fr; gap: 12px; }
 .dc-preview dt { color: var(--muted); font-size: 12px; }
 .dc-preview dd { margin: 0; line-height: 1.5; }
+.dc-editor-note { display: grid; gap: 9px; padding: 14px; border: 1px solid var(--line); border-radius: 13px; background: #10161b; }
+.dc-editor-note label { font-size: 13px; font-weight: 800; }
+.dc-editor-note label span { margin-left: 6px; color: var(--muted); font-size: 11px; font-weight: 500; }
+.dc-editor-note textarea { width: 100%; min-height: 86px; padding: 12px; resize: vertical; border: 1px solid var(--line); border-radius: 10px; background: #070a0d; color: var(--text); font: inherit; line-height: 1.6; box-sizing: border-box; }
+.dc-editor-note textarea:focus { border-color: var(--accent); outline: none; }
+.dc-editor-note > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.dc-editor-note small { color: var(--muted); }
+.note-save-button { min-height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; background: #171e25; color: var(--text); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.note-save-button:disabled { cursor: default; opacity: .55; }
 .dc-copy-preview { overflow: hidden; border: 1px solid var(--line); border-radius: 13px; background: #070a0d; }
 .dc-copy-preview > span { display: block; padding: 11px 14px; border-bottom: 1px solid var(--line); color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .12em; }
 .dc-copy-content { display: grid; max-height: 520px; padding: 18px; overflow: auto; color: #d9ded9; }

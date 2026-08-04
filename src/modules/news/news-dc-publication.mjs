@@ -15,6 +15,7 @@ import { fetchXVideoForRecord } from "./x-watch-source.mjs";
 const ID_PATTERN = /^[a-f0-9]{32}$/u;
 const POSTED_STATUS = "posted";
 const FINAL_STATUSES = new Set([POSTED_STATUS, "ambiguous-no-retry"]);
+const EDITOR_NOTE_MAXIMUM = 1_000;
 
 function publicationError(code, message) {
   return Object.assign(new Error(message), { code });
@@ -25,6 +26,14 @@ function validateId(id) {
     throw publicationError("INVALID_ID", "올바르지 않은 뉴스 ID입니다.");
   }
   return String(id);
+}
+
+function normalizeEditorNote(value) {
+  const note = String(value ?? "").replace(/\r\n?/gu, "\n").trim();
+  if ([...note].length > EDITOR_NOTE_MAXIMUM) {
+    throw publicationError("EDITOR_NOTE_TOO_LARGE", `덧붙일 말은 ${EDITOR_NOTE_MAXIMUM.toLocaleString("ko-KR")}자까지 저장할 수 있습니다.`);
+  }
+  return note;
 }
 
 async function isFile(target) {
@@ -231,6 +240,7 @@ export function createNewsDcPublicationService({
         headText: draft.headText,
         title: draft.title,
         bodyText: draft.bodyText,
+        editorNote: String(record.workflow?.dcEditorNote ?? ""),
         imageCount: draft.imageCount,
         imagePlacement: draft.imagePlacement,
         fallbackCover: cover ? { used: true, id: cover.id, url: cover.url } : { used: false },
@@ -240,6 +250,40 @@ export function createNewsDcPublicationService({
         canPublish: ready && draft.preflight.ready && !FINAL_STATUSES.has(publication?.status),
         publication,
       };
+    } catch (error) {
+      if (error.code === "ENOENT") {
+        throw publicationError("NOT_FOUND", "뉴스 항목을 찾을 수 없습니다.");
+      }
+      throw error;
+    }
+  }
+
+  async function saveEditorNote(id, value) {
+    const safeId = validateId(id);
+    const note = normalizeEditorNote(value);
+    try {
+      const record = await store.update(safeId, (current) => {
+        const workflow = current.workflow ?? {};
+        const publication = safePublication(workflow.dcPublication);
+        if (FINAL_STATUSES.has(publication?.status) || publication?.status === "submitting") {
+          throw publicationError("ALREADY_SUBMITTED", "이미 제출했거나 결과 확인이 필요한 원고는 수정할 수 없습니다.");
+        }
+        if (!new Set(["review", "publish"]).has(workflow.triage?.decision)) {
+          throw publicationError("NOT_REVIEWABLE", "번역과 판정이 끝난 검토 후보만 수정할 수 있습니다.");
+        }
+        if (String(workflow.dcEditorNote ?? "") === note) return current;
+        return {
+          ...current,
+          workflow: {
+            ...workflow,
+            status: workflow.status === "approved_for_dc" ? "pending_review" : workflow.status,
+            dcEditorNote: note || null,
+            dcApproval: null,
+            dcPublication: publication?.status === "failed-preflight" ? null : workflow.dcPublication,
+          },
+        };
+      });
+      return preview(record.id);
     } catch (error) {
       if (error.code === "ENOENT") {
         throw publicationError("NOT_FOUND", "뉴스 항목을 찾을 수 없습니다.");
@@ -420,6 +464,7 @@ export function createNewsDcPublicationService({
 
   return Object.freeze({
     preview,
+    saveEditorNote,
     publish,
     autoPublish,
     initializeAutoPublishing,

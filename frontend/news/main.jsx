@@ -281,7 +281,7 @@ function DcBodyPreview({ bodyText }) {
   );
 }
 
-function DcPublicationPanel({ item, preview, busy, error, onPreview, onPublish }) {
+function DcPublicationPanel({ item, preview, busy, error, onPreview, onPublish, onNoteChange, onNoteSave }) {
   if (item.workflow.publishedToDc) {
     return (
       <div className="approval approved">
@@ -336,6 +336,24 @@ function DcPublicationPanel({ item, preview, busy, error, onPreview, onPublish }
           <dd>{preview.imageCount}장 · 본문 최상단 첨부{preview.fallbackCover?.used ? " · 기본 커버 자동 추가" : ""}</dd>
         </div>
       </dl>
+      <div className="dc-editor-note">
+        <label htmlFor={`dc-editor-note-${item.id}`}>게시글에 덧붙일 말 <span>선택 · DC에는 표찰 없이 들어가요</span></label>
+        <textarea
+          id={`dc-editor-note-${item.id}`}
+          value={preview.editorNote ?? ""}
+          onChange={(event) => onNoteChange(event.target.value)}
+          maxLength={1000}
+          rows={3}
+          placeholder="ㅋㅋㅋ 뭐라는 거야"
+          disabled={busy}
+        />
+        <div>
+          <small>{[...(preview.editorNote ?? "")].length.toLocaleString("ko-KR")} / 1,000</small>
+          <button type="button" className="note-save-button" onClick={onNoteSave} disabled={busy || !preview.noteDirty}>
+            {preview.noteDirty ? "저장하고 미리보기 반영" : "저장됨"}
+          </button>
+        </div>
+      </div>
       <div className="dc-copy-preview">
         <span>본문</span>
         <DcBodyPreview bodyText={preview.bodyText} />
@@ -363,7 +381,18 @@ function DcPublicationPanel({ item, preview, busy, error, onPreview, onPublish }
   );
 }
 
-function NewsCard({ item, preview, busy, error, onPreview, onPublish, onRetry, onReanalyze }) {
+function NewsCard({
+  item,
+  preview,
+  busy,
+  error,
+  onPreview,
+  onPublish,
+  onNoteChange,
+  onNoteSave,
+  onRetry,
+  onReanalyze,
+}) {
   const triage = item.workflow.triage;
   const freeTriage = item.workflow.freeTriage;
   const codexReview = item.workflow.codexReview;
@@ -495,6 +524,8 @@ function NewsCard({ item, preview, busy, error, onPreview, onPublish, onRetry, o
           error={error}
           onPreview={onPreview}
           onPublish={onPublish}
+          onNoteChange={onNoteChange}
+          onNoteSave={onNoteSave}
         />
       )}
     </article>
@@ -509,6 +540,10 @@ function App() {
   const [actionError, setActionError] = useState("");
   const [actionErrorId, setActionErrorId] = useState(null);
   const [filter, setFilter] = useState("action");
+
+  function withLocalPreview(result) {
+    return { ...result, noteDirty: false };
+  }
 
   async function load() {
     const response = await fetch("/api/news", { cache: "no-store" });
@@ -544,7 +579,47 @@ function App() {
       const response = await fetch(`/api/news/${item.id}/dc-preview`, { cache: "no-store" });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "DC 원고를 만들지 못했어요.");
-      setPreviews((current) => ({ ...current, [item.id]: result }));
+      setPreviews((current) => ({ ...current, [item.id]: withLocalPreview(result) }));
+    } catch (error) {
+      setActionError(error.message);
+      setActionErrorId(item.id);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  function changeEditorNote(item, note) {
+    setPreviews((current) => ({
+      ...current,
+      [item.id]: { ...current[item.id], editorNote: note, noteDirty: true },
+    }));
+  }
+
+  async function persistEditorNote(item) {
+    const currentPreview = previews[item.id];
+    if (!currentPreview?.noteDirty) return currentPreview;
+    const response = await fetch(`/api/news/${item.id}/dc-editor-note`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        confirmation: "save-news-dc-editor-note",
+        note: currentPreview.editorNote ?? "",
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "덧붙일 말을 저장하지 못했어요.");
+    const next = withLocalPreview(result);
+    setPreviews((current) => ({ ...current, [item.id]: next }));
+    return next;
+  }
+
+  async function saveEditorNote(item) {
+    setBusyId(item.id);
+    setActionError("");
+    setActionErrorId(null);
+    try {
+      await persistEditorNote(item);
+      await load();
     } catch (error) {
       setActionError(error.message);
       setActionErrorId(item.id);
@@ -562,15 +637,14 @@ function App() {
     setActionError("");
     setActionErrorId(null);
     try {
-      if (!item.workflow.dcApproval) {
-        const approvalResponse = await fetch(`/api/news/${item.id}/dc-approval`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ confirmation: "approve-dc-publication" }),
-        });
-        const approvalResult = await approvalResponse.json();
-        if (!approvalResponse.ok) throw new Error(approvalResult.error || "게시 승인을 저장하지 못했어요.");
-      }
+      await persistEditorNote(item);
+      const approvalResponse = await fetch(`/api/news/${item.id}/dc-approval`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ confirmation: "approve-dc-publication" }),
+      });
+      const approvalResult = await approvalResponse.json();
+      if (!approvalResponse.ok) throw new Error(approvalResult.error || "게시 승인을 저장하지 못했어요.");
       const response = await fetch(`/api/news/${item.id}/dc-publication`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -582,7 +656,7 @@ function App() {
       const previewResponse = await fetch(`/api/news/${item.id}/dc-preview`, { cache: "no-store" });
       if (previewResponse.ok) {
         const refreshedPreview = await previewResponse.json();
-        setPreviews((current) => ({ ...current, [item.id]: refreshedPreview }));
+        setPreviews((current) => ({ ...current, [item.id]: withLocalPreview(refreshedPreview) }));
       }
       if (result.publication?.status === "failed-preflight") {
         throw new Error("DC 로그인·말머리·금칙어 검사 단계에서 게시가 중단됐어요. 원고를 확인한 뒤 다시 시도할 수 있어요.");
@@ -688,6 +762,8 @@ function App() {
               error={actionErrorId === item.id ? actionError : ""}
               onPreview={() => loadPreview(item)}
               onPublish={() => publishToDc(item)}
+              onNoteChange={(note) => changeEditorNote(item, note)}
+              onNoteSave={() => saveEditorNote(item)}
               onRetry={() => retry(item)}
               onReanalyze={() => reanalyze(item)}
             />
