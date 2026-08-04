@@ -53,6 +53,16 @@ test("기존 승인·게시 영수증이 있으면 자동 처리하지 않는다
   assert.equal(evaluateNewsAutoPublish(approved, profile).decision, "blocked");
 });
 
+test("관찰 후보의 초기 신호는 자동 게시하지 않는다", () => {
+  const candidate = { trustLevel: "candidate", affiliationConfirmed: true };
+  assert.equal(evaluateNewsAutoPublish(record("confirmed"), candidate).decision, "human_review");
+  assert.equal(evaluateNewsAutoPublish(record("inference"), candidate).decision, "human_review");
+  assert.equal(evaluateNewsAutoPublish(
+    record("rumor", { importance: "high" }),
+    candidate,
+  ).decision, "blocked");
+});
+
 test("원문 귀속이 검증되지 않은 번역은 자동 게시하지 않는다", () => {
   const unverified = record("official");
   unverified.workflow.translationReview = { status: "free_unverified" };

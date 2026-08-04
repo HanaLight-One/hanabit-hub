@@ -5,6 +5,8 @@ import path from "node:path";
 import test from "node:test";
 import { loadXSourceAllowlist, loadXSourceRoster, loadXStreamPolicy } from "../src/modules/news/x-watch-source.mjs";
 
+const trackedRosterPath = path.resolve("config/news-x-sources.json");
+
 async function withRoster(payload, callback) {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-x-roster-"));
   const target = path.join(root, "sources.json");
@@ -85,6 +87,30 @@ test("후보는 활성화할 수 있지만 소속 종료 계정은 자동 감시
       (target) => loadXSourceRoster(target)),
     /소속 종료/,
   );
+});
+
+test("Tibor Blaho는 관찰 후보로만 감시한다", async () => {
+  const roster = await loadXSourceRoster(trackedRosterPath);
+  const tibor = roster.sources.find((entry) => entry.handle === "btibor91");
+  assert.deepEqual(tibor, {
+    handle: "btibor91",
+    displayName: "Tibor Blaho",
+    sourceKind: "candidate",
+    affiliation: "AIPRM",
+    affiliationStatus: "confirmed",
+    roles: ["product-observer"],
+    topics: ["chatgpt", "codex", "api", "models", "products"],
+    trustLevel: "candidate",
+    verifiedAt: "2026-08-04",
+    enabled: true,
+  });
+
+  const policy = await loadXStreamPolicy(trackedRosterPath);
+  const lane = policy.groups.find((entry) => entry.id === "observation-hype");
+  assert.equal(lane.handles.includes("btibor91"), true);
+  assert.equal(lane.evidenceTerms.includes("testing"), true);
+  assert.equal(lane.evidencePhrases.includes("appears to be"), true);
+  assert.equal(lane.evidencePhrases.includes("showed up"), true);
 });
 
 test("중복 계정과 불완전한 인물 명부는 거부한다", async () => {

@@ -33,6 +33,25 @@ test("X 출처 프로필은 인물의 역할과 추적 이유를 공개 문구�
   assert.equal(profile.verifiedAt, "2026-08-02");
 });
 
+test("제품 변화 관찰 후보는 공식 출처가 아닌 공개 설명을 사용한다", () => {
+  const tibor = {
+    handle: "btibor91",
+    displayName: "Tibor Blaho",
+    sourceKind: "candidate",
+    affiliation: "AIPRM",
+    affiliationStatus: "confirmed",
+    roles: ["product-observer"],
+    topics: ["chatgpt", "products"],
+    trustLevel: "candidate",
+    verifiedAt: "2026-08-04",
+  };
+  const profiles = createNewsSourceProfileIndex({ sources: [tibor] });
+  const profile = findNewsSourceProfile({ type: "x-post", account: "btibor91" }, profiles);
+  assert.deepEqual(profile.roles, ["제품 변화 관찰"]);
+  assert.equal(profile.trustLabel, "관찰 후보");
+  assert.match(profile.whyTracked, /초기 변화 신호/);
+});
+
 test("Discord Announcement는 별도 공식 출처 설명을 사용한다", () => {
   const profile = findNewsSourceProfile({ type: "discord-announcement" }, new Map());
   assert.equal(profile.trustLabel, "공식 출처");

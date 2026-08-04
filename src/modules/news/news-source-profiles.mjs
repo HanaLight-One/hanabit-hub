@@ -6,6 +6,7 @@ const ROLE_LABELS = Object.freeze({
   "engineering-leadership": "엔지니어링 리더십",
   "codex-product": "Codex 제품",
   "developer-relations": "개발자 관계",
+  "product-observer": "제품 변화 관찰",
 });
 
 const TOPIC_LABELS = Object.freeze({
@@ -43,6 +44,9 @@ function whyTracked(source) {
   }
   if (source.roles.includes("developer-relations")) {
     return "API와 개발자 플랫폼 변화를 설명하는 발언을 살펴보기 위해 추적해요.";
+  }
+  if (source.roles.includes("product-observer")) {
+    return "공개 제품과 코드에서 발견되는 초기 변화 신호를 검토하기 위해 추적해요.";
   }
   return "OpenAI의 기술·제품 방향과 관련된 발언을 살펴보기 위해 추적해요.";
 }

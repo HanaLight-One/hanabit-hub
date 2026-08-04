@@ -31,8 +31,8 @@
       "terms": ["OpenAI", "ChatGPT", "Codex", "API", "model"],
       "phrases": [],
       "urlDomains": [],
-      "evidenceTerms": ["release", "released", "shipped", "available", "rollout"],
-      "evidencePhrases": ["rolling out"],
+      "evidenceTerms": ["release", "released", "shipped", "available", "rollout", "testing", "beta"],
+      "evidencePhrases": ["rolling out", "working on", "appears to be", "showed up"],
       "evidenceUrlDomains": ["openai.com", "developers.openai.com"]
     }
   },
@@ -73,6 +73,19 @@
       "topics": ["company", "models", "products"],
       "trustLevel": "high",
       "verifiedAt": "2026-08-02",
+      "streamLane": "observation-hype",
+      "enabled": true
+    },
+    {
+      "handle": "btibor91",
+      "displayName": "Tibor Blaho",
+      "sourceKind": "candidate",
+      "affiliation": "AIPRM",
+      "affiliationStatus": "confirmed",
+      "roles": ["product-observer"],
+      "topics": ["chatgpt", "codex", "api", "models", "products"],
+      "trustLevel": "candidate",
+      "verifiedAt": "2026-08-04",
       "streamLane": "observation-hype",
       "enabled": true
     },
