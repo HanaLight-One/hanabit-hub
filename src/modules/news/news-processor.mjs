@@ -88,6 +88,7 @@ export function createNewsProcessor({
         });
         let finalTriage = result.triage;
         let finalTranslation = result.translation;
+        const finalReaderSummary = result.readerSummary;
         let finalContextTranslations = result.contextTranslations;
         let translationReview = {
           status: "free_unverified",
@@ -139,6 +140,7 @@ export function createNewsProcessor({
         if (translationReview.status === "free_unverified") {
           const audit = auditFreeNewsTranslation(analysisRecord, {
             translation: finalTranslation,
+            readerSummary: finalReaderSummary,
             contextTranslations: finalContextTranslations,
           });
           translationReview = {
@@ -156,6 +158,7 @@ export function createNewsProcessor({
             ...current.workflow,
             status: decision === "skip" ? "ignored" : "pending_review",
             translation: finalTranslation,
+            readerSummary: finalReaderSummary || null,
             contextTranslations: finalContextTranslations,
             translationReview,
             analysisNotice: createNewsAnalysisNotice({ codexReviewed: codexReview?.status === "complete" }),
@@ -179,6 +182,7 @@ export function createNewsProcessor({
             ...current.workflow,
             status: "translation_failed",
             translation: null,
+            readerSummary: null,
             contextTranslations: null,
             analysisFailure: {
               code: failureCode(error),
@@ -234,6 +238,7 @@ export function createNewsProcessor({
         ...record.workflow,
         status: "pending_translation",
         translation: null,
+        readerSummary: null,
         contextTranslations: null,
         freeTriage: null,
         triage: null,

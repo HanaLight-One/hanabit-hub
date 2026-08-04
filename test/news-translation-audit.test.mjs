@@ -95,3 +95,27 @@ test("원문에 없는 문자 체계가 번역에 섞이면 자동 검증하지 
   assert.equal(audit.status, "failed");
   assert.equal(audit.code, "unexpected_script");
 });
+
+test("reader summary keeps names and numbers inside the evidence boundary", () => {
+  const audit = auditFreeNewsTranslation(record({
+    source: "OpenAI Agents SDK Python 0.19.3 fixes tool collisions and session records.",
+  }), {
+    translation: {
+      title: "OpenAI Agents SDK Python 0.19.3 공개",
+      body: "도구 충돌과 세션 기록 문제를 수정했습니다.",
+    },
+    readerSummary: "OpenAI Agents SDK Python 0.19.3에서 도구 충돌과 세션 기록 문제를 줄였어요.",
+    contextTranslations: [],
+  });
+  assert.equal(audit.status, "passed");
+});
+
+test("reader summary cannot add a product name absent from the evidence", () => {
+  const audit = auditFreeNewsTranslation(record({ source: "The update fixes tool collisions." }), {
+    translation: { title: "도구 충돌 수정", body: "도구 충돌 문제를 수정했습니다." },
+    readerSummary: "GPT-6의 도구 충돌을 줄였어요.",
+    contextTranslations: [],
+  });
+  assert.equal(audit.status, "failed");
+  assert.equal(audit.code, "reader_summary_invariant_added");
+});

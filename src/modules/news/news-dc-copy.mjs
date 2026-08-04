@@ -191,6 +191,7 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
       return section(label, translation?.body, counter);
     }),
   ].filter(Boolean);
+  const readerSummarySection = section("한눈에 보면", record.workflow.readerSummary, counter);
   const editorNote = cleanLine(record.workflow.dcEditorNote, counter);
   const analysisSections = [
     section("왜 중요한가", record.workflow.triage.reason, counter),
@@ -200,7 +201,7 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
       counter,
     ),
   ].filter(Boolean);
-  const sections = [...translationSections, ...analysisSections];
+  const sections = [readerSummarySection, ...translationSections, ...analysisSections].filter(Boolean);
 
   const notice = cleanLine(
     record.workflow.analysisNotice || createNewsAnalysisNotice({
@@ -213,6 +214,7 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
     ...(links.included.length ? ["원문 링크", ...links.included, ""] : []),
     profileLine,
     "",
+    ...(readerSummarySection ? [readerSummarySection.label, readerSummarySection.body, ""] : []),
     ...translationSections.flatMap(({ label, body }) => [label, body, ""]),
     ...analysisSections.flatMap(({ label, body }) => [label, body, ""]),
     notice,

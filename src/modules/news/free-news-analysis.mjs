@@ -48,6 +48,7 @@ function analysisSchema(contextCount) {
         required: ["title", "body"],
         additionalProperties: false,
       },
+      readerSummary: { type: "string", maxLength: 180 },
       contextTranslations: contextTranslationSchema(contextCount),
       triage: {
         type: "object",
@@ -69,7 +70,7 @@ function analysisSchema(contextCount) {
         additionalProperties: false,
       },
     },
-    required: ["translation", "contextTranslations", "triage"],
+    required: ["translation", "readerSummary", "contextTranslations", "triage"],
     additionalProperties: false,
   };
 }
@@ -103,6 +104,14 @@ function cleanTranslatedText(value) {
     .join("\n")
     .replace(/\n{3,}/gu, "\n\n")
     .trim();
+}
+
+function readerSummary(value) {
+  const text = cleanTranslatedText(value).replace(/\s+/gu, " ").trim();
+  if ([...text].length > 180) {
+    throw new Error("독자 요약은 180자 이하여야 합니다.");
+  }
+  return text;
 }
 
 export function prepareNewsSourceText(value) {
@@ -240,6 +249,7 @@ function validateResult(value, contextCount, sourceText) {
       title,
       body,
     }),
+    readerSummary: readerSummary(value?.readerSummary),
     contextTranslations: validateContextTranslations(value?.contextTranslations, contextCount),
     triage: Object.freeze({
       decision,
@@ -282,6 +292,8 @@ function buildPrompt(record) {
     "Translate empower or empowering as enabling the person to do something themselves. Do not flatten it into a generic Korean label meaning only help or assistance.",
     "The translation object must contain only SOURCE TEXT in translation.body. Do not merge any CONTEXT statement into translation.body. The only exception for translation.title is the emoji, punctuation, or too-short SOURCE headline fallback described above.",
     "translation.body must contain the complete Korean translation of the meaningful SOURCE TEXT. Do not move the translation only into title, and omit URLs from translated text.",
+    "readerSummary is a separate plain-Korean reader aid, never part of translation.body. For a dense technical release, changelog, or long official update, explain in one or two sentences what kind of user-visible or developer-visible experience the listed changes improve. Use only facts supported by SOURCE and directly linked CONTEXT, distinguish fixes from new features, and do not promise a future benefit when the source describes an already released change. Keep it at most 180 Korean characters and omit URLs.",
+    "When SOURCE is already short and plain enough that a separate explanation would merely repeat it, return readerSummary as an empty string.",
     "Preserve meaningful paragraph breaks and list-item line breaks from SOURCE and CONTEXT in every translated body. Do not flatten a multi-line post into one paragraph.",
     "The contextTranslations array must contain a separate Korean translation for every CONTEXT. Preserve its 1-based CONTEXT index and never attribute it to SOURCE ACCOUNT.",
     "When CONTEXT RELATION is official-document, write a faithful Korean key-point digest rather than a line-by-line full translation. Preserve every explicit distinction between resolution and partial progress, important names, numbers, result lists, availability, and limitations. Do not invent details.",
@@ -303,7 +315,7 @@ function buildPrompt(record) {
     "Do not demand perfect confirmation in advice when an inference is itself newsworthy. Give a ready-to-post cautious framing instead.",
     "Set importance to low, medium, or high. In advice, tell a Korean editor how to frame the item according to its evidenceTag.",
     "Return JSON only with this exact shape:",
-    '{"translation":{"title":"...","body":"..."},"contextTranslations":[{"index":1,"body":"..."}],"triage":{"decision":"skip|review|publish","confidence":0.0,"importance":"low|medium|high","evidenceTag":"official|confirmed|use_case|inference|rumor|opinion","boardCategory":"news|information|chatter|ai_creation","reason":"...","advice":"...","signals":["..."]}}',
+    '{"translation":{"title":"...","body":"..."},"readerSummary":"... or empty string","contextTranslations":[{"index":1,"body":"..."}],"triage":{"decision":"skip|review|publish","confidence":0.0,"importance":"low|medium|high","evidenceTag":"official|confirmed|use_case|inference|rumor|opinion","boardCategory":"news|information|chatter|ai_creation","reason":"...","advice":"...","signals":["..."]}}',
     "Return contextTranslations as an empty array when there is no CONTEXT.",
     `SOURCE TYPE: ${record.source?.type}`,
     `SOURCE ACCOUNT: ${record.source?.account ?? "OpenAI official Discord"}`,

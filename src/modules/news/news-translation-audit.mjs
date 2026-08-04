@@ -61,6 +61,7 @@ export function auditFreeNewsTranslation(record, translationResult = record?.wor
   const original = sourceText(record);
   const title = clean(translationResult?.translation?.title);
   const body = clean(translationResult?.translation?.body);
+  const readerSummary = clean(translationResult?.readerSummary);
   const contexts = (Array.isArray(record?.original?.contexts) ? record.original.contexts : []).slice(0, 3);
   const contextTranslations = Array.isArray(translationResult?.contextTranslations)
     ? translationResult.contextTranslations
@@ -109,6 +110,20 @@ export function auditFreeNewsTranslation(record, translationResult = record?.wor
     return result("failed", "source_invariant_added", "원문에 없는 영문명 또는 수치가 번역에 추가되어 자동 검증하지 않아요.");
   }
   const evidencePackage = [original, ...contexts.map((context) => context?.content)].filter(Boolean).join("\n");
+  if (readerSummary) {
+    if (hasUrl(translationResult?.readerSummary)) {
+      return result("failed", "reader_summary_link_leak", "독자 요약에 링크가 포함되어 자동 검증하지 않아요.");
+    }
+    if (!/[가-힣]/u.test(readerSummary)) {
+      return result("failed", "reader_summary_korean_missing", "독자 요약에서 한국어를 확인할 수 없어 자동 검증하지 않아요.");
+    }
+    if (UNEXPECTED_SCRIPT_PATTERN.test(readerSummary) && !UNEXPECTED_SCRIPT_PATTERN.test(evidencePackage)) {
+      return result("failed", "reader_summary_unexpected_script", "원문에 없는 문자 체계가 독자 요약에 섞여 자동 검증하지 않아요.");
+    }
+    if (unexpectedInvariant(evidencePackage, readerSummary)) {
+      return result("failed", "reader_summary_invariant_added", "원문과 관련 글에 없는 영문명 또는 수치가 독자 요약에 추가되어 자동 검증하지 않아요.");
+    }
+  }
   const titleExtra = unexpectedInvariant(evidencePackage, title);
   if (titleExtra) {
     return result("failed", "title_invariant_added", "원문과 관련 글에 없는 영문명 또는 수치가 제목에 추가되어 자동 검증하지 않아요.");

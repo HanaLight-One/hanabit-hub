@@ -8493,6 +8493,10 @@ function he({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 						children: "제목"
 					}),
 					/* @__PURE__ */ (0, x.jsxs)("h2", { children: [u?.evidenceTag && `[${te[u.evidenceTag]}] `, e.workflow.translation.title || "제목 없음"] }),
+					e.workflow.readerSummary && /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [/* @__PURE__ */ (0, x.jsx)("p", {
+						className: "section-label body-label",
+						children: "한눈에 보면"
+					}), /* @__PURE__ */ (0, x.jsx)("p", { children: e.workflow.readerSummary })] }),
 					/* @__PURE__ */ (0, x.jsx)("p", {
 						className: "section-label body-label",
 						children: "본문 번역"

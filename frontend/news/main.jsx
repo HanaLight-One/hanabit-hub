@@ -436,6 +436,12 @@ function NewsCard({
             {triage?.evidenceTag && `[${EVIDENCE_LABELS[triage.evidenceTag]}] `}
             {item.workflow.translation.title || "제목 없음"}
           </h2>
+          {item.workflow.readerSummary && (
+            <>
+              <p className="section-label body-label">한눈에 보면</p>
+              <p>{item.workflow.readerSummary}</p>
+            </>
+          )}
           <p className="section-label body-label">본문 번역</p>
           <p>{item.workflow.translation.body}</p>
           <small className="translation-boundary">

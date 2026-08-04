@@ -19,6 +19,7 @@ test("뉴스 리더는 내부 경로와 Discord ID 없이 공개 계약을 반�
       original: { language: "en", content: "Hello", embeds: [], links: ["https://openai.com/news"], contexts: [{ relation: "linked-post", account: "OpenAI", content: "Parent context", url: "https://x.com/OpenAI/status/12345" }] },
       internal: { xVideo: { variantUrl: "https://video.twimg.com/private/video.mp4", mediaKey: "7_secret" } },
       workflow: {
+        readerSummary: "무엇이 달라지는지 쉽게 설명한 요약입니다.",
         status: "pending_review",
         translation: { title: "한글 제목", body: "한글 본문" },
         contextTranslations: [{ index: 1, body: "부모 글 번역" }],
@@ -55,6 +56,7 @@ test("뉴스 리더는 내부 경로와 Discord ID 없이 공개 계약을 반�
     assert.equal(payload.items[0].workflow.translation.title, "한글 제목");
     assert.equal(payload.items[0].workflow.translationReview.status, "codex_verified");
     assert.equal(payload.items[0].workflow.contextTranslations[0].body, "부모 글 번역");
+    assert.equal(payload.items[0].workflow.readerSummary, "무엇이 달라지는지 쉽게 설명한 요약입니다.");
     assert.match(payload.items[0].workflow.analysisNotice, /원문 번역이 아니며/);
     assert.equal(payload.items[0].workflow.triage.decision, "publish");
     assert.equal(payload.items[0].workflow.triage.advice, "바로 검토하세요.");

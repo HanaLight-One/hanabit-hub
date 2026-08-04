@@ -81,8 +81,10 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
         assert.match(prompt, /MUST choose use_case when SOURCE or its direct CONTEXT explicitly describes a real person using AI/u);
         assert.match(prompt, /Never change an explicit use_case to inference/u);
         assert.equal(schema.type, "object");
-        assert.deepEqual(schema.required, ["translation", "contextTranslations", "triage"]);
+        assert.deepEqual(schema.required, ["translation", "readerSummary", "contextTranslations", "triage"]);
         assert.equal(schema.additionalProperties, false);
+        assert.equal(schema.properties.readerSummary.maxLength, 180);
+        assert.match(prompt, /readerSummary is a separate plain-Korean reader aid/u);
         assert.equal(schema.properties.contextTranslations.minItems, 1);
         assert.equal(schema.properties.contextTranslations.maxItems, 1);
         assert.equal(schema.properties.translation.properties.title.maxLength, 50);
@@ -91,6 +93,7 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
         assert.deepEqual(schema.properties.triage.properties.decision.enum, ["skip", "review", "publish"]);
         await mkdir(path.dirname(outputPath), { recursive: true });
         await writeFile(outputPath, JSON.stringify({
+          readerSummary: "복잡한 변경이 실제 사용에 미치는 영향을 쉽게 설명합니다.",
           translation: { title: "코덱스 한도 초기화", body: "사용량 한도가 초기화됐습니다." },
           contextTranslations: [{ index: 1, body: "오늘 새 모델을 사용할 수 있습니다. https://example.com/context" }],
           triage: { decision: "publish", confidence: 0.98, importance: "high", evidenceTag: "confirmed", boardCategory: "news", reason: "구체적인 서비스 변경", advice: "게시 가치가 높습니다.", signals: ["usage-limit"] },
@@ -100,6 +103,7 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
     assert.equal(result.triage.decision, "publish");
     assert.equal(result.triage.importance, "high");
     assert.equal(result.triage.evidenceTag, "confirmed");
+    assert.equal(result.readerSummary, "복잡한 변경이 실제 사용에 미치는 영향을 쉽게 설명합니다.");
     assert.equal(result.contextTranslations[0].body, "오늘 새 모델을 사용할 수 있습니다.");
     await assert.rejects(() => readFile(path.join(runtimeRoot, "e".repeat(32), "prompt.txt"), "utf8"), /ENOENT/);
   } finally {
@@ -286,7 +290,7 @@ test("통합 응답이 관련 글 번역을 빠뜨리면 작은 별도 요청으
             /Preserve meaningful paragraph breaks and list-item line breaks/u,
           );
         } else {
-          assert.deepEqual(schema.required, ["translation", "contextTranslations", "triage"]);
+          assert.deepEqual(schema.required, ["translation", "readerSummary", "contextTranslations", "triage"]);
         }
         const value = outputPath.includes("context-output-")
           ? {

@@ -1,6 +1,6 @@
 const GOOD_IMPORTANCE = new Set(["medium", "high"]);
 const TRUSTED_SOURCES = new Set(["official", "high", "standard"]);
-export const NEWS_ANALYSIS_POLICY_VERSION = 15;
+export const NEWS_ANALYSIS_POLICY_VERSION = 16;
 
 function result(decision, code, reason) {
   return Object.freeze({ decision, code, reason });

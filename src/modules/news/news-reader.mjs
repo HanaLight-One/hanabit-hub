@@ -160,6 +160,7 @@ function publicItem(record, sourceProfiles) {
             body: safeText(record.workflow.translation.body, 4_000),
           }
         : null,
+      readerSummary: safeText(record?.workflow?.readerSummary, 180) || null,
       contextTranslations: Array.isArray(record?.workflow?.contextTranslations)
         ? record.workflow.contextTranslations.slice(0, 3).map((entry) => ({
             index: Math.max(1, Math.min(3, Number(entry?.index) || 1)),

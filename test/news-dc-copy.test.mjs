@@ -14,6 +14,7 @@ function record() {
       contexts: [{ account: "OpenAI", label: "OpenAI", content: "Context" }],
     },
     workflow: {
+      readerSummary: "반복 작업을 자동으로 처리하는 흐름을 더 쉽게 구성할 수 있다는 뜻이에요.",
       translation: { title: "반복 작업을 맡겨보세요 🤣", body: "ChatGPT로 반복 작업을 실행할 수 있습니다." },
       contextTranslations: [{ index: 1, body: "관련 글 첫 문단\n\n- 첫 항목\n\n- 둘째 항목" }],
       triage: {
@@ -58,6 +59,8 @@ test("DC 뉴스 원고는 태그·번역·AI 해설·출처를 결정적으로 �
   assert.doesNotMatch(draft.bodyText, /쓰세요|프레이밍하세요/u);
   assert.match(draft.bodyText, /원문 번역이 아니며/u);
   assert.match(draft.bodyText, /https:\/\/x\.com\/gregbrockman\/status\/123456/u);
+  assert.match(draft.bodyText, /한눈에 보면\n반복 작업을 자동으로 처리/u);
+  assert.equal(draft.bodyText.indexOf("한눈에 보면") < draft.bodyText.indexOf("본문 번역"), true);
   assert.equal(draft.bodyText.indexOf("원문 링크"), 0);
   assert.equal(
     draft.bodyText.indexOf("https://x.com/gregbrockman/status/123456") <
