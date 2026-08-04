@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -22,19 +22,29 @@ function incident({ id = "incident-1", update = "update-1", status = "investigat
   };
 }
 
+function component({ id = "component-1", name = "Codex CLI", status = "operational" } = {}) {
+  return {
+    id,
+    name,
+    status,
+    updated_at: status === "operational" ? "2026-08-04T12:40:00Z" : "2026-08-04T13:00:00Z",
+  };
+}
+
 function responder(snapshots) {
   let index = 0;
   return async (url) => {
     assert.equal(url, OPENAI_STATUS_SUMMARY_URL);
     const value = snapshots[Math.min(index++, snapshots.length - 1)];
-    return { ok: true, async json() { return { incidents: value }; } };
+    const snapshot = Array.isArray(value) ? { incidents: value, components: [] } : value;
+    return { ok: true, async json() { return snapshot; } };
   };
 }
 
 test("첫 실행은 진행 중 장애를 기준선으로만 저장한다", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-status-"));
   const monitor = createOpenAIStatusMonitor({ stateRoot: root, fetchImpl: responder([[incident()]]) });
-  assert.deepEqual(await monitor.poll(), { status: "baselined", activeCount: 1 });
+  assert.equal((await monitor.poll()).status, "baselined");
   const state = JSON.parse(await readFile(path.join(root, "openai-status-monitor.json"), "utf8"));
   assert.equal(state.currentPost, null);
 });
@@ -66,7 +76,7 @@ test("수동 기준선 장애가 바로 끝나도 복구 글을 만들지 않는
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-status-"));
   const monitor = createOpenAIStatusMonitor({ stateRoot: root, fetchImpl: responder([[incident()], []]) });
   await monitor.poll();
-  assert.deepEqual(await monitor.poll(), { status: "observed", activeCount: 0 });
+  assert.equal((await monitor.poll()).status, "observed");
 });
 
 test("보호된 수동 장애 글은 삭제 대상이 아니면서 복구완료 기준선이 된다", async () => {
@@ -106,4 +116,87 @@ test("사용자가 지정한 보호 글만 다음 상태 글의 교체 대상으
   });
   assert.equal(confirmed.previousPost.postId, "120497");
   assert.equal((await monitor.readState()).pendingReplacement.postId, "120497");
+});
+
+test("ChatGPT 장애 중 Codex 구성요소가 나빠지면 장애확대 후보를 만든다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-status-"));
+  const chat = component({ id: "chat", name: "Conversations", status: "degraded_performance" });
+  const codex = component({ id: "codex-cli", name: "Codex CLI", status: "partial_outage" });
+  const monitor = createOpenAIStatusMonitor({
+    stateRoot: root,
+    fetchImpl: responder([
+      { incidents: [incident()], components: [chat] },
+      { incidents: [incident()], components: [chat, codex] },
+    ]),
+  });
+  await monitor.poll();
+  const expanded = await monitor.poll();
+  assert.equal(expanded.status, "created");
+  assert.equal(expanded.phase, "expanded");
+  assert.equal(expanded.incidentCount, 1);
+  assert.equal(expanded.componentCount, 2);
+  const record = JSON.parse(await readFile(path.join(root, "pending", expanded.id, "item.json"), "utf8"));
+  assert.match(record.original.content, /Conversations: degraded_performance/u);
+  assert.match(record.original.content, /Codex CLI: partial_outage/u);
+});
+
+test("사건 등록 전 구성요소 노란불만 생겨도 장애발생 후보를 만든다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-status-"));
+  const monitor = createOpenAIStatusMonitor({
+    stateRoot: root,
+    fetchImpl: responder([
+      { incidents: [], components: [component()] },
+      { incidents: [], components: [component({ status: "degraded_performance" })] },
+    ]),
+  });
+  await monitor.poll();
+  const outage = await monitor.poll();
+  assert.equal(outage.status, "created");
+  assert.equal(outage.phase, "outage");
+  assert.equal(outage.componentCount, 1);
+});
+
+test("여러 장애 신호 중 구성요소 하나가 정상화되면 부분복구 후보를 만든다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-status-"));
+  const chat = component({ id: "chat", name: "Conversations", status: "degraded_performance" });
+  const codex = component({ id: "codex", name: "Codex Web", status: "major_outage" });
+  const monitor = createOpenAIStatusMonitor({
+    stateRoot: root,
+    fetchImpl: responder([
+      { incidents: [incident()], components: [chat, codex] },
+      { incidents: [incident()], components: [chat, component({ id: "codex", name: "Codex Web" })] },
+    ]),
+  });
+  await monitor.poll();
+  const partial = await monitor.poll();
+  assert.equal(partial.status, "created");
+  assert.equal(partial.phase, "partial-recovery");
+  assert.equal(partial.componentCount, 1);
+});
+
+test("기존 v1 영수증은 현재 구성요소를 조용히 기준선으로 이식한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-status-"));
+  await writeFile(path.join(root, "openai-status-monitor.json"), JSON.stringify({
+    schemaVersion: 1,
+    initializedAt: "2026-08-04T12:00:00.000Z",
+    lastCheckedAt: "2026-08-04T12:00:00.000Z",
+    lastSnapshotHash: "legacy",
+    activeIncidents: [],
+    currentPost: { postId: "120497", ownership: "adopted-replaceable" },
+    pendingSnapshot: null,
+    history: [],
+  }), "utf8");
+  const monitor = createOpenAIStatusMonitor({
+    stateRoot: root,
+    fetchImpl: responder([{
+      incidents: [incident()],
+      components: [component({ id: "chat", name: "Conversations", status: "degraded_performance" })],
+    }]),
+  });
+  const migrated = await monitor.poll();
+  assert.equal(migrated.status, "components-baselined");
+  const state = await monitor.readState();
+  assert.equal(state.schemaVersion, 2);
+  assert.equal(state.currentPost.postId, "120497");
+  assert.equal(state.degradedComponents.length, 1);
 });

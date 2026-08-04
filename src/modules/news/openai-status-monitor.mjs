@@ -14,6 +14,18 @@ const PHASE_TITLES = Object.freeze({
   "partial-recovery": "OpenAI service incident partially recovered",
   recovered: "OpenAI service incident resolved",
 });
+const COMPONENT_STATUSES = new Set([
+  "operational",
+  "degraded_performance",
+  "partial_outage",
+  "major_outage",
+  "under_maintenance",
+]);
+const DEGRADED_COMPONENT_STATUSES = new Set([
+  "degraded_performance",
+  "partial_outage",
+  "major_outage",
+]);
 
 function cleanText(value, maximum = 2_000) {
   return String(value ?? "").replace(/\s+/gu, " ").trim().slice(0, maximum);
@@ -45,9 +57,18 @@ function normalizeIncident(value) {
   };
 }
 
+function normalizeComponent(value) {
+  return {
+    id: cleanText(value?.id, 64),
+    name: cleanText(value?.name, 160),
+    status: cleanText(value?.status, 40),
+    updatedAt: safeTime(value?.updated_at),
+  };
+}
+
 export function normalizeOpenAIStatusSummary(value) {
-  if (!value || !Array.isArray(value.incidents)) {
-    throw new TypeError("OpenAI 상태 응답에 장애 목록이 없습니다.");
+  if (!value || !Array.isArray(value.incidents) || !Array.isArray(value.components)) {
+    throw new TypeError("OpenAI 상태 응답에 장애 또는 구성요소 목록이 없습니다.");
   }
   const incidents = value.incidents.map(normalizeIncident).filter((entry) => (
     entry.id && entry.name && entry.status && entry.createdAt && entry.updatedAt
@@ -56,29 +77,52 @@ export function normalizeOpenAIStatusSummary(value) {
   if (incidents.length !== value.incidents.length || incidents.length > 20) {
     throw new TypeError("OpenAI 상태 응답의 장애 항목이 올바르지 않습니다.");
   }
-  return incidents;
+  const components = value.components.map(normalizeComponent);
+  if (
+    components.length > 200 ||
+    components.some((entry) => !entry.id || !entry.name || !entry.updatedAt || !COMPONENT_STATUSES.has(entry.status))
+  ) {
+    throw new TypeError("OpenAI 상태 응답의 구성요소 항목이 올바르지 않습니다.");
+  }
+  const degradedComponents = components
+    .filter((entry) => DEGRADED_COMPONENT_STATUSES.has(entry.status))
+    .sort((left, right) => left.id.localeCompare(right.id));
+  return { incidents, degradedComponents };
 }
 
-function snapshotHash(incidents) {
-  return createHash("sha256").update(JSON.stringify(incidents), "utf8").digest("hex");
+function snapshotHash(snapshot) {
+  return createHash("sha256").update(JSON.stringify(snapshot), "utf8").digest("hex");
+}
+
+function activeCount(snapshot) {
+  return snapshot.incidents.length + snapshot.degradedComponents.length;
 }
 
 function phaseFor(previous, current, currentPost) {
-  if (!current.length) return previous.length && currentPost ? "recovered" : null;
-  if (!previous.length) return "outage";
-  const previousIds = new Set(previous.map((entry) => entry.id));
-  const currentIds = new Set(current.map((entry) => entry.id));
-  if (current.some((entry) => !previousIds.has(entry.id))) return "expanded";
-  if (previous.some((entry) => !currentIds.has(entry.id))) return "partial-recovery";
+  if (!activeCount(current)) return activeCount(previous) && currentPost ? "recovered" : null;
+  if (!activeCount(previous)) return "outage";
+  const previousIncidentIds = new Set(previous.incidents.map((entry) => entry.id));
+  const currentIncidentIds = new Set(current.incidents.map((entry) => entry.id));
+  const previousComponentIds = new Set(previous.degradedComponents.map((entry) => entry.id));
+  const currentComponentIds = new Set(current.degradedComponents.map((entry) => entry.id));
+  if (
+    current.incidents.some((entry) => !previousIncidentIds.has(entry.id)) ||
+    current.degradedComponents.some((entry) => !previousComponentIds.has(entry.id))
+  ) return "expanded";
+  if (
+    previous.incidents.some((entry) => !currentIncidentIds.has(entry.id)) ||
+    previous.degradedComponents.some((entry) => !currentComponentIds.has(entry.id))
+  ) return "partial-recovery";
   return "updated";
 }
 
-function originalBody(phase, incidents) {
+function originalBody(phase, { incidents, degradedComponents }) {
   if (phase === "recovered") {
-    return "OpenAI Status reports no active incidents. The previously monitored incident wave has recovered.";
+    return "OpenAI Status reports no active incidents or degraded components. The previously monitored service disruption has recovered.";
   }
   const lines = [
     `OpenAI Status update. Active incidents: ${incidents.length}.`,
+    `Degraded components: ${degradedComponents.length}.`,
     `Update phase: ${phase}.`,
   ];
   incidents.forEach((incident, index) => {
@@ -88,6 +132,12 @@ function originalBody(phase, incidents) {
       `Latest official update: ${incident.latestUpdate?.body || "No update text supplied."}`,
     );
   });
+  if (degradedComponents.length) {
+    lines.push("Affected service components:");
+    degradedComponents.forEach((component, index) => {
+      lines.push(`${index + 1}. ${component.name}: ${component.status}.`);
+    });
+  }
   return lines.join("\n");
 }
 
@@ -111,7 +161,11 @@ export function createOpenAIStatusMonitor({
   async function readState() {
     try {
       const value = JSON.parse(await readFile(statePath, "utf8"));
-      if (value?.schemaVersion !== 1 || !Array.isArray(value.activeIncidents)) {
+      if (
+        ![1, 2].includes(value?.schemaVersion) ||
+        !Array.isArray(value.activeIncidents) ||
+        (value.schemaVersion === 2 && !Array.isArray(value.degradedComponents))
+      ) {
         throw new TypeError("OpenAI 상태 감시 영수증이 올바르지 않습니다.");
       }
       return value;
@@ -137,36 +191,75 @@ export function createOpenAIStatusMonitor({
 
   async function poll() {
     const checkedAt = now().toISOString();
-    const incidents = await fetchSnapshot();
-    const hash = snapshotHash(incidents);
+    const snapshot = await fetchSnapshot();
+    const { incidents, degradedComponents } = snapshot;
+    const hash = snapshotHash(snapshot);
     const state = await readState();
     if (!state) {
       await saveState({
-        schemaVersion: 1,
+        schemaVersion: 2,
         initializedAt: checkedAt,
         lastCheckedAt: checkedAt,
         lastSnapshotHash: hash,
         activeIncidents: incidents,
+        degradedComponents,
         currentPost: null,
         pendingSnapshot: null,
         history: [],
       });
-      return { status: "baselined", activeCount: incidents.length };
+      return {
+        status: "baselined",
+        activeCount: activeCount(snapshot),
+        incidentCount: incidents.length,
+        componentCount: degradedComponents.length,
+      };
+    }
+    if (state.schemaVersion === 1) {
+      await saveState({
+        ...state,
+        schemaVersion: 2,
+        lastCheckedAt: checkedAt,
+        lastSnapshotHash: hash,
+        activeIncidents: incidents,
+        degradedComponents,
+        pendingSnapshot: null,
+      });
+      return {
+        status: "components-baselined",
+        activeCount: activeCount(snapshot),
+        incidentCount: incidents.length,
+        componentCount: degradedComponents.length,
+      };
     }
     if (state.lastSnapshotHash === hash) {
       await saveState({ ...state, lastCheckedAt: checkedAt });
-      return { status: "unchanged", activeCount: incidents.length };
+      return {
+        status: "unchanged",
+        activeCount: activeCount(snapshot),
+        incidentCount: incidents.length,
+        componentCount: degradedComponents.length,
+      };
     }
-    const phase = phaseFor(state.activeIncidents, incidents, state.currentPost);
+    const previousSnapshot = {
+      incidents: state.activeIncidents,
+      degradedComponents: state.degradedComponents,
+    };
+    const phase = phaseFor(previousSnapshot, snapshot, state.currentPost);
     if (!phase) {
       await saveState({
         ...state,
         lastCheckedAt: checkedAt,
         lastSnapshotHash: hash,
         activeIncidents: incidents,
+        degradedComponents,
         pendingSnapshot: null,
       });
-      return { status: "observed", activeCount: incidents.length };
+      return {
+        status: "observed",
+        activeCount: activeCount(snapshot),
+        incidentCount: incidents.length,
+        componentCount: degradedComponents.length,
+      };
     }
     const id = createHash("sha256").update(`openai-status\0${hash}`, "utf8").digest("hex").slice(0, 32);
     const publishedAt = incidents.reduce(
@@ -184,24 +277,42 @@ export function createOpenAIStatusMonitor({
         publishedAt,
         phase,
         incidentIds: incidents.map((entry) => entry.id),
+        componentIds: degradedComponents.map((entry) => entry.id),
       },
       original: {
         title: PHASE_TITLES[phase],
-        content: originalBody(phase, incidents),
+        content: originalBody(phase, snapshot),
       },
       context: [],
       collectedAt: checkedAt,
       workflow: { status: "pending_translation" },
-      internal: { openAIStatus: { schemaVersion: 1, phase, snapshotHash: hash, incidents } },
+      internal: {
+        openAIStatus: {
+          schemaVersion: 2,
+          phase,
+          snapshotHash: hash,
+          incidents,
+          degradedComponents,
+        },
+      },
     });
     await saveState({
       ...state,
       lastCheckedAt: checkedAt,
       lastSnapshotHash: hash,
       activeIncidents: incidents,
+      degradedComponents,
       pendingSnapshot: { id, phase, snapshotHash: hash, createdAt: checkedAt },
     });
-    return { status: result.created ? "created" : "existing", id, phase, snapshotHash: hash, activeCount: incidents.length };
+    return {
+      status: result.created ? "created" : "existing",
+      id,
+      phase,
+      snapshotHash: hash,
+      activeCount: activeCount(snapshot),
+      incidentCount: incidents.length,
+      componentCount: degradedComponents.length,
+    };
   }
 
   async function confirmPublished(snapshotHashValue, publication) {
@@ -240,7 +351,7 @@ export function createOpenAIStatusMonitor({
       throw new TypeError("보호할 수동 상태 글 주소가 올바르지 않습니다.");
     }
     const state = await readState();
-    if (!state || !state.activeIncidents.length) {
+    if (!state || !(state.activeIncidents.length + (state.degradedComponents?.length ?? 0))) {
       throw new Error("진행 중인 OpenAI 장애 기준선이 없습니다.");
     }
     if (state.currentPost) return { status: "already-adopted", currentPost: state.currentPost };
