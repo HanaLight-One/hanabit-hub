@@ -33,8 +33,12 @@ function component({ id = "component-1", name = "Codex CLI", status = "operation
 
 function responder(snapshots) {
   let index = 0;
-  return async (url) => {
-    assert.equal(url, OPENAI_STATUS_SUMMARY_URL);
+  return async (url, options) => {
+    const parsed = new URL(url);
+    assert.equal(`${parsed.origin}${parsed.pathname}`, OPENAI_STATUS_SUMMARY_URL);
+    assert.match(parsed.searchParams.get("hanabit"), /^\d+$/u);
+    assert.equal(options.cache, "no-store");
+    assert.equal(options.headers["cache-control"], "no-cache");
     const value = snapshots[Math.min(index++, snapshots.length - 1)];
     const snapshot = Array.isArray(value) ? { incidents: value, components: [] } : value;
     return { ok: true, async json() { return snapshot; } };
@@ -47,6 +51,26 @@ test("첫 실행은 진행 중 장애를 기준선으로만 저장한다", async
   assert.equal((await monitor.poll()).status, "baselined");
   const state = JSON.parse(await readFile(path.join(root, "openai-status-monitor.json"), "utf8"));
   assert.equal(state.currentPost, null);
+});
+
+test("상태 API 요청마다 CDN 캐시를 우회한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-status-"));
+  const urls = [];
+  const times = [new Date("2026-08-05T00:00:00Z"), new Date("2026-08-05T00:00:20Z")];
+  const monitor = createOpenAIStatusMonitor({
+    stateRoot: root,
+    now: () => times.shift(),
+    fetchImpl: async (url, options) => {
+      urls.push(url);
+      assert.equal(options.cache, "no-store");
+      return { ok: true, async json() { return { incidents: [], components: [] }; } };
+    },
+  });
+  await monitor.poll();
+  await monitor.poll();
+  assert.notEqual(urls[0], urls[1]);
+  assert.equal(new URL(urls[0]).searchParams.get("hanabit"), "1785888000000");
+  assert.equal(new URL(urls[1]).searchParams.get("hanabit"), "1785888020000");
 });
 
 test("새 공식 업데이트를 한 번만 뉴스 후보로 만든다", async () => {

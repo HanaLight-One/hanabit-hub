@@ -180,9 +180,16 @@ export function createOpenAIStatusMonitor({
     await writeJsonAtomic(statePath, value);
   }
 
-  async function fetchSnapshot() {
-    const response = await fetchImpl(OPENAI_STATUS_SUMMARY_URL, {
-      headers: { accept: "application/json" },
+  async function fetchSnapshot(cacheKey) {
+    const requestUrl = new URL(OPENAI_STATUS_SUMMARY_URL);
+    requestUrl.searchParams.set("hanabit", String(cacheKey));
+    const response = await fetchImpl(requestUrl.href, {
+      cache: "no-store",
+      headers: {
+        accept: "application/json",
+        "cache-control": "no-cache",
+        pragma: "no-cache",
+      },
       signal: AbortSignal.timeout(10_000),
     });
     if (!response?.ok) throw new Error(`OpenAI 상태 확인 실패 (${response?.status ?? "unknown"})`);
@@ -190,8 +197,9 @@ export function createOpenAIStatusMonitor({
   }
 
   async function poll() {
-    const checkedAt = now().toISOString();
-    const snapshot = await fetchSnapshot();
+    const checkedTime = now();
+    const checkedAt = checkedTime.toISOString();
+    const snapshot = await fetchSnapshot(checkedTime.getTime());
     const { incidents, degradedComponents } = snapshot;
     const hash = snapshotHash(snapshot);
     const state = await readState();
