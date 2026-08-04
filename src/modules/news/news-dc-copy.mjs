@@ -141,8 +141,9 @@ function translatedHeadline(record, counter) {
 }
 
 function section(label, body, counter) {
+  const cleanLabel = cleanLine(label, counter);
   const cleanBody = cleanLine(body, counter);
-  return cleanBody ? { label, body: cleanBody } : null;
+  return cleanBody ? { label: cleanLabel || "내용", body: cleanBody } : null;
 }
 
 export function textToDcHtml(value) {

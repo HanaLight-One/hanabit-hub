@@ -96,6 +96,17 @@ test("이모지뿐인 원문 제목은 관련 글 번역에서 정보성 제목�
   assert.equal(draft.preflight.emojiRemovedCount, 2);
 });
 
+test("관련 글 작성자 이름의 이모지도 DC 소제목에서 제거한다", () => {
+  const sample = record();
+  sample.original.contexts[0].label = "Diego | AI 🚀 - e/acc";
+  const draft = composeNewsDcCopy(sample);
+
+  assert.match(draft.bodyText, /관련 글 번역 · Diego \| AI - e\/acc/u);
+  assert.doesNotMatch(`${draft.title}\n${draft.bodyText}`, /\p{Extended_Pictographic}/u);
+  assert.equal(draft.preflight.emojiRemovedCount, 2);
+  assert.equal(draft.preflight.ready, true);
+});
+
 test("DC 뉴스 원고는 번역 응답에 남은 Markdown 표식을 평문으로 정리한다", () => {
   const sample = record();
   sample.workflow.translation.title = "### 7.4.0";
