@@ -13,6 +13,8 @@ test("React 뉴스 검수실 화면과 승인 스크립트를 제공한다", asy
     assert.equal(page.status, 200);
     assert.equal(body.includes("뉴스 검수실"), true);
     assert.equal(body.includes('id="news-root"'), true);
+    assert.equal(body.includes('/news/app.js?v=20260804-editor-note'), true);
+    assert.equal(body.includes('/news/styles.css?v=20260804-editor-note'), true);
     assert.equal(script.includes("localStorage"), false);
     assert.equal(script.includes('fetch("/api/news"'), true);
     assert.equal(script.includes("translation-box"), true);
