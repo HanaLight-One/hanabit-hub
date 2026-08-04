@@ -27,6 +27,12 @@ export function createNewsApprovalService({ root, now = () => new Date() }) {
       let changed = false;
       const record = await store.update(id, (current) => {
         const workflow = current.workflow ?? {};
+        if (
+          workflow.dcPublication?.status === "failed-preflight" &&
+          workflow.dcApproval?.status === "approved"
+        ) {
+          return current;
+        }
         if (workflow.dcPublication) {
           throw approvalError("ALREADY_PUBLISHED", "이미 게시 영수증이 있는 뉴스입니다.");
         }

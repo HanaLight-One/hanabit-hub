@@ -50,6 +50,36 @@ test("DC 승인은 검토 후보에 게시 실행 없는 승인 영수증만 남
   }
 });
 
+test("failed preflight reuses the existing DC approval", async () => {
+  const sample = await fixture({
+    status: "approved_for_dc",
+    triage: { decision: "publish", confidence: 0.9, reason: "official release" },
+    dcApproval: {
+      schemaVersion: 1,
+      status: "approved",
+      approvedAt: "2026-08-04T10:31:00.000Z",
+      target: "dcinside",
+    },
+    dcPublication: {
+      schemaVersion: 1,
+      status: "failed-preflight",
+      mode: "manual",
+      submittedAt: "2026-08-04T10:32:00.000Z",
+    },
+  });
+  try {
+    const service = createNewsApprovalService({ root: sample.root });
+    const result = await service.approveForDc(sample.id);
+    const saved = JSON.parse(await readFile(path.join(sample.itemRoot, "item.json"), "utf8"));
+
+    assert.equal(result.changed, false);
+    assert.equal(saved.workflow.dcPublication.status, "failed-preflight");
+    assert.equal(saved.workflow.dcApproval.status, "approved");
+  } finally {
+    await rm(sample.root, { recursive: true, force: true });
+  }
+});
+
 test("번역 전 또는 보류 판정 뉴스는 DC 승인을 거부한다", async () => {
   const sample = await fixture({
     status: "pending_review",
