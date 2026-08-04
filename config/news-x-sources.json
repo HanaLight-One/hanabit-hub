@@ -10,7 +10,7 @@
     },
     "product-practice": {
       "mode": "keywords",
-      "includeReplies": true,
+      "includeReplies": false,
       "terms": ["Codex", "ChatGPT", "API", "SDK", "Windows", "WSL", "sandbox", "CLI", "IDE", "terminal", "plugin", "plugins", "usage", "limits", "available", "live", "shipped", "released"],
       "phrases": ["rolling out", "how to", "usage limits"],
       "urlDomains": ["developers.openai.com", "github.com", "openai.com"]

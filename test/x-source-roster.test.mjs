@@ -113,6 +113,12 @@ test("Tibor Blaho는 관찰 후보로만 감시한다", async () => {
   assert.equal(lane.evidencePhrases.includes("showed up"), true);
 });
 
+test("제품 실무 인물의 답글은 X 원격 수집 전에 제외한다", async () => {
+  const policy = await loadXStreamPolicy(trackedRosterPath);
+  const lane = policy.groups.find((entry) => entry.id === "product-practice");
+  assert.equal(lane.includeReplies, false);
+});
+
 test("중복 계정과 불완전한 인물 명부는 거부한다", async () => {
   await assert.rejects(
     withRoster({ schemaVersion: 1, sources: [source, { ...source, handle: "openai" }] },
