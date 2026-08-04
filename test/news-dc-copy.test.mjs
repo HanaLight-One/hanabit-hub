@@ -80,6 +80,22 @@ test("DC 뉴스 원고는 결합문자가 남으면 실제 게시 준비를 막�
   assert.equal(draft.preflight.combiningMarkCount, 1);
 });
 
+test("이모지뿐인 원문 제목은 관련 글 번역에서 정보성 제목을 복구한다", () => {
+  const sample = record();
+  sample.workflow.translation.title = "🚀";
+  sample.workflow.translation.body = "🚀";
+  sample.workflow.contextTranslations = [{
+    index: 1,
+    body: "ChatGPT에서 Chat은 점점 Work처럼 행동하기 시작하고 있다. 둘은 올해 안에 합쳐질 것으로 예상한다.",
+  }];
+  sample.workflow.triage.evidenceTag = "opinion";
+  const draft = composeNewsDcCopy(sample);
+
+  assert.equal(draft.title, "[의견] ChatGPT에서 Chat은 점점 Work처럼 행동하기 시작하고 있다");
+  assert.notEqual(draft.title, "[의견]");
+  assert.equal(draft.preflight.emojiRemovedCount, 2);
+});
+
 test("DC 뉴스 원고는 번역 응답에 남은 Markdown 표식을 평문으로 정리한다", () => {
   const sample = record();
   sample.workflow.translation.title = "### 7.4.0";

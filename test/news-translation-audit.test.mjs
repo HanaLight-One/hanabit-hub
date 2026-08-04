@@ -40,6 +40,30 @@ test("관련 글 번역을 원문 번역에 그대로 섞으면 자동 검증하
   assert.equal(audit.code, "context_mixed_into_source");
 });
 
+test("이모지 원문의 제목은 관련 글 근거를 요약해도 본문 경계를 통과한다", () => {
+  const audit = auditFreeNewsTranslation(
+    record({ source: "🚀", context: "ChatGPT Chat is starting to behave more like Work." }),
+    {
+      translation: { title: "ChatGPT의 Chat이 Work처럼 변해간다는 관측", body: "로켓" },
+      contextTranslations: [{ index: 1, body: "ChatGPT의 Chat이 점점 Work처럼 행동하기 시작합니다." }],
+    },
+  );
+  assert.equal(audit.status, "passed");
+  assert.equal(audit.code, "local_source_boundary");
+});
+
+test("관련 글에도 없는 제품명을 제목에 추가하면 자동 검증하지 않는다", () => {
+  const audit = auditFreeNewsTranslation(
+    record({ source: "🚀", context: "Chat is changing." }),
+    {
+      translation: { title: "GPT-7의 Chat 변화", body: "로켓" },
+      contextTranslations: [{ index: 1, body: "Chat이 변하고 있습니다." }],
+    },
+  );
+  assert.equal(audit.status, "failed");
+  assert.equal(audit.code, "title_invariant_added");
+});
+
 test("원문에 없는 제품명이나 수치를 번역에 추가하면 자동 검증하지 않는다", () => {
   const audit = auditFreeNewsTranslation(record({ source: "A new model is available." }), {
     translation: { title: "GPT-6 공개", body: "GPT-6 모델이 공개되었습니다." },

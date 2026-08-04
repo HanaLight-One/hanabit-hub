@@ -114,6 +114,32 @@ function cleanLine(value, counter) {
   return result.text;
 }
 
+function conciseHeadline(value, counter, maximum = 56) {
+  const cleaned = cleanLine(value, counter).replace(/\s+/gu, " ").trim();
+  if (!cleaned) return "";
+  const firstSentence = cleaned.match(/^.*?[.!?](?=\s|$)/u)?.[0] ?? cleaned;
+  return [...firstSentence.replace(/[.!?]+$/u, "").trim()].slice(0, maximum).join("").trim();
+}
+
+function translatedHeadline(record, counter) {
+  const primary = conciseHeadline(
+    releaseAwareTitle(record, record?.workflow?.translation?.title),
+    counter,
+  );
+  if (primary) return primary;
+
+  const contextBodies = (record?.workflow?.contextTranslations ?? []).map((entry) => entry?.body);
+  for (const candidate of [
+    ...contextBodies,
+    record?.workflow?.translation?.body,
+    record?.workflow?.triage?.reason,
+  ]) {
+    const fallback = conciseHeadline(candidate, counter);
+    if (fallback) return fallback;
+  }
+  return "내용 확인 필요";
+}
+
 function section(label, body, counter) {
   const cleanBody = cleanLine(body, counter);
   return cleanBody ? { label, body: cleanBody } : null;
@@ -137,10 +163,7 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
 
   const counter = { removed: 0 };
   const evidenceLabel = EVIDENCE_LABELS[record.workflow.triage.evidenceTag] ?? "확인 필요";
-  const translatedTitle = cleanLine(
-    releaseAwareTitle(record, record.workflow.translation.title || "제목 없음"),
-    counter,
-  );
+  const translatedTitle = translatedHeadline(record, counter);
   const title = [...`[${evidenceLabel}] ${translatedTitle}`].slice(0, 80).join("").trim();
   const profile = findNewsSourceProfile(record.source, sourceProfiles);
   const headText = selectNewsDcHeadText(record, profile);

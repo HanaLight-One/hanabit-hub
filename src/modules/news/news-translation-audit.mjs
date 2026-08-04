@@ -23,7 +23,9 @@ function sourceText(record) {
 }
 
 function invariants(value) {
-  return new Set((clean(value).match(LATIN_OR_NUMBER_PATTERN) ?? []).map((token) => token.toLowerCase()));
+  return new Set((clean(value).match(LATIN_OR_NUMBER_PATTERN) ?? [])
+    .map((token) => token.toLowerCase().replace(/[._+-]+$/gu, ""))
+    .filter(Boolean));
 }
 
 function unexpectedInvariant(source, translated) {
@@ -65,7 +67,7 @@ export function auditFreeNewsTranslation(record, translationResult = record?.wor
     return result("failed", "context_count", "관련 글과 관련 글 번역의 개수가 달라 자동 검증하지 않아요.");
   }
 
-  const translatedSource = clean(`${title} ${body}`).toLowerCase();
+  const translatedBody = body.toLowerCase();
   const seen = new Set();
   for (const [offset, context] of contexts.entries()) {
     const entry = contextTranslations[offset];
@@ -82,14 +84,19 @@ export function auditFreeNewsTranslation(record, translationResult = record?.wor
     if (contextExtra) {
       return result("failed", "context_invariant_added", "관련 글 원문에 없는 영문명 또는 수치가 번역에 추가되어 자동 검증하지 않아요.");
     }
-    if (translatedContext.length >= 12 && translatedSource.includes(translatedContext.toLowerCase())) {
+    if (translatedContext.length >= 12 && translatedBody.includes(translatedContext.toLowerCase())) {
       return result("failed", "context_mixed_into_source", "관련 글 번역이 원문 전용 번역에 섞여 자동 검증하지 않아요.");
     }
   }
 
-  const extra = unexpectedInvariant(original, `${title} ${body}`);
-  if (extra) {
+  const bodyExtra = unexpectedInvariant(original, body);
+  if (bodyExtra) {
     return result("failed", "source_invariant_added", "원문에 없는 영문명 또는 수치가 번역에 추가되어 자동 검증하지 않아요.");
+  }
+  const evidencePackage = [original, ...contexts.map((context) => context?.content)].filter(Boolean).join("\n");
+  const titleExtra = unexpectedInvariant(evidencePackage, title);
+  if (titleExtra) {
+    return result("failed", "title_invariant_added", "원문과 관련 글에 없는 영문명 또는 수치가 제목에 추가되어 자동 검증하지 않아요.");
   }
 
   return result("passed", "local_source_boundary", "원문·관련 글 분리와 링크·식별자 보존 규칙을 로컬에서 통과했어요.");
