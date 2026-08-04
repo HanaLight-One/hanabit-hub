@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { createNewsDcPublicationService } from "../src/modules/news/news-dc-publication.mjs";
+import { NEWS_ANALYSIS_POLICY_VERSION } from "../src/modules/news/news-auto-publish-policy.mjs";
 
 const ID = "b".repeat(32);
 
@@ -34,6 +35,7 @@ async function fixture({ approved = true, withMedia = true } = {}) {
       analysisNotice: "주의: 아래 해설은 GPT-5.4 mini가 정리한 내용입니다. 원문 번역이 아니며, 최종 판단은 독자에게 있습니다.",
       dcApproval: approved ? { status: "approved", approvedAt: "2026-08-02T00:01:00Z" } : null,
       dcPublication: null,
+      analysisPolicyVersion: NEWS_ANALYSIS_POLICY_VERSION,
     },
     media: withMedia ? [{ file: "media/01.png", contentType: "image/png" }] : [],
   }), "utf8");
@@ -455,6 +457,43 @@ test("승인 없는 뉴스와 비활성 게시자는 실제 실행을 거부한�
       publisherScriptPath: sample.scriptPath,
     });
     await assert.rejects(() => disabled.publish(ID), { code: "RUNTIME_UNAVAILABLE" });
+  } finally {
+    await rm(sample.root, { recursive: true, force: true });
+  }
+});
+
+test("이전 정책으로 처리된 대기 뉴스는 재기동 뒤 소급 게시하지 않는다", async () => {
+  const sample = await fixture({ approved: false });
+  let runs = 0;
+  try {
+    const itemPath = path.join(sample.itemRoot, "item.json");
+    const item = JSON.parse(await readFile(itemPath, "utf8"));
+    item.source.publishedAt = "2026-08-02T03:00:30.000Z";
+    item.workflow.processedAt = "2026-08-02T03:01:00.000Z";
+    item.workflow.analysisPolicyVersion = NEWS_ANALYSIS_POLICY_VERSION - 1;
+    item.workflow.translationReview = { status: "local_verified" };
+    item.workflow.triage = {
+      ...item.workflow.triage,
+      confidence: 0.95,
+      importance: "high",
+      boardCategory: "news",
+    };
+    await writeFile(itemPath, JSON.stringify(item), "utf8");
+    const service = createNewsDcPublicationService({
+      root: sample.newsRoot,
+      enabled: true,
+      autoPublishEnabled: true,
+      publisherRoot: sample.publisherRoot,
+      coverRoot: sample.coverRoot,
+      publisherScriptPath: sample.scriptPath,
+      now: () => new Date("2026-08-02T03:00:00.000Z"),
+      async runPublisher() { runs += 1; },
+    });
+    await service.initializeAutoPublishing();
+    const result = await service.autoPublish(ID);
+    assert.equal(result.status, "hub_only");
+    assert.equal(result.code, "legacy_policy");
+    assert.equal(runs, 0);
   } finally {
     await rm(sample.root, { recursive: true, force: true });
   }

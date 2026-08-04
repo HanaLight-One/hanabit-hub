@@ -24,6 +24,7 @@ const UNCONFIRMED_TEXTS = Object.freeze({
 });
 const EMOJI_PATTERN = /\p{Extended_Pictographic}|\p{Regional_Indicator}|[\u{FE0F}\u{200D}\u{20E3}]/gu;
 const COMBINING_MARK_PATTERN = /\p{M}/gu;
+const TITLE_REVIEW_PLACEHOLDER = "내용 확인 필요";
 const OFFICIAL_RELEASE_LABELS = Object.freeze({
   "openai/codex": "Codex",
   "openai/openai-python": "OpenAI Python SDK",
@@ -138,7 +139,7 @@ function translatedHeadline(record, counter) {
     const fallback = conciseHeadline(candidate, counter);
     if (fallback) return fallback;
   }
-  return "내용 확인 필요";
+  return TITLE_REVIEW_PLACEHOLDER;
 }
 
 function section(label, body, counter) {
@@ -167,6 +168,7 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
   const evidenceLabel = EVIDENCE_LABELS[record.workflow.triage.evidenceTag] ?? "확인 필요";
   const translatedTitle = translatedHeadline(record, counter);
   const title = `[${evidenceLabel}] ${translatedTitle}`.trim();
+  const titleNeedsReview = translatedTitle === TITLE_REVIEW_PLACEHOLDER;
   const profile = findNewsSourceProfile(record.source, sourceProfiles);
   const headText = selectNewsDcHeadText(record, profile);
   const sourceName = cleanLine(
@@ -195,7 +197,6 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
   const readerSummarySection = section("한눈에 보면", record.workflow.readerSummary, counter);
   const editorNote = cleanLine(record.workflow.dcEditorNote, counter);
   const analysisSections = [
-    section("왜 중요한가", record.workflow.triage.reason, counter),
     section(
       "아직 확인되지 않은 점",
       UNCONFIRMED_TEXTS[record.workflow.triage.evidenceTag] ?? UNCONFIRMED_TEXTS.inference,
@@ -232,6 +233,7 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
     ...(counter.removed ? [`DC 비지원 이모지 ${counter.removed}개를 원고에서 제거했어요.`] : []),
     ...(links.omitted ? [`DC 필터 위험 경로가 포함된 링크 ${links.omitted}개를 원고에서 제외했어요.`] : []),
     ...(imageCount > 10 ? ["DC 뉴스 게시 이미지 상한 10장을 초과했어요."] : []),
+    ...(titleNeedsReview ? ["정보성 게시 제목을 만들지 못해 제목 확인이 필요해요."] : []),
     "DC 금칙어는 변동될 수 있어 최종 제출이 거부될 수 있어요.",
   ];
   const contentHash = createHash("sha256")
@@ -251,7 +253,7 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
     usesFallbackCover,
     imagePlacement: "start",
     preflight: Object.freeze({
-      ready: combiningMarkCount === 0 && imageCount <= 10,
+      ready: combiningMarkCount === 0 && imageCount <= 10 && !titleNeedsReview,
       emojiRemovedCount: counter.removed,
       combiningMarkCount,
       omittedRiskyLinkCount: links.omitted,

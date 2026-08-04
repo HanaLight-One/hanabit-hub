@@ -54,7 +54,7 @@ test("DC 뉴스 원고는 태그·번역·AI 해설·출처를 결정적으로 �
   assert.match(draft.bodyText, /관련 글 번역 · OpenAI/u);
   assert.match(draft.bodyText, /관련 글 첫 문단\n\n• 첫 항목\n\n• 둘째 항목/u);
   assert.match(draft.bodyHtml, /관련 글 첫 문단<\/p><p><br><\/p><p[^>]*>• 첫 항목<\/p>/u);
-  assert.match(draft.bodyText, /왜 중요한가/u);
+  assert.doesNotMatch(draft.bodyText, /왜 중요한가|evidenceTag|SOURCE|CONTEXT|use_case/u);
   assert.match(draft.bodyText, /다른 환경에서도 동일하게 재현되는지는 원문만으로 확인되지 않았습니다/u);
   assert.doesNotMatch(draft.bodyText, /쓰세요|프레이밍하세요/u);
   assert.match(draft.bodyText, /원문 번역이 아니며/u);
@@ -117,7 +117,7 @@ test("사용자 코멘트는 표찰 없이 모든 해설 뒤의 마지막 문단
 
   assert.equal(draft.editorNote, "ㅋㅋㅋ 뭐라는 거야\n그래도 흥미롭네");
   assert.equal(draft.bodyText.includes("작성자 한마디"), false);
-  assert.equal(draft.bodyText.indexOf("왜 중요한가") < draft.bodyText.indexOf("ㅋㅋㅋ 뭐라는 거야"), true);
+  assert.equal(draft.bodyText.indexOf("아직 확인되지 않은 점") < draft.bodyText.indexOf("ㅋㅋㅋ 뭐라는 거야"), true);
   assert.equal(draft.bodyText.endsWith("ㅋㅋㅋ 뭐라는 거야\n그래도 흥미롭네"), true);
   assert.doesNotMatch(draft.bodyText, /\p{Extended_Pictographic}/u);
 });
@@ -205,4 +205,6 @@ test("DC 제목은 별도 게시 제목을 쓰고 긴 문장을 중간에서 자
   withoutHeadline.workflow.triage.reason = "다".repeat(70);
   const draft = composeNewsDcCopy(withoutHeadline, { sourceProfiles: profiles });
   assert.equal(draft.title.includes("가".repeat(56)), false);
+  assert.equal(draft.preflight.ready, false);
+  assert.match(draft.preflight.warnings.join(" "), /제목 확인/u);
 });

@@ -6,7 +6,7 @@ import { createPendingNewsStore } from "./news-item-store.mjs";
 import { composeNewsDcCopy } from "./news-dc-copy.mjs";
 import { isAllowedNewsDcHeadText } from "./news-dc-head-text.mjs";
 import { createNewsDcCoverCatalog } from "./news-dc-covers.mjs";
-import { evaluateNewsAutoPublish } from "./news-auto-publish-policy.mjs";
+import { evaluateNewsAutoPublish, NEWS_ANALYSIS_POLICY_VERSION } from "./news-auto-publish-policy.mjs";
 import { applyNewsEditorialShadow } from "./news-editorial-governor.mjs";
 import { findNewsSourceProfile } from "./news-source-profiles.mjs";
 import { createXVideoPreviewService, xVideoPreviewNotice } from "./x-video-preview.mjs";
@@ -160,12 +160,15 @@ export function createNewsDcPublicationService({
       const profile = findNewsSourceProfile(record.source, sourceProfiles);
       const processedAt = Date.parse(record.workflow?.processedAt ?? "");
       const publishedAt = Date.parse(record.source?.publishedAt ?? "");
+      const legacyPolicy = Number(record.workflow?.analysisPolicyVersion) !== NEWS_ANALYSIS_POLICY_VERSION;
       const beforeActivation =
         !Number.isFinite(processedAt) || processedAt < activationTime ||
         !Number.isFinite(publishedAt) || publishedAt < activationTime;
-      const gate = beforeActivation
-        ? { decision: "blocked", code: "before_activation", reason: "자동 게시 시작 전 항목이에요." }
-        : evaluateNewsAutoPublish(record, profile);
+      const gate = legacyPolicy
+        ? { decision: "blocked", code: "legacy_policy", reason: "현재 자동 게시 정책으로 처리된 새 항목이 아니에요." }
+        : beforeActivation
+          ? { decision: "blocked", code: "before_activation", reason: "자동 게시 시작 전 항목이에요." }
+          : evaluateNewsAutoPublish(record, profile);
       return {
         ...record,
         source: { ...record.source, profile },
