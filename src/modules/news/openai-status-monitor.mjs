@@ -231,6 +231,32 @@ export function createOpenAIStatusMonitor({
     return { currentPost, previousPost };
   }
 
+  async function adoptProtectedPost(publication) {
+    const postId = String(publication?.postId ?? "");
+    const url = String(publication?.url ?? "");
+    if (!/^\d{4,}$/u.test(postId) || url !== `https://m.dcinside.com/board/chatgpt/${postId}`) {
+      throw new TypeError("보호할 수동 상태 글 주소가 올바르지 않습니다.");
+    }
+    const state = await readState();
+    if (!state || !state.activeIncidents.length) {
+      throw new Error("진행 중인 OpenAI 장애 기준선이 없습니다.");
+    }
+    if (state.currentPost) return { status: "already-adopted", currentPost: state.currentPost };
+    const currentPost = {
+      postId,
+      url,
+      snapshotHash: state.lastSnapshotHash,
+      publishedAt: now().toISOString(),
+      ownership: "manual-protected",
+    };
+    await saveState({
+      ...state,
+      currentPost,
+      history: [...state.history.slice(-99), { event: "adopted", ...currentPost }],
+    });
+    return { status: "adopted", currentPost };
+  }
+
   async function recordReplacement(previousPost, result) {
     const state = await readState();
     if (!state) throw new Error("OpenAI 상태 감시 영수증이 없습니다.");
@@ -246,5 +272,5 @@ export function createOpenAIStatusMonitor({
     });
   }
 
-  return Object.freeze({ poll, readState, confirmPublished, recordReplacement });
+  return Object.freeze({ poll, readState, confirmPublished, adoptProtectedPost, recordReplacement });
 }

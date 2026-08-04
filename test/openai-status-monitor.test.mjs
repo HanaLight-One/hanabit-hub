@@ -68,3 +68,18 @@ test("수동 기준선 장애가 바로 끝나도 복구 글을 만들지 않는
   await monitor.poll();
   assert.deepEqual(await monitor.poll(), { status: "observed", activeCount: 0 });
 });
+
+test("보호된 수동 장애 글은 삭제 대상이 아니면서 복구완료 기준선이 된다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-status-"));
+  const monitor = createOpenAIStatusMonitor({ stateRoot: root, fetchImpl: responder([[incident()], []]) });
+  await monitor.poll();
+  const adopted = await monitor.adoptProtectedPost({
+    postId: "120497",
+    url: "https://m.dcinside.com/board/chatgpt/120497",
+  });
+  assert.equal(adopted.status, "adopted");
+  assert.equal(adopted.currentPost.ownership, "manual-protected");
+  const recovered = await monitor.poll();
+  assert.equal(recovered.status, "created");
+  assert.equal(recovered.phase, "recovered");
+});
