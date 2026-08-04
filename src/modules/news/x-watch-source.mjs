@@ -7,6 +7,7 @@ const STATUS_URL_PATTERN = /https?:\/\/(?:www\.)?(?:x\.com|twitter\.com)\/([A-Za
 const OEMBED_HOSTS = new Set(["publish.x.com", "publish.twitter.com"]);
 const X_HOSTS = new Set(["x.com", "www.x.com", "twitter.com", "www.twitter.com"]);
 const X_SHORT_HOSTS = new Set(["t.co", "www.t.co"]);
+const X_ARTICLE_PATH_PATTERN = /^\/i\/article\/(\d{5,25})\/?$/u;
 const MAX_CONTEXT_POSTS = 3;
 const SOURCE_KINDS = new Set(["official", "person", "candidate"]);
 const AFFILIATION_STATUSES = new Set(["confirmed", "review_required", "former"]);
@@ -56,10 +57,36 @@ function selectXVideo(media) {
   };
 }
 
-async function fetchXPostDetails(post, { bearerToken, fetchImpl, includeVideo = false }) {
+function xArticleContent(article) {
+  if (!article || typeof article !== "object" || Array.isArray(article)) return null;
+  const blocks = [article.content_state?.blocks, article.content?.blocks, article.blocks, article.content_state]
+    .find(Array.isArray) ?? [];
+  const parts = [
+    article.title,
+    article.preview_text,
+    typeof article.body === "string" ? article.body : null,
+    typeof article.content === "string" ? article.content : null,
+    ...blocks.map((block) => block?.text ?? block?.plain_text),
+  ]
+    .map((value) => String(value ?? "").trim())
+    .filter(Boolean);
+  const content = [...new Set(parts)].join("\n\n").replace(/\n{3,}/gu, "\n\n").trim();
+  return content && content.length <= 16_000 ? content : null;
+}
+
+async function fetchXPostDetails(post, {
+  bearerToken,
+  fetchImpl,
+  includeVideo = false,
+  includeArticle = false,
+}) {
   if (!bearerToken || !/^\d{5,25}$/u.test(String(post?.statusId ?? ""))) return null;
   const endpoint = new URL(`https://api.x.com/2/tweets/${post.statusId}`);
-  endpoint.searchParams.set("tweet.fields", includeVideo ? "note_tweet,attachments" : "note_tweet");
+  endpoint.searchParams.set("tweet.fields", [
+    "note_tweet",
+    ...(includeVideo ? ["attachments"] : []),
+    ...(includeArticle ? ["article"] : []),
+  ].join(","));
   if (includeVideo) {
     endpoint.searchParams.set("expansions", "attachments.media_keys");
     endpoint.searchParams.set("media.fields", "type,variants,duration_ms,width,height");
@@ -84,6 +111,7 @@ async function fetchXPostDetails(post, { bearerToken, fetchImpl, includeVideo = 
     return {
       fullText: fullText && fullText.length <= 16_000 ? fullText : null,
       video,
+      article: includeArticle ? xArticleContent(payload?.data?.article) : null,
     };
   } catch {
     return null;
@@ -138,38 +166,58 @@ function hrefsFromHtml(value) {
     .map((match) => decodeHtml(match[2]));
 }
 
-async function resolveRelatedPost(value, fetchImpl) {
-  const direct = xPostFromUrl(value);
-  if (direct) return direct;
+async function resolveLinkedTarget(value, fetchImpl) {
   let target;
   try {
     target = new URL(String(value ?? ""));
   } catch {
     return null;
   }
-  if (!X_SHORT_HOSTS.has(target.hostname.toLowerCase())) return null;
-  const response = await fetchImpl(target, { redirect: "manual" });
-  if (![301, 302, 303, 307, 308].includes(response.status)) return null;
-  const location = response.headers?.get?.("location");
-  if (!location) return null;
-  return xPostFromUrl(new URL(location, target).href);
+  if (target.protocol !== "https:" || target.username || target.password || target.port) return null;
+  if (!X_SHORT_HOSTS.has(target.hostname.toLowerCase())) return target;
+  try {
+    const response = await fetchImpl(target, { redirect: "manual" });
+    if (![301, 302, 303, 307, 308].includes(response.status)) return null;
+    const location = response.headers?.get?.("location");
+    if (!location) return null;
+    const resolved = new URL(location, target);
+    if (resolved.protocol !== "https:" || resolved.username || resolved.password || resolved.port) return null;
+    return resolved;
+  } catch {
+    return null;
+  }
 }
 
-async function relatedPostsFromHtml(value, { fetchImpl, primary }) {
+async function linkedTargetsFromHtml(value, fetchImpl) {
+  const targets = [];
+  const seen = new Set();
+  for (const href of hrefsFromHtml(value).slice(0, 12)) {
+    const target = await resolveLinkedTarget(href, fetchImpl);
+    if (!target || seen.has(target.href)) continue;
+    seen.add(target.href);
+    targets.push(target);
+  }
+  return targets;
+}
+
+function relatedPostsFromTargets(targets, primary) {
   const posts = [];
   const seen = new Set([primary.statusId]);
-  for (const href of hrefsFromHtml(value).slice(0, 12)) {
+  for (const target of targets) {
     if (posts.length >= MAX_CONTEXT_POSTS) break;
-    try {
-      const post = await resolveRelatedPost(href, fetchImpl);
-      if (!post || seen.has(post.statusId)) continue;
-      seen.add(post.statusId);
-      posts.push(post);
-    } catch {
-      // 보조 문맥 실패가 기본 X 게시물 수집을 막지 않게 한다.
-    }
+    const post = xPostFromUrl(target);
+    if (!post || seen.has(post.statusId)) continue;
+    seen.add(post.statusId);
+    posts.push(post);
   }
   return posts;
+}
+
+function externalLinksFromTargets(targets) {
+  return targets
+    .filter((target) => !X_HOSTS.has(target.hostname.toLowerCase()) && !X_SHORT_HOSTS.has(target.hostname.toLowerCase()))
+    .map((target) => target.href)
+    .slice(0, 12);
 }
 
 function normalizeRosterSource(value) {
@@ -355,11 +403,15 @@ export async function fetchXPost(post, {
     throw new Error("X 작성자가 등록된 링크와 다릅니다.");
   }
   if (!oembedContent) throw new Error("X 원문이 비어 있습니다.");
-  const details = includeVideo || looksTruncated(oembedContent)
+  const linkedTargets = await linkedTargetsFromHtml(payload.html, fetchImpl);
+  const articleTarget = linkedTargets.find((target) =>
+    X_HOSTS.has(target.hostname.toLowerCase()) && X_ARTICLE_PATH_PATTERN.test(target.pathname));
+  const details = includeVideo || articleTarget || looksTruncated(oembedContent)
     ? await fetchXPostDetails(post, {
         bearerToken: xApiBearerToken,
         fetchImpl,
         includeVideo,
+        includeArticle: Boolean(articleTarget),
       })
     : null;
   return {
@@ -367,7 +419,10 @@ export async function fetchXPost(post, {
     authorName: String(payload.author_name ?? post.handle).slice(0, 80),
     account: resolvedHandle,
     video: details?.video ?? null,
-    relatedPosts: await relatedPostsFromHtml(payload.html, { fetchImpl, primary: post }),
+    article: details?.article ?? null,
+    articleUrl: articleTarget?.href ?? null,
+    links: externalLinksFromTargets(linkedTargets),
+    relatedPosts: relatedPostsFromTargets(linkedTargets, post),
   };
 }
 
@@ -429,7 +484,17 @@ export async function normalizeXWatchMessage(message, options) {
   const post = options.post ?? findAllowedXPost(message, options);
   if (!post) return null;
   const resolved = await fetchXPost(post, { ...options, includeVideo: false });
-  const contexts = await fetchContextPosts(message, post, resolved.relatedPosts, options);
+  const relatedContexts = await fetchContextPosts(message, post, resolved.relatedPosts, options);
+  const contexts = [
+    ...(resolved.article ? [{
+      relation: "x-article",
+      account: resolved.account,
+      label: `${resolved.authorName} · X Article`,
+      url: resolved.articleUrl,
+      content: resolved.article,
+    }] : []),
+    ...relatedContexts,
+  ].slice(0, MAX_CONTEXT_POSTS);
   const id = xPostId(post);
   const publishedAt = new Date(message.createdTimestamp ?? message.createdAt ?? Date.now());
   return {
@@ -446,7 +511,13 @@ export async function normalizeXWatchMessage(message, options) {
         url: post.url,
         publishedAt: publishedAt.toISOString(),
       },
-      original: { language: "en", content: resolved.content, embeds: [], links: [post.url], contexts },
+      original: {
+        language: "en",
+        content: resolved.content,
+        embeds: [],
+        links: [...new Set([post.url, ...(resolved.articleUrl ? [resolved.articleUrl] : []), ...resolved.links])],
+        contexts,
+      },
       workflow: { status: "pending_translation", translation: null, triage: null, dcPublication: null },
       collectedAt: new Date().toISOString(),
     },

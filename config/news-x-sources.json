@@ -156,14 +156,14 @@
     },
     {
       "handle": "derrickcchoi",
-      "displayName": "@derrickcchoi",
-      "sourceKind": "candidate",
+      "displayName": "Derrick Choi",
+      "sourceKind": "person",
       "affiliation": "OpenAI",
-      "affiliationStatus": "review_required",
-      "roles": ["codex-practice-candidate"],
+      "affiliationStatus": "confirmed",
+      "roles": ["codex-product", "developer-relations"],
       "topics": ["codex", "developer-platform", "workflow"],
-      "trustLevel": "candidate",
-      "verifiedAt": null,
+      "trustLevel": "high",
+      "verifiedAt": "2026-08-05",
       "streamLane": "product-practice",
       "enabled": true
     }

@@ -82,3 +82,32 @@ test("로컬 원문 경계 검증은 확정·사례만 통과시키고 유추는
   assert.equal(result.decision, "human_review");
   assert.equal(result.code, "inference_deep_review");
 });
+
+test("연결된 OpenAI 공식 문서의 수집·번역이 없으면 자동 게시하지 않는다", () => {
+  const item = record("official");
+  item.original = {
+    links: ["https://openai.com/index/security-update/"],
+    contexts: [],
+  };
+  const missing = evaluateNewsAutoPublish(item, profile);
+  assert.equal(missing.decision, "human_review");
+  assert.equal(missing.code, "official_document_untranslated");
+
+  item.original.contexts = [{
+    relation: "official-document",
+    url: "https://openai.com/index/security-update/",
+    content: "Full official document",
+  }];
+  item.workflow.contextTranslations = [{ index: 1, body: "공식 문서 핵심 내용" }];
+  assert.equal(evaluateNewsAutoPublish(item, profile).decision, "eligible");
+});
+
+test("신뢰 인물이 연결한 공식 활용 사례는 중간 중요도도 후보가 된다", () => {
+  const item = record("use_case", { importance: "medium", confidence: 0.9 });
+  item.original = {
+    contexts: [{ relation: "linked-post", account: "ChatGPT", content: "Built with Codex" }],
+  };
+  const result = evaluateNewsAutoPublish(item, profile);
+  assert.equal(result.decision, "eligible");
+  assert.equal(result.code, "trusted_use_case");
+});

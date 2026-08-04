@@ -189,3 +189,20 @@ test("공식 문서 보강은 관련 글과 구분한 주요 내용으로 표시
   assert.match(draft.bodyText, /공식 문서 주요 내용 · OpenAI 공식 문서/u);
   assert.doesNotMatch(draft.bodyText, /관련 글 번역 · OpenAI 공식 문서/u);
 });
+
+test("DC 제목은 별도 게시 제목을 쓰고 긴 문장을 중간에서 자르지 않는다", () => {
+  const profiles = new Map();
+  const withHeadline = record();
+  withHeadline.workflow.publicHeadline = "GPT-Live·Codex로 만든 새 식별 도우미";
+  withHeadline.workflow.translation.title = "🐥🐥";
+  assert.match(composeNewsDcCopy(withHeadline, { sourceProfiles: profiles }).title, /새 식별 도우미$/u);
+
+  const withoutHeadline = record();
+  withoutHeadline.workflow.publicHeadline = null;
+  withoutHeadline.workflow.translation.title = "가".repeat(70);
+  withoutHeadline.workflow.contextTranslations = [];
+  withoutHeadline.workflow.translation.body = "나".repeat(70);
+  withoutHeadline.workflow.triage.reason = "다".repeat(70);
+  const draft = composeNewsDcCopy(withoutHeadline, { sourceProfiles: profiles });
+  assert.equal(draft.title.includes("가".repeat(56)), false);
+});

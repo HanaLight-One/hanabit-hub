@@ -1,6 +1,8 @@
+import { findOfficialOpenAiArticle } from "./official-document-enricher.mjs";
+
 const GOOD_IMPORTANCE = new Set(["medium", "high"]);
 const TRUSTED_SOURCES = new Set(["official", "high", "standard"]);
-export const NEWS_ANALYSIS_POLICY_VERSION = 16;
+export const NEWS_ANALYSIS_POLICY_VERSION = 17;
 
 function result(decision, code, reason) {
   return Object.freeze({ decision, code, reason });
@@ -28,6 +30,19 @@ export function evaluateNewsAutoPublish(record, sourceProfile = null) {
   if (!String(workflow.analysisNotice ?? "").includes("원문 번역이 아니며")) {
     return result("human_review", "analysis_notice_missing", "AI 해설 주의 문구가 없어 자동 게시하지 않아요.");
   }
+  if (findOfficialOpenAiArticle(record)) {
+    const contexts = Array.isArray(record?.original?.contexts) ? record.original.contexts : [];
+    const officialIndex = contexts.findIndex((context) => context?.relation === "official-document");
+    const translated = (workflow.contextTranslations ?? []).find((entry) =>
+      Number(entry?.index) === officialIndex + 1 && String(entry?.body ?? "").trim());
+    if (officialIndex < 0 || !translated) {
+      return result(
+        "human_review",
+        "official_document_untranslated",
+        "연결된 OpenAI 공식 문서의 수집과 한국어 요약이 끝나지 않아 자동 게시하지 않아요.",
+      );
+    }
+  }
   if (triage.evidenceTag === "official") {
     return result("eligible", "official", "공식 출처의 게시 후보라 자동 게시 조건을 충족해요.");
   }
@@ -36,6 +51,9 @@ export function evaluateNewsAutoPublish(record, sourceProfile = null) {
   }
   const trusted = TRUSTED_SOURCES.has(sourceProfile?.trustLevel) && sourceProfile?.affiliationConfirmed === true;
   const confidence = Number(triage.confidence) || 0;
+  const hasOfficialContext = (record?.original?.contexts ?? []).some((context) =>
+    context?.relation === "official-document" ||
+    ["openai", "openaidevs", "chatgpt"].includes(String(context?.account ?? "").toLowerCase()));
   if (
     triage.evidenceTag === "confirmed" &&
     trusted &&
@@ -47,7 +65,7 @@ export function evaluateNewsAutoPublish(record, sourceProfile = null) {
   if (
     triage.evidenceTag === "use_case" &&
     trusted &&
-    triage.importance === "high" &&
+    (triage.importance === "high" || (triage.importance === "medium" && hasOfficialContext)) &&
     confidence >= 0.85
   ) {
     return result("eligible", "trusted_use_case", "신뢰 출처가 소개한 중요하고 구체적인 활용 사례라 [사례] 표현으로 자동 게시할 수 있어요.");

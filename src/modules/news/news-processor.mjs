@@ -93,6 +93,7 @@ export function createNewsProcessor({
         });
         let finalTriage = result.triage;
         let finalTranslation = result.translation;
+        let finalPublicHeadline = result.publicHeadline || result.translation?.title;
         const finalReaderSummary = result.readerSummary;
         let finalContextTranslations = result.contextTranslations;
         let translationReview = {
@@ -109,6 +110,7 @@ export function createNewsProcessor({
               freeTriage = result.triage;
               const { translationAudit, contextTranslationAudits, ...reviewTriage } = reviewed.result;
               finalTriage = { ...reviewTriage, signals: ["codex-review"] };
+              finalPublicHeadline = reviewTriage.publicHeadline || finalPublicHeadline;
               if (translationAudit && Array.isArray(contextTranslationAudits)) {
                 finalTranslation = {
                   title: translationAudit.title,
@@ -145,6 +147,7 @@ export function createNewsProcessor({
         if (translationReview.status === "free_unverified") {
           const audit = auditFreeNewsTranslation(analysisRecord, {
             translation: finalTranslation,
+            publicHeadline: finalPublicHeadline,
             readerSummary: finalReaderSummary,
             contextTranslations: finalContextTranslations,
           });
@@ -163,6 +166,7 @@ export function createNewsProcessor({
             ...current.workflow,
             status: decision === "skip" ? "ignored" : "pending_review",
             translation: finalTranslation,
+            publicHeadline: finalPublicHeadline,
             readerSummary: finalReaderSummary || null,
             contextTranslations: finalContextTranslations,
             translationReview,
@@ -187,6 +191,7 @@ export function createNewsProcessor({
             ...current.workflow,
             status: "translation_failed",
             translation: null,
+            publicHeadline: null,
             readerSummary: null,
             contextTranslations: null,
             analysisFailure: {
@@ -243,6 +248,7 @@ export function createNewsProcessor({
         ...record.workflow,
         status: "pending_translation",
         translation: null,
+        publicHeadline: null,
         readerSummary: null,
         contextTranslations: null,
         freeTriage: null,

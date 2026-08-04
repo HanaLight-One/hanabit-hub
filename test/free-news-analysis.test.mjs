@@ -111,6 +111,65 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
   }
 });
 
+test("재시도 교정 지시문을 번역 결과로 받아들이지 않는다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-retry-leak-"));
+  const runnerPath = path.join(root, "runner.ps1");
+  await writeFile(runnerPath, "test", "utf8");
+  try {
+    await assert.rejects(() => invokeFreeNewsAnalysis({
+      id: "a".repeat(32),
+      source: { type: "x-post", account: "OpenAIDevs" },
+      original: { content: "A developer update", contexts: [] },
+    }, {
+      runnerPath,
+      runtimeRoot: path.join(root, "runtime"),
+      async wait() {},
+      async runProcess(_command, args) {
+        const outputPath = args[args.indexOf("-Output") + 1];
+        await writeFile(outputPath, JSON.stringify({
+          translation: {
+            title: "개발자 업데이트",
+            body: "RETRY CORRECTION: 이전 응답은 로컬 형식 검증에 실패했습니다.",
+          },
+          readerSummary: "",
+          contextTranslations: [],
+          triage: {
+            decision: "publish",
+            confidence: 0.9,
+            importance: "medium",
+            evidenceTag: "official",
+            boardCategory: "news",
+            reason: "공식 소식입니다.",
+            advice: "원문대로 전합니다.",
+            signals: [],
+          },
+        }), "utf8");
+      },
+    }), /재시도 교정 지시문/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("링크만 남고 연결 본문도 없는 X 글은 번역하지 않는다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-empty-link-"));
+  const runnerPath = path.join(root, "runner.ps1");
+  await writeFile(runnerPath, "test", "utf8");
+  try {
+    await assert.rejects(() => invokeFreeNewsAnalysis({
+      id: "b".repeat(32),
+      source: { type: "x-post", account: "OpenAIDevs" },
+      original: { content: "https://t.co/example", contexts: [] },
+    }, {
+      runnerPath,
+      runtimeRoot: path.join(root, "runtime"),
+      async runProcess() { throw new Error("runner must not be called"); },
+    }), /번역할 X 원문이나 연결 문맥/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("empowering의 자립 의미와 링크 소개 구조가 빠진 번역은 다시 요청한다", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-fidelity-"));
   const runnerPath = path.join(root, "runner.ps1");

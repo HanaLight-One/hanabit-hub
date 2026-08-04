@@ -119,3 +119,18 @@ test("reader summary cannot add a product name absent from the evidence", () => 
   assert.equal(audit.status, "failed");
   assert.equal(audit.code, "reader_summary_invariant_added");
 });
+
+test("독자 요약은 출처 계정명과 표시 이름을 근거로 사용할 수 있다", () => {
+  const item = record();
+  item.source = { account: "derrickcchoi", label: "Derrick Choi" };
+  item.original.content = "I am moving to Singapore to lead Codex efforts across APAC.";
+  const result = auditFreeNewsTranslation(item, {
+    translation: {
+      title: "싱가포르로 옮겨 APAC Codex 업무를 이끈다",
+      body: "저는 APAC 전역의 Codex 업무를 이끌기 위해 싱가포르로 옮깁니다.",
+    },
+    readerSummary: "Derrick Choi가 APAC Codex 업무를 맡는다는 소식입니다.",
+    contextTranslations: [],
+  });
+  assert.equal(result.status, "passed");
+});

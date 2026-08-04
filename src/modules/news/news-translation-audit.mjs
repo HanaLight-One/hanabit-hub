@@ -109,7 +109,12 @@ export function auditFreeNewsTranslation(record, translationResult = record?.wor
   if (bodyExtra) {
     return result("failed", "source_invariant_added", "원문에 없는 영문명 또는 수치가 번역에 추가되어 자동 검증하지 않아요.");
   }
-  const evidencePackage = [original, ...contexts.map((context) => context?.content)].filter(Boolean).join("\n");
+  const evidencePackage = [
+    original,
+    record?.source?.account,
+    record?.source?.label,
+    ...contexts.map((context) => context?.content),
+  ].filter(Boolean).join("\n");
   if (readerSummary) {
     if (hasUrl(translationResult?.readerSummary)) {
       return result("failed", "reader_summary_link_leak", "독자 요약에 링크가 포함되어 자동 검증하지 않아요.");

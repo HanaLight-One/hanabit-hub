@@ -113,6 +113,15 @@ test("Tibor Blaho는 관찰 후보로만 감시한다", async () => {
   assert.equal(lane.evidencePhrases.includes("showed up"), true);
 });
 
+test("Derrick Choi는 확인된 OpenAI Codex 인물로 분류한다", async () => {
+  const roster = await loadXSourceRoster(trackedRosterPath);
+  const derrick = roster.sources.find((source) => source.handle === "derrickcchoi");
+  assert.equal(derrick.sourceKind, "person");
+  assert.equal(derrick.affiliationStatus, "confirmed");
+  assert.equal(derrick.trustLevel, "high");
+  assert.equal(derrick.displayName, "Derrick Choi");
+});
+
 test("제품 실무 인물의 답글은 X 원격 수집 전에 제외한다", async () => {
   const policy = await loadXStreamPolicy(trackedRosterPath);
   const lane = policy.groups.find((entry) => entry.id === "product-practice");

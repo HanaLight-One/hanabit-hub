@@ -309,3 +309,73 @@ test("주 게시물에 영상이 없으면 연결된 원글의 영상을 내부 
   assert.equal(video.durationMs, 85_266);
   assert.equal(video.variantUrl, "https://video.twimg.com/a/related.mp4");
 });
+
+test("t.co가 가리킨 OpenAI 공식 문서 주소를 원문 링크로 보존한다", async () => {
+  const statusId = "2091234567890123456";
+  const result = await normalizeXWatchMessage({
+    channelId,
+    type: 0,
+    content: `https://x.com/openai/status/${statusId}`,
+  }, {
+    channelId,
+    allowedHandles,
+    async fetchImpl(url) {
+      if (url.hostname === "t.co") {
+        return new Response(null, {
+          status: 301,
+          headers: { location: "https://openai.com/index/security-update/" },
+        });
+      }
+      return new Response(JSON.stringify({
+        author_name: "OpenAI",
+        author_url: "https://twitter.com/openai",
+        html: '<blockquote><p>Security update <a href="https://t.co/official">https://t.co/official</a></p></blockquote>',
+      }), { status: 200 });
+    },
+  });
+  assert.deepEqual(result.record.original.links, [
+    `https://x.com/openai/status/${statusId}`,
+    "https://openai.com/index/security-update/",
+  ]);
+});
+
+test("X Article 링크는 필요한 글에서만 API 본문을 별도 문맥으로 수집한다", async () => {
+  const statusId = "2091234567890123456";
+  const articleUrl = "https://x.com/i/article/2091234567890123000";
+  const result = await normalizeXWatchMessage({
+    channelId,
+    type: 0,
+    content: `https://x.com/openai/status/${statusId}`,
+  }, {
+    channelId,
+    allowedHandles,
+    xApiBearerToken: "test-bearer-token",
+    async fetchImpl(url) {
+      if (url.hostname === "t.co") {
+        return new Response(null, { status: 301, headers: { location: articleUrl } });
+      }
+      if (url.hostname === "api.x.com") {
+        assert.equal(url.searchParams.get("tweet.fields"), "note_tweet,article");
+        return new Response(JSON.stringify({
+          data: {
+            id: statusId,
+            text: "https://t.co/article",
+            article: {
+              title: "A useful developer update",
+              preview_text: "What changed and why it matters.",
+              content_state: { blocks: [{ text: "The full article body." }] },
+            },
+          },
+        }), { status: 200 });
+      }
+      return new Response(JSON.stringify({
+        author_name: "OpenAI",
+        author_url: "https://twitter.com/openai",
+        html: '<blockquote><p><a href="https://t.co/article">https://t.co/article</a></p></blockquote>',
+      }), { status: 200 });
+    },
+  });
+  assert.equal(result.record.original.contexts[0].relation, "x-article");
+  assert.equal(result.record.original.contexts[0].url, articleUrl);
+  assert.match(result.record.original.contexts[0].content, /full article body/u);
+});
