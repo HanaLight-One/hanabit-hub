@@ -214,9 +214,9 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
     profileLine,
     "",
     ...translationSections.flatMap(({ label, body }) => [label, body, ""]),
-    ...(editorNote ? [editorNote, ""] : []),
     ...analysisSections.flatMap(({ label, body }) => [label, body, ""]),
     notice,
+    ...(editorNote ? ["", editorNote] : []),
   ];
   const bodyText = bodyParts.join("\n").replace(/\n{3,}/gu, "\n\n").trim();
   const combiningMarkCount = (bodyText.match(COMBINING_MARK_PATTERN) ?? []).length +

@@ -336,8 +336,23 @@ function DcPublicationPanel({ item, preview, busy, error, onPreview, onPublish, 
           <dd>{preview.imageCount}장 · 본문 최상단 첨부{preview.fallbackCover?.used ? " · 기본 커버 자동 추가" : ""}</dd>
         </div>
       </dl>
+      <div className="dc-copy-preview">
+        <span>본문</span>
+        <DcBodyPreview bodyText={preview.bodyText} />
+      </div>
+      <ul className="dc-warnings">
+        {preview.preflight.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+      </ul>
+      {preview.preflight.emojiRemovedCount > 0 && (
+        <p className="dc-safe-note">미리보기와 실제 게시 원고 모두에서 이모지를 제거했어요.</p>
+      )}
+      {!preview.publisherReady && <p className="action-error">실제 DC 게시 실행환경을 확인해 주세요.</p>}
+      {error && <span className="action-error">{error}</span>}
+      <p className="dc-submit-copy">
+        누르면 필요한 경우 승인을 먼저 저장하고 DC에 정확히 한 번 제출합니다. 실패가 불명확하면 자동 재시도하지 않아요.
+      </p>
       <div className="dc-editor-note">
-        <label htmlFor={`dc-editor-note-${item.id}`}>게시글에 덧붙일 말 <span>선택 · DC에는 표찰 없이 들어가요</span></label>
+        <label htmlFor={`dc-editor-note-${item.id}`}>게시글에 덧붙일 말 <span>선택 · 본문의 가장 마지막에 표찰 없이 들어가요</span></label>
         <textarea
           id={`dc-editor-note-${item.id}`}
           value={preview.editorNote ?? ""}
@@ -354,21 +369,6 @@ function DcPublicationPanel({ item, preview, busy, error, onPreview, onPublish, 
           </button>
         </div>
       </div>
-      <div className="dc-copy-preview">
-        <span>본문</span>
-        <DcBodyPreview bodyText={preview.bodyText} />
-      </div>
-      <ul className="dc-warnings">
-        {preview.preflight.warnings.map((warning) => <li key={warning}>{warning}</li>)}
-      </ul>
-      {preview.preflight.emojiRemovedCount > 0 && (
-        <p className="dc-safe-note">미리보기와 실제 게시 원고 모두에서 이모지를 제거했어요.</p>
-      )}
-      {!preview.publisherReady && <p className="action-error">실제 DC 게시 실행환경을 확인해 주세요.</p>}
-      {error && <span className="action-error">{error}</span>}
-      <p className="dc-submit-copy">
-        누르면 필요한 경우 승인을 먼저 저장하고 DC에 정확히 한 번 제출합니다. 실패가 불명확하면 자동 재시도하지 않아요.
-      </p>
       <button
         type="button"
         className="publish-button"

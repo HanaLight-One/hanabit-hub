@@ -8356,31 +8356,6 @@ function O({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a,
 				t.fallbackCover?.used ? " · 기본 커버 자동 추가" : ""
 			] })] })] }),
 			/* @__PURE__ */ (0, x.jsxs)("div", {
-				className: "dc-editor-note",
-				children: [
-					/* @__PURE__ */ (0, x.jsxs)("label", {
-						htmlFor: `dc-editor-note-${e.id}`,
-						children: ["게시글에 덧붙일 말 ", /* @__PURE__ */ (0, x.jsx)("span", { children: "선택 · DC에는 표찰 없이 들어가요" })]
-					}),
-					/* @__PURE__ */ (0, x.jsx)("textarea", {
-						id: `dc-editor-note-${e.id}`,
-						value: t.editorNote ?? "",
-						onChange: (e) => o(e.target.value),
-						maxLength: 1e3,
-						rows: 3,
-						placeholder: "ㅋㅋㅋ 뭐라는 거야",
-						disabled: n
-					}),
-					/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsxs)("small", { children: [[...t.editorNote ?? ""].length.toLocaleString("ko-KR"), " / 1,000"] }), /* @__PURE__ */ (0, x.jsx)("button", {
-						type: "button",
-						className: "note-save-button",
-						onClick: s,
-						disabled: n || !t.noteDirty,
-						children: t.noteDirty ? "저장하고 미리보기 반영" : "저장됨"
-					})] })
-				]
-			}),
-			/* @__PURE__ */ (0, x.jsxs)("div", {
 				className: "dc-copy-preview",
 				children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "본문" }), /* @__PURE__ */ (0, x.jsx)(D, { bodyText: t.bodyText })]
 			}),
@@ -8403,6 +8378,31 @@ function O({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a,
 			/* @__PURE__ */ (0, x.jsx)("p", {
 				className: "dc-submit-copy",
 				children: "누르면 필요한 경우 승인을 먼저 저장하고 DC에 정확히 한 번 제출합니다. 실패가 불명확하면 자동 재시도하지 않아요."
+			}),
+			/* @__PURE__ */ (0, x.jsxs)("div", {
+				className: "dc-editor-note",
+				children: [
+					/* @__PURE__ */ (0, x.jsxs)("label", {
+						htmlFor: `dc-editor-note-${e.id}`,
+						children: ["게시글에 덧붙일 말 ", /* @__PURE__ */ (0, x.jsx)("span", { children: "선택 · 본문의 가장 마지막에 표찰 없이 들어가요" })]
+					}),
+					/* @__PURE__ */ (0, x.jsx)("textarea", {
+						id: `dc-editor-note-${e.id}`,
+						value: t.editorNote ?? "",
+						onChange: (e) => o(e.target.value),
+						maxLength: 1e3,
+						rows: 3,
+						placeholder: "ㅋㅋㅋ 뭐라는 거야",
+						disabled: n
+					}),
+					/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsxs)("small", { children: [[...t.editorNote ?? ""].length.toLocaleString("ko-KR"), " / 1,000"] }), /* @__PURE__ */ (0, x.jsx)("button", {
+						type: "button",
+						className: "note-save-button",
+						onClick: s,
+						disabled: n || !t.noteDirty,
+						children: t.noteDirty ? "저장하고 미리보기 반영" : "저장됨"
+					})] })
+				]
 			}),
 			/* @__PURE__ */ (0, x.jsx)("button", {
 				type: "button",
