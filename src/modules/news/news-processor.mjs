@@ -4,7 +4,10 @@ import { createPendingNewsStore } from "./news-item-store.mjs";
 import { findNewsSourceProfile } from "./news-source-profiles.mjs";
 import { NEWS_ANALYSIS_POLICY_VERSION } from "./news-auto-publish-policy.mjs";
 import { createNewsAnalysisNotice } from "./news-analysis-notice.mjs";
-import { auditFreeNewsTranslation } from "./news-translation-audit.mjs";
+import {
+  auditFreeNewsTranslation,
+  NEWS_TRANSLATION_AUDIT_REVIEWER,
+} from "./news-translation-audit.mjs";
 import { enrichOfficialDocument } from "./official-document-enricher.mjs";
 
 const OFFICIAL_TYPES = new Set(["discord-announcement", "official-github-release", "official-changelog"]);
@@ -140,7 +143,7 @@ export function createNewsProcessor({
           });
           translationReview = {
             status: audit.status === "passed" ? "local_verified" : "free_unverified",
-            reviewer: "local-source-boundary-v1",
+            reviewer: NEWS_TRANSLATION_AUDIT_REVIEWER,
             reason: audit.reason,
             reviewedAt: now().toISOString(),
           };

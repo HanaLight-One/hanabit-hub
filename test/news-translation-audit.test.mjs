@@ -73,6 +73,20 @@ test("원문에 없는 제품명이나 수치를 번역에 추가하면 자동 �
   assert.equal(audit.code, "source_invariant_added");
 });
 
+test("원문 영문 복수형의 단수형은 새 식별자로 오인하지 않는다", () => {
+  const audit = auditFreeNewsTranslation(record({
+    source: "Normalize strict object schemas and apply policies.",
+  }), {
+    translation: {
+      title: "객체 스키마 정규화",
+      body: "strict object schema를 정규화하고 policy를 적용합니다.",
+    },
+    contextTranslations: [],
+  });
+  assert.equal(audit.status, "passed");
+  assert.equal(audit.code, "local_source_boundary");
+});
+
 test("원문에 없는 문자 체계가 번역에 섞이면 자동 검증하지 않는다", () => {
   const audit = auditFreeNewsTranslation(record({ source: "Jump to blog post" }), {
     translation: { title: "블로그 글", body: "블로그 पोस्ट로 이동" },

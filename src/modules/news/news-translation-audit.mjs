@@ -1,6 +1,7 @@
 const URL_PATTERN = /(?:https?:\/\/|(?:pic\.)?twitter\.com\/)[^\s]+/giu;
 const LATIN_OR_NUMBER_PATTERN = /[a-z][a-z0-9._+-]{1,}|\d+(?:\.\d+)+|\d{2,}/giu;
 const UNEXPECTED_SCRIPT_PATTERN = /[\p{Script=Arabic}\p{Script=Cyrillic}\p{Script=Devanagari}\p{Script=Hebrew}\p{Script=Thai}]/u;
+export const NEWS_TRANSLATION_AUDIT_REVIEWER = "local-source-boundary-v2";
 
 function clean(value) {
   return String(value ?? "")
@@ -28,8 +29,22 @@ function invariants(value) {
     .filter(Boolean));
 }
 
+function sourceInvariantAliases(value) {
+  const allowed = invariants(value);
+  for (const token of [...allowed]) {
+    if (/^[a-z][a-z0-9._+-]*ies$/u.test(token) && token.length > 4) {
+      allowed.add(`${token.slice(0, -3)}y`);
+    } else if (/^[a-z][a-z0-9._+-]*(?:sses|shes|ches|xes|zes)$/u.test(token)) {
+      allowed.add(token.slice(0, -2));
+    } else if (/^[a-z][a-z0-9._+-]*s$/u.test(token) && token.length > 4 && !token.endsWith("ss")) {
+      allowed.add(token.slice(0, -1));
+    }
+  }
+  return allowed;
+}
+
 function unexpectedInvariant(source, translated) {
-  const allowed = invariants(source);
+  const allowed = sourceInvariantAliases(source);
   return [...invariants(translated)].find((token) => !allowed.has(token)) ?? null;
 }
 

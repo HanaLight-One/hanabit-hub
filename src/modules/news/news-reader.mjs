@@ -4,7 +4,10 @@ import { findNewsSourceProfile } from "./news-source-profiles.mjs";
 import { evaluateNewsAutoPublish, NEWS_ANALYSIS_POLICY_VERSION } from "./news-auto-publish-policy.mjs";
 import { createNewsAnalysisNotice } from "./news-analysis-notice.mjs";
 import { applyNewsEditorialShadow } from "./news-editorial-governor.mjs";
-import { auditFreeNewsTranslation } from "./news-translation-audit.mjs";
+import {
+  auditFreeNewsTranslation,
+  NEWS_TRANSLATION_AUDIT_REVIEWER,
+} from "./news-translation-audit.mjs";
 
 const ID_PATTERN = /^[a-f0-9]{32}$/u;
 const MEDIA_NAME_PATTERN = /^[a-zA-Z0-9_-]+\.(gif|jpe?g|png|webp)$/u;
@@ -105,7 +108,7 @@ function publicItem(record, sourceProfiles) {
           ...record.workflow,
           translationReview: {
             status: localAudit.status === "passed" ? "local_verified" : "free_unverified",
-            reviewer: "local-source-boundary-v1",
+            reviewer: NEWS_TRANSLATION_AUDIT_REVIEWER,
             reason: localAudit.reason,
           },
         },

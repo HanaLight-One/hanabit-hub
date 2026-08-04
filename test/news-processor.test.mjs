@@ -78,7 +78,7 @@ test("원문 경계를 통과한 무료 번역은 자동 검증 영수증으로 
     await processor.process(id);
     const saved = await store.read(id);
     assert.equal(saved.workflow.translationReview.status, "local_verified");
-    assert.equal(saved.workflow.translationReview.reviewer, "local-source-boundary-v1");
+    assert.equal(saved.workflow.translationReview.reviewer, "local-source-boundary-v2");
     assert.match(saved.workflow.translationReview.reason, /원문·관련 글 분리/u);
   });
 });
