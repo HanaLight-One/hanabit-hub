@@ -14,6 +14,19 @@ const EVIDENCE_LABELS = Object.freeze({
   rumor: "루머",
   opinion: "의견",
 });
+const HUB_ONLY_TITLE_LABELS = Object.freeze([
+  ...Object.values(EVIDENCE_LABELS),
+  "장애",
+  "장애발생",
+  "장애확대",
+  "장애현황",
+  "부분복구",
+  "복구완료",
+]);
+const HUB_ONLY_TITLE_PREFIX = new RegExp(
+  `^(?:\\[(?:${HUB_ONLY_TITLE_LABELS.join("|")})\\]\\s*)+`,
+  "u",
+);
 const UNCONFIRMED_TEXTS = Object.freeze({
   official: "세부 제공 범위와 적용 시점은 원문만으로 모두 확인되지 않았습니다.",
   confirmed: "세부 제공 범위와 적용 시점은 원문만으로 모두 확인되지 않았습니다.",
@@ -53,6 +66,10 @@ function releaseAwareTitle(record, value) {
   const label = OFFICIAL_RELEASE_LABELS[record.source.repository];
   if (!label || title.toLocaleLowerCase("en-US").includes(label.toLocaleLowerCase("en-US"))) return title;
   return `${label} ${title}`;
+}
+
+function stripHubOnlyTitleLabels(value) {
+  return String(value ?? "").replace(HUB_ONLY_TITLE_PREFIX, "").trim();
 }
 
 function stripEmoji(value) {
@@ -125,7 +142,9 @@ function conciseHeadline(value, counter, maximum = 56) {
 
 function translatedHeadline(record, counter) {
   const primary = conciseHeadline(
-    releaseAwareTitle(record, record?.workflow?.publicHeadline || record?.workflow?.translation?.title),
+    stripHubOnlyTitleLabels(
+      releaseAwareTitle(record, record?.workflow?.publicHeadline || record?.workflow?.translation?.title),
+    ),
     counter,
   );
   if (primary) return primary;
@@ -136,7 +155,7 @@ function translatedHeadline(record, counter) {
     record?.workflow?.translation?.body,
     record?.workflow?.triage?.reason,
   ]) {
-    const fallback = conciseHeadline(candidate, counter);
+    const fallback = conciseHeadline(stripHubOnlyTitleLabels(candidate), counter);
     if (fallback) return fallback;
   }
   return TITLE_REVIEW_PLACEHOLDER;
@@ -165,9 +184,8 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
   }
 
   const counter = { removed: 0 };
-  const evidenceLabel = EVIDENCE_LABELS[record.workflow.triage.evidenceTag] ?? "확인 필요";
   const translatedTitle = translatedHeadline(record, counter);
-  const title = `[${evidenceLabel}] ${translatedTitle}`.trim();
+  const title = translatedTitle;
   const titleNeedsReview = translatedTitle === TITLE_REVIEW_PLACEHOLDER;
   const profile = findNewsSourceProfile(record.source, sourceProfiles);
   const headText = selectNewsDcHeadText(record, profile);
@@ -265,4 +283,5 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
 
 export const newsDcCopyPolicy = Object.freeze({
   evidenceLabels: EVIDENCE_LABELS,
+  hubOnlyTitleLabels: HUB_ONLY_TITLE_LABELS,
 });

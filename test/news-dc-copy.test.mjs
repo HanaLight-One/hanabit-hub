@@ -46,7 +46,7 @@ test("DC 뉴스 원고는 태그·번역·AI 해설·출처를 결정적으로 �
   const draft = composeNewsDcCopy(record(), { sourceProfiles: profiles });
 
   assert.equal(draft.headText, "뉴스/소식");
-  assert.equal(draft.title, "[사례] 반복 작업을 맡겨보세요");
+  assert.equal(draft.title, "반복 작업을 맡겨보세요");
   assert.match(draft.bodyText, /게시자: Greg Brockman/u);
   assert.match(draft.bodyText, /게시자: Greg Brockman · OpenAI · 사장·공동 창립자 · 핵심 인물/u);
   assert.doesNotMatch(draft.bodyText, /주요 분야:|출처 구분:|소속 확인:/u);
@@ -94,8 +94,7 @@ test("이모지뿐인 원문 제목은 관련 글 번역에서 정보성 제목�
   sample.workflow.triage.evidenceTag = "opinion";
   const draft = composeNewsDcCopy(sample);
 
-  assert.equal(draft.title, "[의견] ChatGPT에서 Chat은 점점 Work처럼 행동하기 시작하고 있다");
-  assert.notEqual(draft.title, "[의견]");
+  assert.equal(draft.title, "ChatGPT에서 Chat은 점점 Work처럼 행동하기 시작하고 있다");
   assert.equal(draft.preflight.emojiRemovedCount, 2);
 });
 
@@ -127,7 +126,7 @@ test("DC 뉴스 원고는 번역 응답에 남은 Markdown 표식을 평문으�
   sample.workflow.translation.title = "### 7.4.0";
   sample.workflow.translation.body = "### 빌드 시스템\n\n* **deps:** dotenv 업데이트";
   const draft = composeNewsDcCopy(sample);
-  assert.equal(draft.title, "[사례] 7.4.0");
+  assert.equal(draft.title, "7.4.0");
   assert.match(draft.bodyText, /빌드 시스템\n\n• deps: dotenv 업데이트/u);
   assert.doesNotMatch(draft.bodyText, /###|\*\*/u);
 });
@@ -142,7 +141,26 @@ test("공식 GitHub 릴리스 제목에는 제품명을 결정적으로 붙인�
   sample.workflow.translation.title = "7.4.0";
   sample.workflow.triage.evidenceTag = "official";
   const draft = composeNewsDcCopy(sample);
-  assert.equal(draft.title, "[공식] OpenAI Agents SDK JavaScript 7.4.0");
+  assert.equal(draft.title, "OpenAI Agents SDK JavaScript 7.4.0");
+});
+
+test("허브 분류 태그는 DC 제목에서만 반복 제거한다", () => {
+  const sample = record();
+  sample.workflow.publicHeadline = "[공식] [장애발생] OpenAI 서비스 장애 발생";
+  sample.workflow.translation.title = "허브에 보일 번역 제목";
+  sample.workflow.triage.evidenceTag = "official";
+  const draft = composeNewsDcCopy(sample);
+
+  assert.equal(sample.workflow.publicHeadline, "[공식] [장애발생] OpenAI 서비스 장애 발생");
+  assert.equal(draft.title, "OpenAI 서비스 장애 발생");
+});
+
+test("허브 소유가 아닌 대괄호 제목은 DC 게시에서도 보존한다", () => {
+  const sample = record();
+  sample.workflow.publicHeadline = "[OpenAI] 새로운 연구 결과 공개";
+  const draft = composeNewsDcCopy(sample);
+
+  assert.equal(draft.title, "[OpenAI] 새로운 연구 결과 공개");
 });
 
 test("원문 이미지가 없을 때만 기본 커버를 이미지 수에 포함한다", () => {

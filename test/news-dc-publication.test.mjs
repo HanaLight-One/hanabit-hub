@@ -56,7 +56,7 @@ test("미리보기는 실제 게시 없이 안전한 공개 원고만 반환한�
     });
     const preview = await service.preview(ID);
     assert.equal(preview.headText, "뉴스/소식");
-    assert.equal(preview.title, "[공식] 새 소식");
+    assert.equal(preview.title, "새 소식");
     assert.equal(preview.approvalRequired, true);
     assert.equal(preview.publisherReady, true);
     assert.equal(preview.canPublish, true);
