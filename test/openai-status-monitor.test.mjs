@@ -237,3 +237,37 @@ test("기존 v1 영수증은 현재 구성요소를 조용히 기준선으로 �
   assert.equal(state.currentPost.postId, "120497");
   assert.equal(state.degradedComponents.length, 1);
 });
+
+test("직전 상태 글 삭제가 불명확하면 현재 글을 유지하고 다음 게시를 보류한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-status-"));
+  const monitor = createOpenAIStatusMonitor({
+    stateRoot: root,
+    fetchImpl: responder([[], [incident()]]),
+  });
+  await monitor.poll();
+  const outage = await monitor.poll();
+  await monitor.confirmPublished(outage.snapshotHash, {
+    postId: "120600",
+    url: "https://m.dcinside.com/board/chatgpt/120600",
+  });
+  const previousPost = (await monitor.readState()).currentPost;
+
+  await monitor.recordReplacement(previousPost, { status: "ambiguous-no-retry" });
+  const blocked = await monitor.readState();
+  assert.equal(blocked.currentPost.postId, "120600");
+  assert.equal(blocked.pendingReplacement.postId, "120600");
+
+  await monitor.recordReplacement(previousPost, { status: "deleted" });
+  const cleared = await monitor.readState();
+  assert.equal(cleared.currentPost, null);
+  assert.equal(cleared.pendingReplacement, null);
+});
+
+test("상태 감시기는 직전 자동 글 삭제 확정 뒤에만 새 원고를 게시한다", async () => {
+  const source = await readFile(new URL("../scripts/watch-discord-announcements.mjs", import.meta.url), "utf8");
+  const deleteIndex = source.indexOf("await replacePreviousStatusPost(currentPost)");
+  const publishIndex = source.indexOf("await finishProcessed(processed)");
+  assert.equal(deleteIndex >= 0, true);
+  assert.equal(publishIndex > deleteIndex, true);
+  assert.match(source, /if \(replacement\.status !== "deleted"\) \{[\s\S]*?return;[\s\S]*?\}/u);
+});

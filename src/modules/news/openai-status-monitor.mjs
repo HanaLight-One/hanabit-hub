@@ -410,12 +410,16 @@ export function createOpenAIStatusMonitor({
   async function recordReplacement(previousPost, result) {
     const state = await readState();
     if (!state) throw new Error("OpenAI 상태 감시 영수증이 없습니다.");
+    const previousPostId = String(previousPost?.postId ?? "");
+    const deleted = result?.status === "deleted";
+    const isCurrentPost = state.currentPost?.postId === previousPostId;
     await saveState({
       ...state,
-      pendingReplacement: null,
+      currentPost: deleted && isCurrentPost ? null : state.currentPost,
+      pendingReplacement: deleted ? null : previousPost,
       history: [...state.history.slice(-99), {
         event: "replacement",
-        previousPostId: String(previousPost?.postId ?? ""),
+        previousPostId,
         status: String(result?.status ?? "ambiguous-no-retry"),
         recordedAt: now().toISOString(),
       }],

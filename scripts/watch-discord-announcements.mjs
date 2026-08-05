@@ -85,7 +85,7 @@ async function finishProcessed(record) {
 }
 
 async function replacePreviousStatusPost(previousPost) {
-  if (!previousPost || !statusPostReplacer) return;
+  if (!previousPost || !statusPostReplacer) return { status: "not-required" };
   const result = await statusPostReplacer.replace(previousPost);
   await statusMonitor.recordReplacement(previousPost, result);
   if (result.status !== "deleted") {
@@ -94,6 +94,7 @@ async function replacePreviousStatusPost(previousPost) {
   } else {
     await safeLog(`OpenAI 상태 이전 글 삭제 완료: ${previousPost.postId}`);
   }
+  return result;
 }
 
 async function collectOpenAIStatus(reason) {
@@ -106,6 +107,14 @@ async function collectOpenAIStatus(reason) {
         await safeLog(`OpenAI 상태 확인(${reason}): ${result.status}, 활성 장애 ${result.activeCount}`);
       }
       return;
+    }
+    const currentPost = (await statusMonitor.readState())?.currentPost ?? null;
+    if (["automatic", "adopted-replaceable"].includes(currentPost?.ownership)) {
+      const replacement = await replacePreviousStatusPost(currentPost);
+      if (replacement.status !== "deleted") {
+        await safeLog(`OpenAI 상태 새 글 게시 보류: 이전 글 ${currentPost.postId} 삭제 미확정`);
+        return;
+      }
     }
     let processed = await processor.process(result.id);
     const title = STATUS_TITLES[result.phase];
@@ -120,8 +129,7 @@ async function collectOpenAIStatus(reason) {
     }
     const publication = await finishProcessed(processed);
     if (publication?.status !== "posted" || !publication.publication?.postId) return;
-    const confirmed = await statusMonitor.confirmPublished(result.snapshotHash, publication.publication);
-    await replacePreviousStatusPost(confirmed.previousPost);
+    await statusMonitor.confirmPublished(result.snapshotHash, publication.publication);
     await safeLog(`OpenAI 상태 새 글 게시 완료: ${result.phase} (${publication.publication.postId})`);
   })();
   try {
