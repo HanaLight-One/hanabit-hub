@@ -74,5 +74,49 @@ test("혼돈 프리셋 목록을 제공하고 알 수 없는 프리셋을 거절
   });
   const settings = await oracle.readSettings();
   assert.equal(settings.presets.some((preset) => preset.name === "그게 왜 거기 있어"), true);
+  assert.equal(settings.presets.length, 12);
+  for (const preset of settings.presets) {
+    assert.equal(Number.isInteger(preset.defaultChaos), true);
+    assert.equal(preset.defaultIngredients.length, 6);
+    assert.equal(new Set(preset.defaultIngredients.map((item) => item.id)).size, 6);
+    assert.equal(new Set(preset.defaultIngredients.map((item) => item.name)).size, 6);
+    assert.equal(preset.defaultIngredients.every((item) =>
+      item.enabled === true && Number.isInteger(item.weight) && item.weight >= 0 && item.weight <= 100), true);
+  }
   await assert.rejects(() => oracle.reroll({ preset: "unknown" }), { code: "INVALID_PRESET" });
+});
+
+test("신탁 요청에 전달한 프리셋 재료는 저장 지연과 관계없이 즉시 사용한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-oracle-request-ingredients-"));
+  const runnerPath = path.join(root, "runner.ps1");
+  await writeFile(runnerPath, "# mock", "utf8");
+  const oracle = createPromptOracle({
+    settingsPath: path.join(root, "state", "settings.json"),
+    runtimeRoot: path.join(root, "runtime"),
+    runnerPath,
+    random: () => 0.1,
+    async runProcess(_command, args) {
+      const prompt = await readFile(args[args.indexOf("-PromptFile") + 1], "utf8");
+      assert.match(prompt, /선명한 빗줄기/u);
+      assert.match(prompt, /젖은 반사광/u);
+      assert.doesNotMatch(prompt, /행복감/u);
+      const outputPath = args[args.indexOf("-Output") + 1];
+      await writeFile(outputPath, JSON.stringify({
+        scene: "빗줄기가 유리 지붕을 두드리는 동안 젖은 반사광이 골목의 작은 피난처를 길게 비춘다.",
+      }), "utf8");
+    },
+  });
+
+  const result = await oracle.reroll({
+    chaos: 34,
+    preset: "rainy-day",
+    ingredients: [
+      { id: "rain-fall", name: "선명한 빗줄기", weight: 100, enabled: true },
+      { id: "rain-reflection", name: "젖은 반사광", weight: 100, enabled: true },
+    ],
+  });
+  assert.deepEqual(
+    result.ingredients.map((item) => item.name).sort(),
+    ["선명한 빗줄기", "젖은 반사광"].sort(),
+  );
 });

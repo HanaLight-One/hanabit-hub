@@ -8,19 +8,82 @@ const POWERSHELL = path.join(
   "System32", "WindowsPowerShell", "v1.0", "powershell.exe",
 );
 const MAX_INGREDIENTS = 40;
+
+function presetIngredient(id, name, weight) {
+  return Object.freeze({ id, name, weight, enabled: true });
+}
+
+function oraclePreset(id, name, defaultChaos, direction, ingredients) {
+  return Object.freeze({
+    id,
+    name,
+    defaultChaos,
+    direction,
+    defaultIngredients: Object.freeze(ingredients.map((item) => presetIngredient(...item))),
+  });
+}
+
 const ORACLE_PRESETS = Object.freeze([
-  Object.freeze({ id: "random", name: "완전 무작위", defaultChaos: 68, direction: "Follow the selected ingredients without an extra mood preset." }),
-  Object.freeze({ id: "happy-peace", name: "행복한 평화", defaultChaos: 22, direction: "Create a peaceful, safe scene filled with small visible happiness and relaxed interactions." }),
-  Object.freeze({ id: "warm-sunlight", name: "따스한 햇살 아래 어느 날", defaultChaos: 25, direction: "Center warm sunlight, soft shadows, and an ordinary moment that feels gently cherished." }),
-  Object.freeze({ id: "sentimental-season", name: "센치한 계절감", defaultChaos: 38, direction: "Make the current season emotionally tangible through air, color, texture, and quiet nostalgia." }),
-  Object.freeze({ id: "rainy-day", name: "비가 오는 어느 날", defaultChaos: 34, direction: "Build the scene around rain, wet reflections, shelter, and a memorable action shaped by the weather." }),
-  Object.freeze({ id: "snowy-day", name: "눈이 오는 어느 날", defaultChaos: 34, direction: "Build the scene around falling snow, cold air, accumulated texture, and a warm or striking focal action." }),
-  Object.freeze({ id: "seasonal-downpour", name: "계절이 비처럼 쏟아져", defaultChaos: 66, direction: "Turn recognizable signs of a season into an impossible downpour while keeping the scene visually coherent." }),
-  Object.freeze({ id: "dream-chaos", name: "몽환적 혼돈", defaultChaos: 78, direction: "Use dream logic, fluid scale, strange transitions, and beautiful contradictions that still form one drawable scene." }),
-  Object.freeze({ id: "daily-collapse", name: "일상 붕괴", defaultChaos: 84, direction: "Begin with an ordinary daily place, then let its familiar rules visibly fail in one surprising but coherent event." }),
-  Object.freeze({ id: "cute-disaster", name: "귀여운 재난", defaultChaos: 76, direction: "Create a harmless, non-graphic disaster caused by cute beings or objects; make the scale dramatic but nobody is injured." }),
-  Object.freeze({ id: "cosmic-omen", name: "우주적 불길함", defaultChaos: 88, direction: "Introduce a vast cosmic omen and quiet unease without graphic horror, while preserving a strong readable composition." }),
-  Object.freeze({ id: "why-is-it-there", name: "그게 왜 거기 있어", defaultChaos: 92, direction: "Place one unmistakably impossible and contextually wrong thing at the center, and let the rest of the scene react seriously to it." }),
+  oraclePreset("random", "완전 무작위", 68, "Follow the selected ingredients without an extra mood preset.", [
+    ["random-wrong-place", "의외의 장소", 62], ["random-strange-pair", "낯선 조합", 68],
+    ["random-emotion-turn", "감정의 반전", 52], ["random-light", "극적인 빛", 45],
+    ["random-small-event", "작은 사건", 58], ["random-surreal", "초현실", 48],
+  ]),
+  oraclePreset("happy-peace", "행복한 평화", 22, "Create a peaceful, safe scene filled with small visible happiness and relaxed interactions.", [
+    ["peace-relief", "포근한 안도", 82], ["peace-kindness", "다정한 교감", 78],
+    ["peace-sunlight", "부드러운 햇살", 72], ["peace-small-joy", "소소한 행복", 88],
+    ["peace-daily", "안전한 일상", 76], ["peace-color", "온화한 색감", 52],
+  ]),
+  oraclePreset("warm-sunlight", "따스한 햇살 아래 어느 날", 25, "Center warm sunlight, soft shadows, and an ordinary moment that feels gently cherished.", [
+    ["sun-afternoon", "늦은 오후 햇살", 92], ["sun-shadow", "길게 드리운 그림자", 62],
+    ["sun-breeze", "산들바람", 46], ["sun-ordinary", "평범한 하루", 78],
+    ["sun-cherished", "소중한 순간", 72], ["sun-warmth", "따뜻한 온기", 82],
+  ]),
+  oraclePreset("sentimental-season", "센치한 계절감", 38, "Make the current season emotionally tangible through air, color, texture, and quiet nostalgia.", [
+    ["season-air", "계절의 공기", 88], ["season-faded", "빛바랜 색", 64],
+    ["season-wind", "바람에 흔들림", 68], ["season-longing", "조용한 그리움", 74],
+    ["season-trace", "오래된 흔적", 52], ["season-passing", "지나가는 순간", 70],
+  ]),
+  oraclePreset("rainy-day", "비가 오는 어느 날", 34, "Build the scene around rain, wet reflections, shelter, and a memorable action shaped by the weather.", [
+    ["rain-fall", "선명한 빗줄기", 92], ["rain-reflection", "젖은 반사광", 82],
+    ["rain-shelter", "작은 피난처", 70], ["rain-umbrella", "우산", 58],
+    ["rain-puddle", "물웅덩이", 66], ["rain-action", "비 속의 행동", 74],
+  ]),
+  oraclePreset("snowy-day", "눈이 오는 어느 날", 34, "Build the scene around falling snow, cold air, accumulated texture, and a warm or striking focal action.", [
+    ["snow-fall", "함박눈", 92], ["snow-pile", "소복이 쌓인 눈", 82],
+    ["snow-breath", "차가운 숨", 68], ["snow-light", "따뜻한 불빛", 78],
+    ["snow-footprint", "이어지는 발자국", 62], ["snow-action", "눈 속의 행동", 72],
+  ]),
+  oraclePreset("seasonal-downpour", "계절이 비처럼 쏟아져", 66, "Turn recognizable signs of a season into an impossible downpour while keeping the scene visually coherent.", [
+    ["downpour-season", "계절의 상징", 88], ["downpour-objects", "쏟아지는 사물", 92],
+    ["downpour-weather", "비현실적인 날씨", 80], ["downpour-motion", "휘날리는 움직임", 76],
+    ["downpour-reaction", "놀란 일상", 66], ["downpour-focus", "선명한 중심 사건", 72],
+  ]),
+  oraclePreset("dream-chaos", "몽환적 혼돈", 78, "Use dream logic, fluid scale, strange transitions, and beautiful contradictions that still form one drawable scene.", [
+    ["dream-logic", "꿈의 논리", 94], ["dream-scale", "뒤틀린 크기", 78],
+    ["dream-boundary", "흐르는 경계", 84], ["dream-contradiction", "아름다운 모순", 86],
+    ["dream-connection", "낯선 연결", 90], ["dream-light", "몽환적인 빛", 74],
+  ]),
+  oraclePreset("daily-collapse", "일상 붕괴", 84, "Begin with an ordinary daily place, then let its familiar rules visibly fail in one surprising but coherent event.", [
+    ["collapse-place", "익숙한 장소", 82], ["collapse-rule", "무너진 일상 규칙", 96],
+    ["collapse-chain", "연쇄 반응", 80], ["collapse-people", "당황한 사람들", 68],
+    ["collapse-physics", "물리 법칙의 오류", 88], ["collapse-focus", "선명한 중심 사건", 76],
+  ]),
+  oraclePreset("cute-disaster", "귀여운 재난", 76, "Create a harmless, non-graphic disaster caused by cute beings or objects; make the scale dramatic but nobody is injured.", [
+    ["cute-cause", "귀여운 원인", 96], ["cute-chaos", "거대한 소동", 88],
+    ["cute-safe", "다치지 않는 재난", 100], ["cute-response", "진지한 대응", 70],
+    ["cute-props", "쏟아지는 소품", 74], ["cute-energy", "밝은 에너지", 68],
+  ]),
+  oraclePreset("cosmic-omen", "우주적 불길함", 88, "Introduce a vast cosmic omen and quiet unease without graphic horror, while preserving a strong readable composition.", [
+    ["cosmic-body", "거대한 천체", 94], ["cosmic-sky", "불가능한 하늘", 92],
+    ["cosmic-unease", "고요한 불안", 86], ["cosmic-daily", "미세한 일상", 58],
+    ["cosmic-shadow", "낯선 그림자", 78], ["cosmic-scale", "압도적인 규모", 90],
+  ]),
+  oraclePreset("why-is-it-there", "그게 왜 거기 있어", 92, "Place one unmistakably impossible and contextually wrong thing at the center, and let the rest of the scene react seriously to it.", [
+    ["wrong-object", "엉뚱한 물체", 100], ["wrong-place", "너무 평범한 장소", 82],
+    ["wrong-reaction", "진지한 반응", 92], ["wrong-arrival", "설명되지 않는 등장", 96],
+    ["wrong-scale", "크기 불균형", 78], ["wrong-focus", "단 하나의 중심", 88],
+  ]),
 ]);
 const DEFAULT_SETTINGS = Object.freeze({
   chaos: 68,
@@ -76,7 +139,12 @@ function publicSettings(settings) {
   return {
     chaos: settings.chaos,
     ingredients: settings.ingredients.map((item) => ({ ...item })),
-    presets: ORACLE_PRESETS.map(({ id, name, defaultChaos }) => ({ id, name, defaultChaos })),
+    presets: ORACLE_PRESETS.map(({ id, name, defaultChaos, defaultIngredients }) => ({
+      id,
+      name,
+      defaultChaos,
+      defaultIngredients: defaultIngredients.map((item) => ({ ...item })),
+    })),
     limits: { ingredients: MAX_INGREDIENTS },
   };
 }
@@ -190,10 +258,13 @@ export function createPromptOracle({
     const workRoot = path.join(runtimeRoot, randomUUID());
     try {
       if (!(await stat(runnerPath)).isFile()) throw oracleError("NOT_READY", "무료 API 실행기가 준비되지 않았어요.");
-      const settings = await readSettings();
+      const savedSettings = await readSettings();
       const chaos = value.chaos === undefined
-        ? settings.chaos
+        ? savedSettings.chaos
         : boundedInteger(value.chaos, 0, 100, "혼돈도");
+      const settings = value.ingredients === undefined
+        ? savedSettings
+        : normalizeSettings({ chaos, ingredients: value.ingredients });
       const preset = findPreset(value.preset);
       const selected = selectOracleIngredients({ ...settings, chaos }, random);
       const promptPath = path.join(workRoot, "prompt.txt");

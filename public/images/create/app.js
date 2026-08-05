@@ -44,6 +44,7 @@ const elements = {
   sourceUploadButton: document.querySelector("#source-upload-button"),
   sourceUploadStatus: document.querySelector("#source-upload-status"),
   scene: document.querySelector("#scene-request"),
+  sceneClear: document.querySelector("#scene-clear"),
   characterCount: document.querySelector("#character-count"),
   oracleReroll: document.querySelector("#oracle-reroll"),
   oraclePreset: document.querySelector("#oracle-preset"),
@@ -119,6 +120,7 @@ let sourceImages = null;
 let oracleSettings = null;
 let oracleSaving = false;
 let oracleSavePending = false;
+let oraclePresetsById = new Map();
 
 async function copyText(value, button) {
   const text = String(value ?? "");
@@ -215,6 +217,7 @@ function renderOracleIngredients() {
 
 function renderOraclePresets() {
   const presets = Array.isArray(oracleSettings?.presets) ? oracleSettings.presets : [];
+  oraclePresetsById = new Map(presets.map((preset) => [preset.id, preset]));
   elements.oraclePreset.replaceChildren(...presets.map((preset) => {
     const option = document.createElement("option");
     option.value = preset.id;
@@ -287,6 +290,7 @@ async function rerollOracle() {
       body: JSON.stringify({
         chaos: Number(elements.oracleChaos.value),
         preset: elements.oraclePreset.value,
+        ingredients: oracleSettings.ingredients.map((item) => ({ ...item })),
       }),
     });
     const result = await response.json();
@@ -954,6 +958,11 @@ elements.styleGrid.addEventListener("change", (event) => {
 elements.scene.addEventListener("input", () => {
   elements.characterCount.textContent = elements.scene.value.length;
 });
+elements.sceneClear.addEventListener("click", () => {
+  elements.scene.value = "";
+  elements.scene.dispatchEvent(new Event("input", { bubbles: true }));
+  elements.scene.focus();
+});
 
 elements.oracleChaos.addEventListener("input", () => {
   elements.oracleChaosValue.textContent = elements.oracleChaos.value;
@@ -965,12 +974,19 @@ elements.oracleChaos.addEventListener("change", () => {
 });
 elements.oraclePreset.addEventListener("change", () => {
   const selected = elements.oraclePreset.selectedOptions[0];
-  const defaultChaos = Number(selected?.dataset.chaos);
+  const preset = oraclePresetsById.get(elements.oraclePreset.value);
+  const defaultChaos = Number(preset?.defaultChaos ?? selected?.dataset.chaos);
   if (Number.isInteger(defaultChaos)) {
     elements.oracleChaos.value = String(defaultChaos);
     elements.oracleChaosValue.textContent = String(defaultChaos);
+    oracleSettings.chaos = defaultChaos;
   }
-  setOracleMessage(`${selected?.textContent ?? "완전 무작위"} 프리셋을 골랐어요. 주사위를 눌러 장면을 받아보세요.`);
+  if (Array.isArray(preset?.defaultIngredients) && preset.defaultIngredients.length) {
+    oracleSettings.ingredients = preset.defaultIngredients.map((item) => ({ ...item }));
+    renderOracleIngredients();
+    saveOracleSettings();
+  }
+  setOracleMessage(`${selected?.textContent ?? "완전 무작위"} 기본 재료를 담았어요. 자유롭게 고친 뒤 주사위를 눌러보세요.`);
 });
 elements.oracleAdd.addEventListener("click", () => {
   if (!oracleSettings) return;

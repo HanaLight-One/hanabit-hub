@@ -8,10 +8,10 @@
     <meta name="description" content="하나빛 이미지 추가생성 초안실" />
     <title>추가 이미지 생성실 · Hanabit Hub</title>
     <link rel="stylesheet" href="/images/styles.css" />
-    <link rel="stylesheet" href="/images/create/styles.css?v=20260803-oracle-presets" />
+    <link rel="stylesheet" href="/images/create/styles.css?v=20260805-oracle-defaults" />
     <link rel="stylesheet" href="/codex-usage-indicator.css" />
     <script src="/codex-usage-indicator.js" type="module"></script>
-    <script src="/images/create/app.js?v=20260803-oracle-presets" type="module"></script>
+    <script src="/images/create/app.js?v=20260805-oracle-defaults" type="module"></script>
   </head>
   <body>
     <header class="topbar">
@@ -151,7 +151,10 @@
             </div>
             <textarea id="scene-request" maxlength="12000" required
               placeholder="예: 비가 그친 새벽, 두 사람이 오래된 온실에서 작은 빛을 발견한다."></textarea>
-            <small><span id="character-count">0</span> / 12,000</small>
+            <div class="scene-textarea-footer">
+              <button id="scene-clear" class="scene-clear" type="button">비우기</button>
+              <small><span id="character-count">0</span> / 12,000</small>
+            </div>
             <details class="oracle-settings">
               <summary>⚙ 혼돈 설정</summary>
               <div class="oracle-settings-body">
