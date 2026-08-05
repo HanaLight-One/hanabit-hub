@@ -99,6 +99,8 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
         assertStrictObjectSchemas(schema);
         assert.equal(schema.properties.readerSummary.maxLength, 180);
         assert.match(prompt, /readerSummary is a separate plain-Korean reader aid/u);
+        assert.match(prompt, /first explain in plain Korean what the named software is used to build or manage/u);
+        assert.match(prompt, /never assume readers recognize the product name/u);
         assert.equal(schema.properties.contextTranslations.minItems, 1);
         assert.equal(schema.properties.contextTranslations.maxItems, 1);
         assert.equal(schema.properties.translation.properties.title.maxLength, 50);
