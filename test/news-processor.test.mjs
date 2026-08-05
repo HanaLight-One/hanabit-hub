@@ -79,7 +79,7 @@ test("원문 경계를 통과한 무료 번역은 자동 검증 영수증으로 
     await processor.process(id);
     const saved = await store.read(id);
     assert.equal(saved.workflow.translationReview.status, "local_verified");
-    assert.equal(saved.workflow.translationReview.reviewer, "local-source-boundary-v2");
+    assert.equal(saved.workflow.translationReview.reviewer, "local-source-boundary-v3");
     assert.equal(saved.workflow.readerSummary, "복잡한 변경 내용을 일반 독자가 이해하기 쉽게 정리합니다.");
     assert.match(saved.workflow.translationReview.reason, /원문·관련 글 분리/u);
   });

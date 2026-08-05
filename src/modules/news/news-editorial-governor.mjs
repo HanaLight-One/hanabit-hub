@@ -92,6 +92,7 @@ function editorialScore(item) {
 
 function bypassesBurstLimit(item) {
   const triage = item?.workflow?.triage ?? {};
+  if (item?.source?.type === "official-changelog") return false;
   return triage.evidenceTag === "official" ||
     (triage.evidenceTag === "confirmed" && triage.importance === "high");
 }

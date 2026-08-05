@@ -73,6 +73,34 @@ test("원문에 없는 제품명이나 수치를 번역에 추가하면 자동 �
   assert.equal(audit.code, "source_invariant_added");
 });
 
+test("제목만 한국어이고 본문이 영문이면 자동 검증하지 않는다", () => {
+  const audit = auditFreeNewsTranslation(record({
+    source: "Builders are finding new ways to build out loud with Voice in Codex.",
+  }), {
+    translation: {
+      title: "Codex 음성으로 아이디어를 말하며 빌드",
+      body: "Builders are finding new ways to build out loud with Voice in Codex.",
+    },
+    contextTranslations: [],
+  });
+  assert.equal(audit.status, "failed");
+  assert.equal(audit.code, "body_korean_missing");
+});
+
+test("한국어가 조금 섞여도 본문 대부분이 영문이면 자동 검증하지 않는다", () => {
+  const audit = auditFreeNewsTranslation(record({
+    source: "Builders can talk through an idea, start a new session, and check other threads along the way.",
+  }), {
+    translation: {
+      title: "음성 작업 흐름 소개",
+      body: "새 기능: Builders can talk through an idea, start a new session, and check other threads along the way.",
+    },
+    contextTranslations: [],
+  });
+  assert.equal(audit.status, "failed");
+  assert.equal(audit.code, "body_english_dominant");
+});
+
 test("원문 영문 복수형의 단수형은 새 식별자로 오인하지 않는다", () => {
   const audit = auditFreeNewsTranslation(record({
     source: "Normalize strict object schemas and apply policies.",
@@ -133,4 +161,19 @@ test("독자 요약은 출처 계정명과 표시 이름을 근거로 사용할 
     contextTranslations: [],
   });
   assert.equal(result.status, "passed");
+});
+
+test("OpenAI 공식 문서 소스는 독자 요약에서 OpenAI 출처명을 사용할 수 있다", () => {
+  const item = record({ source: "Customers can filter usage data by API key." });
+  item.source = { type: "official-changelog", provider: "openai-docs" };
+  const result = auditFreeNewsTranslation(item, {
+    translation: {
+      title: "API 키별 사용량 필터 지원",
+      body: "고객은 API 키별로 사용량 데이터를 필터링할 수 있습니다.",
+    },
+    readerSummary: "OpenAI의 사용량 관리 도구에서 API 키별 데이터를 나눠 볼 수 있게 됐습니다.",
+    contextTranslations: [],
+  });
+  assert.equal(result.status, "passed");
+  assert.equal(result.code, "local_source_boundary");
 });

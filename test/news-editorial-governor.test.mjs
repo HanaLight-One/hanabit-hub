@@ -16,10 +16,11 @@ function item(id, {
   codexStatus = null,
   processedAt = publishedAt,
   publicationAt = null,
+  sourceType = "x-post",
 } = {}) {
   return {
     id: id.padStart(32, "0"),
-    source: { publishedAt, url: sourceUrl, profile: { trustLevel: "high" } },
+    source: { type: sourceType, publishedAt, url: sourceUrl, profile: { trustLevel: "high" } },
     original: { links, contexts: [] },
     collectedAt: publishedAt,
     workflow: {
@@ -64,6 +65,31 @@ test("서로 다른 공식 속보는 15분 안에 연달아 와도 모두 즉시
   ]);
   assert.deepEqual(items.map((entry) => entry.workflow.editorialShadow.decision), ["ready", "ready", "ready"]);
   assert.deepEqual(items.map((entry) => entry.workflow.editorialShadow.code), ["priority_pass", "priority_pass", "priority_pass"]);
+});
+
+test("같은 회차의 공식 변경 기록은 가장 강한 한 건만 자동 게시 후보가 된다", () => {
+  const items = applyNewsEditorialShadow([
+    item("17", {
+      sourceType: "official-changelog",
+      evidenceTag: "official",
+      importance: "high",
+      publishedAt: "2026-08-05T17:26:02Z",
+      title: "GPT-5.6 장문맥 지원",
+      body: "Fast 모드가 장문맥 요청을 지원합니다.",
+    }),
+    item("18", {
+      sourceType: "official-changelog",
+      evidenceTag: "official",
+      importance: "medium",
+      publishedAt: "2026-08-05T17:26:02Z",
+      title: "사용량 대시보드 개선",
+      body: "API 키별 필터와 그룹화를 지원합니다.",
+    }),
+  ]);
+  assert.equal(items[0].workflow.editorialShadow.decision, "ready");
+  assert.equal(items[0].workflow.editorialShadow.code, "quality_pass");
+  assert.equal(items[1].workflow.editorialShadow.decision, "hold");
+  assert.equal(items[1].workflow.editorialShadow.code, "burst_queue");
 });
 
 test("중요도 높은 확정 정보는 연속 게시 제한을 통과하지만 사례는 계속 보호한다", () => {

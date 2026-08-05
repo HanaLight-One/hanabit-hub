@@ -1,7 +1,24 @@
 const URL_PATTERN = /(?:https?:\/\/|(?:pic\.)?twitter\.com\/)[^\s]+/giu;
 const LATIN_OR_NUMBER_PATTERN = /[a-z][a-z0-9._+-]{1,}|\d+(?:\.\d+)+|\d{2,}/giu;
 const UNEXPECTED_SCRIPT_PATTERN = /[\p{Script=Arabic}\p{Script=Cyrillic}\p{Script=Devanagari}\p{Script=Hebrew}\p{Script=Thai}]/u;
-export const NEWS_TRANSLATION_AUDIT_REVIEWER = "local-source-boundary-v2";
+export const NEWS_TRANSLATION_AUDIT_REVIEWER = "local-source-boundary-v3";
+
+function sourceIdentity(record) {
+  if (
+    record?.source?.type === "official-changelog" &&
+    record?.source?.provider === "openai-docs"
+  ) {
+    return "OpenAI";
+  }
+  return "";
+}
+
+function isEnglishDominant(value) {
+  const text = clean(value);
+  const koreanCount = (text.match(/[가-힣]/gu) ?? []).length;
+  const latinCount = (text.match(/[a-z]/giu) ?? []).length;
+  return latinCount >= 24 && latinCount > koreanCount * 2;
+}
 
 function clean(value) {
   return String(value ?? "")
@@ -73,8 +90,11 @@ export function auditFreeNewsTranslation(record, translationResult = record?.wor
   if (hasUrl(translationResult?.translation?.title) || hasUrl(translationResult?.translation?.body)) {
     return result("failed", "source_link_leak", "원문 전용 번역에 링크가 남아 있어 자동 검증하지 않아요.");
   }
-  if (!/[가-힣]/u.test(`${title} ${body}`)) {
-    return result("failed", "korean_missing", "한국어 번역을 확인할 수 없어 자동 검증하지 않아요.");
+  if (!/[가-힣]/u.test(body)) {
+    return result("failed", "body_korean_missing", "본문에서 한국어 번역을 확인할 수 없어 자동 검증하지 않아요.");
+  }
+  if (isEnglishDominant(body)) {
+    return result("failed", "body_english_dominant", "본문 대부분이 영문이라 한국어 번역으로 자동 검증하지 않아요.");
   }
   if (UNEXPECTED_SCRIPT_PATTERN.test(`${title} ${body}`) && !UNEXPECTED_SCRIPT_PATTERN.test(original)) {
     return result("failed", "unexpected_script", "원문에 없는 문자 체계가 번역에 섞여 자동 검증하지 않아요.");
@@ -111,6 +131,7 @@ export function auditFreeNewsTranslation(record, translationResult = record?.wor
   }
   const evidencePackage = [
     original,
+    sourceIdentity(record),
     record?.source?.account,
     record?.source?.label,
     ...contexts.map((context) => context?.content),
