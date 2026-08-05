@@ -80,7 +80,7 @@ function fastPricingContext(value) {
     lines.slice(start + 1).find((line) => line.toLowerCase().startsWith(`| ${model} |`)));
   if (!header || !separator || rows.some((line) => !line)) return null;
   return [
-    "Fast mode prices in USD per 1M tokens.",
+    "Fast mode prices in USD per 1M tokens (100만 tokens).",
     header,
     separator,
     ...rows,

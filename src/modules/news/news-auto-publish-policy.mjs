@@ -2,7 +2,7 @@ import { findOfficialOpenAiArticle } from "./official-document-enricher.mjs";
 
 const GOOD_IMPORTANCE = new Set(["medium", "high"]);
 const TRUSTED_SOURCES = new Set(["official", "high", "standard"]);
-export const NEWS_ANALYSIS_POLICY_VERSION = 19;
+export const NEWS_ANALYSIS_POLICY_VERSION = 20;
 
 function result(decision, code, reason) {
   return Object.freeze({ decision, code, reason });

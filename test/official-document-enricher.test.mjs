@@ -99,6 +99,7 @@ test("GPT-5.6 Fast 변경 기록의 프리뷰 가격 링크를 공개 표 문맥
   assert.equal(requested, "https://developers.openai.com/api/docs/pricing.md?latest-pricing=fast");
   assert.equal(enriched.original.contexts[0].label, "OpenAI 공식 Fast 가격표");
   assert.equal(enriched.original.contexts[0].url, "https://developers.openai.com/api/docs/pricing?latest-pricing=fast");
+  assert.match(enriched.original.contexts[0].content, /1M tokens \(100만 tokens\)/u);
   assert.match(enriched.original.contexts[0].content, /gpt-5\.6-sol.*\$20\.00.*\$90\.00/u);
   assert.match(enriched.original.contexts[0].content, /gpt-5\.6-luna.*\$0\.80.*\$3\.60/u);
 });
