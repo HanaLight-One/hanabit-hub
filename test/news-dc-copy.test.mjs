@@ -220,6 +220,35 @@ test("DC 원고의 OpenAI 문서 프리뷰 링크는 공개 주소로 교정한�
   assert.doesNotMatch(copy.bodyText, /vercel\.app/u);
 });
 
+test("OpenAI Fast 가격표는 DC 모바일에서 읽기 쉬운 문단으로 바꾼다", () => {
+  const sample = record();
+  sample.original.contexts = [{
+    relation: "official-document",
+    account: "OpenAI",
+    label: "OpenAI 공식 Fast 가격표",
+    url: "https://developers.openai.com/api/docs/pricing?latest-pricing=fast",
+  }];
+  sample.workflow.contextTranslations = [{
+    index: 1,
+    body: [
+      "Fast 모드의 USD 기준 100만 토큰당 가격입니다.",
+      "",
+      "| 모델 | 짧은 문맥 입력 | 짧은 문맥 캐시 입력 | 짧은 문맥 캐시 쓰기 | 짧은 문맥 출력 | 긴 문맥 입력 | 긴 문맥 캐시 입력 | 긴 문맥 캐시 쓰기 | 긴 문맥 출력 |",
+      "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+      "| gpt-5.6-sol | $10.00 | $1.00 | $12.50 | $60.00 | $20.00 | $2.00 | $25.00 | $90.00 |",
+      "| gpt-5.6-terra | $4.00 | $0.40 | $5.00 | $24.00 | $8.00 | $0.80 | $10.00 | $36.00 |",
+      "| gpt-5.6-luna | $0.40 | $0.04 | $0.50 | $2.40 | $0.80 | $0.08 | $1.00 | $3.60 |",
+    ].join("\n"),
+  }];
+
+  const copy = composeNewsDcCopy(sample);
+  assert.match(copy.bodyText, /Fast 모드 가격 · 100만 토큰 기준\(USD\)/u);
+  assert.match(copy.bodyText, /GPT-5\.6 Sol\n짧은 문맥: 입력 \$10\.00 · 캐시 입력 \$1\.00 · 캐시 쓰기 \$12\.50 · 출력 \$60\.00/u);
+  assert.match(copy.bodyText, /긴 문맥: 입력 \$0\.80 · 캐시 입력 \$0\.08 · 캐시 쓰기 \$1\.00 · 출력 \$3\.60/u);
+  assert.doesNotMatch(copy.bodyText, /^\|/mu);
+  assert.doesNotMatch(copy.bodyText, /\| ---/u);
+});
+
 test("DC 제목은 별도 게시 제목을 쓰고 긴 문장을 중간에서 자르지 않는다", () => {
   const profiles = new Map();
   const withHeadline = record();

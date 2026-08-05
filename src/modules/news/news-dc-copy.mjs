@@ -46,6 +46,12 @@ const OFFICIAL_RELEASE_LABELS = Object.freeze({
   "openai/openai-agents-python": "OpenAI Agents SDK Python",
   "openai/openai-agents-js": "OpenAI Agents SDK JavaScript",
 });
+const FAST_PRICE_CONTEXT_LABEL = "OpenAI 공식 Fast 가격표";
+const FAST_PRICE_MODELS = Object.freeze({
+  "gpt-5.6-sol": "GPT-5.6 Sol",
+  "gpt-5.6-terra": "GPT-5.6 Terra",
+  "gpt-5.6-luna": "GPT-5.6 Luna",
+});
 
 function safeText(value, maximum = 8_000) {
   return String(value ?? "").replace(/\r\n?/gu, "\n").trim().slice(0, maximum);
@@ -59,6 +65,46 @@ function stripMarkdownArtifacts(value) {
     .replace(/__([^_]+)__/gu, "$1")
     .replace(/`([^`\n]+)`/gu, "$1")
     .replace(/^[ \t]*[-*_]{3,}[ \t]*$/gmu, "");
+}
+
+function isFastPriceContext(context) {
+  if (context?.relation !== "official-document") return false;
+  if (context?.label === FAST_PRICE_CONTEXT_LABEL) return true;
+  try {
+    const url = new URL(context?.url);
+    return url.hostname.toLowerCase() === "developers.openai.com" &&
+      url.pathname === "/api/docs/pricing" &&
+      url.searchParams.get("latest-pricing") === "fast";
+  } catch {
+    return false;
+  }
+}
+
+function formatFastPriceContext(context, value) {
+  if (!isFastPriceContext(context)) return value;
+
+  const rows = new Map();
+  for (const line of String(value ?? "").split(/\r?\n/u)) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) continue;
+    const cells = trimmed.slice(1, -1).split("|").map((cell) => cell.trim());
+    const modelKey = cells[0]?.toLowerCase();
+    if (!(modelKey in FAST_PRICE_MODELS) || cells.length !== 9) continue;
+    if (!cells.slice(1).every((price) => /^\$\d+(?:\.\d+)?$/u.test(price))) continue;
+    rows.set(modelKey, cells.slice(1));
+  }
+  if (rows.size !== Object.keys(FAST_PRICE_MODELS).length) return value;
+
+  const modelBlocks = Object.entries(FAST_PRICE_MODELS).map(([modelKey, modelLabel]) => {
+    const [shortInput, shortCachedInput, shortCacheWrite, shortOutput,
+      longInput, longCachedInput, longCacheWrite, longOutput] = rows.get(modelKey);
+    return [
+      modelLabel,
+      `짧은 문맥: 입력 ${shortInput} · 캐시 입력 ${shortCachedInput} · 캐시 쓰기 ${shortCacheWrite} · 출력 ${shortOutput}`,
+      `긴 문맥: 입력 ${longInput} · 캐시 입력 ${longCachedInput} · 캐시 쓰기 ${longCacheWrite} · 출력 ${longOutput}`,
+    ].join("\n");
+  });
+  return ["Fast 모드 가격 · 100만 토큰 기준(USD)", ...modelBlocks].join("\n\n");
 }
 
 function releaseAwareTitle(record, value) {
@@ -210,7 +256,7 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
       const label = context?.relation === "official-document"
         ? `공식 문서 주요 내용 · ${owner}`
         : `관련 글 번역 · ${owner}`;
-      return section(label, translation?.body, counter);
+      return section(label, formatFastPriceContext(context, translation?.body), counter);
     }),
   ].filter(Boolean);
   const readerSummarySection = section("한눈에 보면", record.workflow.readerSummary, counter);
