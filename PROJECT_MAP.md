@@ -160,13 +160,16 @@ X 원문의 `t.co` 주소는 수집 단계에서 안전한 HTTPS 목적지로 �
 보존한다. 목적지가 X Article이면 일반 글에는 추가 비용을 쓰지 않고 해당 글에만 X API의
 Article 필드를 요청해 제목·미리보기·본문 블록을 별도 `x-article` 문맥으로 보강한다.
 Discord 또는 X 원문에 `openai.com/index/` 공식 발표 링크가 있으면
-`src/modules/news/official-document-enricher.mjs`가 문서 한 건만 읽어 별도
+`src/modules/news/official-document-enricher.mjs`가 필요한 공식 문서만 제한적으로 읽어 별도
 `official-document` 문맥으로 보강한다. OpenAI 페이지의 자동 요청 차단을 우회하기 위해
 공개 URL만 Jina Reader에 전달하며, 허용 호스트·경로·응답 출처·크기·시간을 고정 검증한다.
 키·쿠키·내부 주소는 전달하지 않는다. 문서 수집 또는 한국어 주요 내용 생성이 실패하면
 짧은 공지는 허브에 남기되 자동 게시 게이트가 보류한다. 무료 API는
 이 문맥을 줄단위 전체 번역이 아닌 ‘공식 문서 주요 내용’으로 정리하며, 해결과 부분 진전,
 수치·기능·제공 범위와 제한을 구분해 보존한다.
+공식 변경 기록에 남은 `developers-site-git-*-openai.vercel.app/api/docs/` 프리뷰 링크는
+공개 `developers.openai.com/api/docs/` 주소로 교정한다. GPT-5.6 Fast 변경 기록의 가격 링크는
+공개 Markdown 가격표에서 해당 세 모델의 Fast 표만 제한적으로 읽어 공식 문맥으로 붙인다.
 판정 완료 항목의 새 정책 재판정은 `POST /api/news/:id/reanalysis`, 결정론적 자동 게시
 가능성 표시는 `src/modules/news/news-auto-publish-policy.mjs`가 담당한다. 게이트는
 원문 전용 번역의 귀속 검증과 AI 해설 주의 문구가 없으면 자동 게시 가능으로 판정하지

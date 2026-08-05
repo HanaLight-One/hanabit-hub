@@ -208,6 +208,18 @@ test("공식 문서 보강은 관련 글과 구분한 주요 내용으로 표시
   assert.doesNotMatch(draft.bodyText, /관련 글 번역 · OpenAI 공식 문서/u);
 });
 
+test("DC 원고의 OpenAI 문서 프리뷰 링크는 공개 주소로 교정한다", () => {
+  const sample = record();
+  sample.source.type = "official-changelog";
+  sample.source.url = "https://developers.openai.com/api/docs/changelog#aug-5";
+  sample.original.links = [
+    "https://developers-site-git-agent-add-fast-openai.vercel.app/api/docs/pricing?latest-pricing=fast",
+  ];
+  const copy = composeNewsDcCopy(sample);
+  assert.match(copy.bodyText, /https:\/\/developers\.openai\.com\/api\/docs\/pricing\?latest-pricing=fast/u);
+  assert.doesNotMatch(copy.bodyText, /vercel\.app/u);
+});
+
 test("DC 제목은 별도 게시 제목을 쓰고 긴 문장을 중간에서 자르지 않는다", () => {
   const profiles = new Map();
   const withHeadline = record();

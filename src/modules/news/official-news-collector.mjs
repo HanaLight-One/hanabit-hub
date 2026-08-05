@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createPendingNewsStore } from "./news-item-store.mjs";
+import { normalizeOfficialMarkdownLink } from "./official-doc-url.mjs";
 
 const SOURCE_ID = /^[a-z0-9][a-z0-9-]{0,79}$/u;
 const REPOSITORY = /^openai\/[A-Za-z0-9._-]{1,80}$/u;
@@ -74,7 +75,8 @@ function linksFromMarkdown(value, baseUrl) {
   for (const match of String(value).matchAll(/\[[^\]]+\]\(([^)]+)\)/gu)) {
     try {
       const url = new URL(match[1], baseUrl);
-      if (url.protocol === "https:") links.push(url.href);
+      const normalized = normalizeOfficialMarkdownLink(url.href);
+      if (normalized) links.push(normalized);
     } catch {
       // 잘못된 링크 하나가 공식 변경 기록 전체를 막지 않게 한다.
     }

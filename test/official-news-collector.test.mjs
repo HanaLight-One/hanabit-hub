@@ -138,3 +138,45 @@ test("공식 Markdown 변경 기록도 최초 항목을 게시하지 않고 기�
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("공식 변경 기록의 OpenAI Vercel 프리뷰 링크는 공개 문서 주소로 저장한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-official-preview-link-"));
+  const docsSource = {
+    id: "openai-api-changelog",
+    type: "markdown-changelog",
+    repository: null,
+    url: "https://developers.openai.com/api/docs/changelog.md",
+    limit: 10,
+    enabled: true,
+  };
+  let markdown = "# Changelog\n\n## August, 2026\n\n### Aug 4\n\nExisting update.\n";
+  const collector = createOfficialNewsCollector({
+    stateRoot: root,
+    sources: [docsSource],
+    now: () => new Date("2026-08-06T00:00:00Z"),
+    async fetchImpl() { return new Response(markdown, { status: 200 }); },
+  });
+  try {
+    await collector.collectAll();
+    markdown = [
+      "# Changelog",
+      "",
+      "## August, 2026",
+      "",
+      "### Aug 5",
+      "",
+      "See [pricing details](https://developers-site-git-agent-add-fast-openai.vercel.app/api/docs/pricing?latest-pricing=fast).",
+      "",
+      "### Aug 4",
+      "",
+      "Existing update.",
+    ].join("\n");
+    const result = await collector.collectAll();
+    const saved = await createPendingNewsStore({ root }).read(result.ids[0]);
+    assert.deepEqual(saved.original.links, [
+      "https://developers.openai.com/api/docs/pricing?latest-pricing=fast",
+    ]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

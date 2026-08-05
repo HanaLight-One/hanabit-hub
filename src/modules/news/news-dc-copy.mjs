@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { findNewsSourceProfile } from "./news-source-profiles.mjs";
 import { createNewsAnalysisNotice } from "./news-analysis-notice.mjs";
 import { selectNewsDcHeadText } from "./news-dc-head-text.mjs";
+import { normalizeOfficialMarkdownLink } from "./official-doc-url.mjs";
 import newsDcHtml from "./news-dc-html.cjs";
 
 const { textToHtml } = newsDcHtml;
@@ -112,7 +113,7 @@ function isDirectMediaUrl(value) {
 
 function sourceLinks(record) {
   const candidates = [record?.source?.url, ...(record?.original?.links ?? [])]
-    .map(safeHttpUrl)
+    .map((value) => normalizeOfficialMarkdownLink(value) ?? safeHttpUrl(value))
     .filter(Boolean)
     .filter((url) => !isDirectMediaUrl(url));
   let unique = [...new Set(candidates)];

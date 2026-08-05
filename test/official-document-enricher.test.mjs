@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   enrichOfficialDocument,
   findOfficialOpenAiArticle,
+  findOfficialOpenAiPricing,
 } from "../src/modules/news/official-document-enricher.mjs";
 
 function record(links) {
@@ -63,6 +64,43 @@ test("응답 출처가 다르거나 읽기 실패면 기존 뉴스만 보존한�
     fetchImpl: async () => { throw new Error("network detail must not escape"); },
   });
   assert.equal(failed, item);
+});
+
+test("GPT-5.6 Fast 변경 기록의 프리뷰 가격 링크를 공개 표 문맥으로 보강한다", async () => {
+  const preview = "https://developers-site-git-agent-add-fast-openai.vercel.app/api/docs/pricing?latest-pricing=fast";
+  const item = {
+    source: { type: "official-changelog" },
+    original: {
+      content: "GPT-5.6 Fast mode now supports long-context requests exceeding 272K tokens.",
+      links: [preview],
+      contexts: [],
+    },
+  };
+  assert.equal(
+    findOfficialOpenAiPricing(item),
+    "https://developers.openai.com/api/docs/pricing?latest-pricing=fast",
+  );
+  let requested;
+  const enriched = await enrichOfficialDocument(item, {
+    fetchImpl: async (url) => {
+      requested = String(url);
+      return new Response([
+        "# Pricing",
+        "### Fast pricing data",
+        "",
+        "| Model | Short context input | Short context cached input | Short context cache writes | Short context output | Long context input | Long context cached input | Long context cache writes | Long context output |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| gpt-5.6-sol | $10.00 | $1.00 | $12.50 | $60.00 | $20.00 | $2.00 | $25.00 | $90.00 |",
+        "| gpt-5.6-terra | $4.00 | $0.40 | $5.00 | $24.00 | $8.00 | $0.80 | $10.00 | $36.00 |",
+        "| gpt-5.6-luna | $0.40 | $0.04 | $0.50 | $2.40 | $0.80 | $0.08 | $1.00 | $3.60 |",
+      ].join("\n"), { status: 200, headers: { "content-type": "text/markdown" } });
+    },
+  });
+  assert.equal(requested, "https://developers.openai.com/api/docs/pricing.md?latest-pricing=fast");
+  assert.equal(enriched.original.contexts[0].label, "OpenAI 공식 Fast 가격표");
+  assert.equal(enriched.original.contexts[0].url, "https://developers.openai.com/api/docs/pricing?latest-pricing=fast");
+  assert.match(enriched.original.contexts[0].content, /gpt-5\.6-sol.*\$20\.00.*\$90\.00/u);
+  assert.match(enriched.original.contexts[0].content, /gpt-5\.6-luna.*\$0\.80.*\$3\.60/u);
 });
 
 test("허용하지 않은 호스트와 OpenAI 비기사 경로는 읽지 않는다", async () => {
