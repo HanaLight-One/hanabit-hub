@@ -8,7 +8,7 @@ function sourceIdentity(record) {
     record?.source?.type === "official-changelog" &&
     record?.source?.provider === "openai-docs"
   ) {
-    return "OpenAI";
+    return "OpenAI API";
   }
   return "";
 }

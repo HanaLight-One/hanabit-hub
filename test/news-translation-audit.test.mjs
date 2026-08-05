@@ -171,7 +171,7 @@ test("OpenAI 공식 문서 소스는 독자 요약에서 OpenAI 출처명을 사
       title: "API 키별 사용량 필터 지원",
       body: "고객은 API 키별로 사용량 데이터를 필터링할 수 있습니다.",
     },
-    readerSummary: "OpenAI의 사용량 관리 도구에서 API 키별 데이터를 나눠 볼 수 있게 됐습니다.",
+    readerSummary: "OpenAI API의 사용량 관리 도구에서 API 키별 데이터를 나눠 볼 수 있게 됐습니다.",
     contextTranslations: [],
   });
   assert.equal(result.status, "passed");
