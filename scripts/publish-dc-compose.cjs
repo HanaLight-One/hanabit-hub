@@ -3,9 +3,12 @@ const { createRequire } = require("node:module");
 const fs = require("node:fs");
 const path = require("node:path");
 const { textToHtml } = require("../src/modules/news/news-dc-html.cjs");
+const {
+  canonicalDcComposerHeadText,
+  findGalleryHeadText,
+} = require("../src/modules/dc/dc-head-text.cjs");
 
 const MEDIA_TYPES = new Set(["image/gif", "image/jpeg", "image/png", "image/webp"]);
-const HEAD_TEXTS = new Set(["잡담", "🛠 작업", "❓ 질문", "💡 정보", "뉴스/소식", "AI창작", "프롬프트", "🔞 후방", "🎄 대회", "공지"]);
 const EMOJI_PATTERN = /\p{Extended_Pictographic}|\p{Regional_Indicator}|[\u{FE0F}\u{200D}\u{20E3}]/gu;
 const MARK_PATTERN = /\p{M}/gu;
 const MAX_IMAGES = 50;
@@ -45,7 +48,7 @@ function composeInlineContent(job) {
 
 function validateComposeJob(value, jobPath) {
   if (![1, 2].includes(value?.schemaVersion) || !/^[a-f0-9]{32}$/u.test(String(value.id ?? ""))) throw new Error("INVALID_JOB");
-  if (value.galleryId !== "chatgpt" || !HEAD_TEXTS.has(value.headTextName)) throw new Error("INVALID_TARGET");
+  if (value.galleryId !== "chatgpt" || !canonicalDcComposerHeadText(value.headTextName)) throw new Error("INVALID_TARGET");
   if (!String(value.title ?? "").trim() || !String(value.bodyText ?? "").trim()) throw new Error("EMPTY_COPY");
   if ([...String(value.title)].length > 80 || String(value.bodyText).length > 20_000) throw new Error("COPY_TOO_LARGE");
   const combined = `${value.title}\n${value.bodyText}`;
@@ -99,7 +102,7 @@ async function publish({ jobPath, publisherRoot }) {
   const dc = requirePublisher("@gurumnyang/dcinside.js");
   const FormDataCtor = requirePublisher("form-data");
   const heads = await dc.getGalleryHeadTexts({ galleryId: job.galleryId });
-  const head = heads.find((entry) => String(entry.name ?? "") === job.headTextName);
+  const head = findGalleryHeadText(heads, job.headTextName);
   if (!head) throw new Error("HEAD_TEXT_UNAVAILABLE");
   const id = process.env.DC_ID?.trim();
   const password = process.env.DC_PW;
@@ -149,4 +152,4 @@ async function main() {
 }
 
 if (require.main === module) main();
-module.exports = { validateComposeJob, composeInlineContent, safeDcUrl, withoutWatermark };
+module.exports = { validateComposeJob, composeInlineContent, safeDcUrl, withoutWatermark, findGalleryHeadText };

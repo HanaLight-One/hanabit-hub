@@ -62,6 +62,21 @@ test("GPT 이미지를 별도 보관하고 허브 이미지와 함께 DC 초안�
   assert.equal(preview.canPublish, true);
 });
 
+test("예전 후방 말머리 초안은 현재 DC 말머리로 정규화한다", async (context) => {
+  const { composer } = await fixture(context);
+  const draft = await composer.saveDraft({
+    headText: "🔞 후방",
+    title: "후방 말머리 호환 테스트",
+    bodyText: "본문입니다.",
+    images: [],
+  });
+  assert.equal(draft.headText, "🫣후방");
+  assert.equal(draft.preflight.ready, true);
+  const status = await composer.status();
+  assert.equal(status.headTexts.includes("🫣후방"), true);
+  assert.equal(status.headTexts.includes("🔞 후방"), false);
+});
+
 test("실제 게시 요청은 격리된 첨부 사본과 영수증을 한 번만 사용한다", async (context) => {
   const { png, archive, composer, jobs } = await fixture(context);
   const uploaded = await composer.upload({ filename: "one.png", contentType: "image/png", buffer: png });

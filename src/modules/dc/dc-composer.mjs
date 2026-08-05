@@ -3,13 +3,14 @@ import crypto from "node:crypto";
 import { copyFile, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
+import headTextContract from "./dc-head-text.cjs";
 
 const ID_PATTERN = /^[a-f0-9]{32}$/u;
 const IMAGE_ID_PATTERN = /^[a-f0-9]{64}$/u;
 const MEDIA_TYPES = new Map([
   ["image/gif", ".gif"], ["image/jpeg", ".jpg"], ["image/png", ".png"], ["image/webp", ".webp"],
 ]);
-const HEAD_TEXTS = Object.freeze(["잡담", "🛠 작업", "❓ 질문", "💡 정보", "뉴스/소식", "AI창작", "프롬프트", "🔞 후방", "🎄 대회", "공지"]);
+const { DC_COMPOSER_HEAD_TEXTS: HEAD_TEXTS, canonicalDcComposerHeadText } = headTextContract;
 const EMOJI_PATTERN = /\p{Extended_Pictographic}|\p{Regional_Indicator}|[\u{FE0F}\u{200D}\u{20E3}]/gu;
 const MARK_PATTERN = /\p{M}/gu;
 const FINAL_STATUSES = new Set(["posted", "ambiguous"]);
@@ -75,7 +76,7 @@ export function createDcComposer({
 
   function preflight({ headText, title, bodyText, images }) {
     const errors = [];
-    if (!HEAD_TEXTS.includes(headText)) errors.push("허용된 말머리를 선택해 주세요.");
+    if (!canonicalDcComposerHeadText(headText)) errors.push("허용된 말머리를 선택해 주세요.");
     if (!title.trim()) errors.push("제목을 입력해 주세요.");
     if ([...title].length > 80) errors.push("제목은 80자 이하여야 해요.");
     if (!bodyText.trim()) errors.push("본문을 입력해 주세요.");
@@ -210,7 +211,8 @@ export function createDcComposer({
     const id = input.id ? safeId(input.id) : crypto.randomUUID().replaceAll("-", "");
     const current = database.prepare("SELECT * FROM dc_drafts WHERE id = ?").get(id);
     if (FINAL_STATUSES.has(current?.status)) throw dcError("FINAL_DRAFT", "이미 게시 요청이 끝난 초안은 수정할 수 없습니다.");
-    const headText = String(input.headText ?? "잡담");
+    const requestedHeadText = String(input.headText ?? "잡담");
+    const headText = canonicalDcComposerHeadText(requestedHeadText) ?? requestedHeadText;
     const title = String(input.title ?? "").trim();
     const blocks = await normalizedLayout(input);
     const bodyText = blocks.filter((block) => block.type === "text").map((block) => block.text).join("\n\n").trim();
@@ -256,7 +258,7 @@ export function createDcComposer({
     const blocks = layout.map((block) => block?.type === "text"
       ? { type: "text", text: String(block.text ?? "") }
       : { type: "image", ...imageMap.get(`${block?.sourceType}:${block?.sourceId}`) }).filter((block) => block.type === "text" || block.sourceId);
-    return Object.freeze({ id, galleryId: row.gallery_id, headText: row.head_text, title: row.title, bodyText: row.body_text, blocks: Object.freeze(blocks), status: row.status, images: Object.freeze(images), createdAt: row.created_at, updatedAt: row.updated_at, publication: row.status === "posted" || row.status === "ambiguous" ? { status: row.status, submittedAt: row.submitted_at, postId: row.post_id, url: row.post_url } : null });
+    return Object.freeze({ id, galleryId: row.gallery_id, headText: canonicalDcComposerHeadText(row.head_text) ?? row.head_text, title: row.title, bodyText: row.body_text, blocks: Object.freeze(blocks), status: row.status, images: Object.freeze(images), createdAt: row.created_at, updatedAt: row.updated_at, publication: row.status === "posted" || row.status === "ambiguous" ? { status: row.status, submittedAt: row.submitted_at, postId: row.post_id, url: row.post_url } : null });
   }
 
   async function latestDraft() {

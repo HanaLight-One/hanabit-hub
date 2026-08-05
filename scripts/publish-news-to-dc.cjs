@@ -2,6 +2,7 @@ const { createRequire } = require("node:module");
 const { createHash } = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
+const { findGalleryHeadText } = require("../src/modules/dc/dc-head-text.cjs");
 const { safeBodyLink, textToHtml, textToHtmlWithCards } = require("../src/modules/news/news-dc-html.cjs");
 
 const EMOJI_PATTERN = /\p{Extended_Pictographic}|\p{Regional_Indicator}|[\u{FE0F}\u{200D}\u{20E3}]/gu;
@@ -126,7 +127,7 @@ async function publishNews({ jobPath, publisherRoot }) {
   const dc = publisherRequire("@gurumnyang/dcinside.js");
   const FormDataCtor = publisherRequire("form-data");
   const headTexts = await dc.getGalleryHeadTexts({ galleryId: job.galleryId });
-  const headText = headTexts.find((entry) => String(entry.name ?? "") === job.headTextName);
+  const headText = findGalleryHeadText(headTexts, job.headTextName);
   if (!headText) throw new Error("HEAD_TEXT_UNAVAILABLE");
 
   const credentials = automatedDcCredentials();

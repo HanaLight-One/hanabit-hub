@@ -8,13 +8,25 @@ import path from "node:path";
 import test from "node:test";
 
 const require = createRequire(import.meta.url);
-const { validateComposeJob, composeInlineContent } = require("../scripts/publish-dc-compose.cjs");
+const { validateComposeJob, composeInlineContent, findGalleryHeadText } = require("../scripts/publish-dc-compose.cjs");
 
 test("DC 편집기는 기존 하나빛 계정 변수를 유지한다", () => {
   const source = readFileSync(new URL("../scripts/publish-dc-compose.cjs", import.meta.url), "utf8");
   assert.match(source, /process\.env\.DC_ID/u);
   assert.match(source, /process\.env\.DC_PW/u);
   assert.doesNotMatch(source, /DC_ADMIN_BLUE_BADGE/u);
+});
+
+test("DC 말머리는 이모지와 공백이 바뀌어도 의미 이름으로 안전하게 찾는다", () => {
+  const heads = [
+    { id: "10", name: "💡정보" },
+    { id: "30", name: "🫣후방" },
+    { id: "90", name: "🎄대회" },
+  ];
+  assert.equal(findGalleryHeadText(heads, "💡 정보")?.id, "10");
+  assert.equal(findGalleryHeadText(heads, "🔞 후방")?.id, "30");
+  assert.equal(findGalleryHeadText(heads, "🎄 대회")?.id, "90");
+  assert.equal(findGalleryHeadText(heads, "공지"), null);
 });
 
 test("일반 DC 게시자는 격리 작업 폴더의 정확한 첨부와 내용 해시만 허용한다", async () => {
