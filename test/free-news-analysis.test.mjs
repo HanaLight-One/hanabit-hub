@@ -9,6 +9,19 @@ import {
   prepareNewsSourceText,
 } from "../src/modules/news/free-news-analysis.mjs";
 
+function assertStrictObjectSchemas(schema) {
+  if (!schema || typeof schema !== "object") return;
+  if (schema.type === "object") {
+    assert.equal(schema.additionalProperties, false);
+    assert.deepEqual(
+      [...(schema.required ?? [])].sort(),
+      Object.keys(schema.properties ?? {}).sort(),
+    );
+    Object.values(schema.properties ?? {}).forEach(assertStrictObjectSchemas);
+  }
+  if (schema.type === "array") assertStrictObjectSchemas(schema.items);
+}
+
 test("Discord 숨김 미디어 링크와 커스텀 이모지는 번역 입력에서 제거한다", () => {
   assert.equal(
     prepareNewsSourceText("Update rates[.](https://video.twimg.com/a.mp4)\n\n[Jump to blog post](<https://openai.com/news>) <:_:1362396578412892313>"),
@@ -81,8 +94,9 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
         assert.match(prompt, /MUST choose use_case when SOURCE or its direct CONTEXT explicitly describes a real person using AI/u);
         assert.match(prompt, /Never change an explicit use_case to inference/u);
         assert.equal(schema.type, "object");
-        assert.deepEqual(schema.required, ["translation", "readerSummary", "contextTranslations", "triage"]);
+        assert.deepEqual(schema.required, ["translation", "publicHeadline", "readerSummary", "contextTranslations", "triage"]);
         assert.equal(schema.additionalProperties, false);
+        assertStrictObjectSchemas(schema);
         assert.equal(schema.properties.readerSummary.maxLength, 180);
         assert.match(prompt, /readerSummary is a separate plain-Korean reader aid/u);
         assert.equal(schema.properties.contextTranslations.minItems, 1);
@@ -342,6 +356,7 @@ test("통합 응답이 관련 글 번역을 빠뜨리면 작은 별도 요청으
         const schema = JSON.parse(await readFile(schemaPath, "utf8"));
         if (outputPath.includes("context-output-")) {
           assert.deepEqual(schema.required, ["contextTranslations"]);
+          assertStrictObjectSchemas(schema);
           assert.equal(schema.properties.contextTranslations.minItems, 1);
           assert.equal(schema.properties.contextTranslations.maxItems, 1);
           assert.match(
@@ -349,7 +364,7 @@ test("통합 응답이 관련 글 번역을 빠뜨리면 작은 별도 요청으
             /Preserve meaningful paragraph breaks and list-item line breaks/u,
           );
         } else {
-          assert.deepEqual(schema.required, ["translation", "readerSummary", "contextTranslations", "triage"]);
+          assert.deepEqual(schema.required, ["translation", "publicHeadline", "readerSummary", "contextTranslations", "triage"]);
         }
         const value = outputPath.includes("context-output-")
           ? {

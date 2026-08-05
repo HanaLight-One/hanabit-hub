@@ -72,7 +72,7 @@ function analysisSchema(contextCount) {
         additionalProperties: false,
       },
     },
-    required: ["translation", "readerSummary", "contextTranslations", "triage"],
+    required: ["translation", "publicHeadline", "readerSummary", "contextTranslations", "triage"],
     additionalProperties: false,
   };
 }
