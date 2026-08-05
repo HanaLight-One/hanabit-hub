@@ -91,10 +91,8 @@ async function enrichOfficialPricing(record, { fetchImpl, timeoutMs }) {
   const target = findOfficialOpenAiPricing(record);
   if (!target) return record;
   const contexts = Array.isArray(record?.original?.contexts) ? record.original.contexts : [];
-  if (contexts.some((context) => context?.relation === "official-document" &&
-    canonicalOpenAiDeveloperDocUrl(context?.url) === target)) {
-    return record;
-  }
+  const existingIndex = contexts.findIndex((context) => context?.relation === "official-document" &&
+    canonicalOpenAiDeveloperDocUrl(context?.url) === target);
   try {
     const response = await fetchImpl(pricingMarkdownUrl(target), {
       headers: { accept: "text/markdown", "user-agent": "HanabitNewsLab/0.1" },
@@ -107,17 +105,21 @@ async function enrichOfficialPricing(record, { fetchImpl, timeoutMs }) {
     if (Buffer.byteLength(raw, "utf8") > MAX_DOCUMENT_BYTES) return record;
     const content = fastPricingContext(raw);
     if (!content) return record;
+    const pricingContext = {
+      relation: "official-document",
+      account: "OpenAI",
+      label: "OpenAI 공식 Fast 가격표",
+      content,
+      url: target,
+    };
+    const nextContexts = existingIndex >= 0
+      ? contexts.map((context, index) => index === existingIndex ? pricingContext : context)
+      : [pricingContext, ...contexts];
     return {
       ...record,
       original: {
         ...record.original,
-        contexts: [{
-          relation: "official-document",
-          account: "OpenAI",
-          label: "OpenAI 공식 Fast 가격표",
-          content,
-          url: target,
-        }, ...contexts].slice(0, 3),
+        contexts: nextContexts.slice(0, 3),
       },
     };
   } catch {
