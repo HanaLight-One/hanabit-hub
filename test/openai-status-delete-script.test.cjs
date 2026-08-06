@@ -8,6 +8,7 @@ const {
   classifyDeleteError,
   classifyDeleteResult,
   validateJob,
+  verifyPostVisibility,
 } = require("../scripts/delete-news-dc-post.cjs");
 
 test("상태 글 삭제자는 파딱 전용 계정만 선택한다", () => {
@@ -57,4 +58,29 @@ test("삭제 실패는 비밀 응답 대신 안전한 원인 코드로만 분류
     status: "ambiguous-no-retry",
     reason: "DELETE_REQUEST_UNCERTAIN",
   });
+});
+
+test("삭제 뒤 공개 페이지에서 정확한 글 번호의 존재 여부를 다시 확인한다", async () => {
+  const present = await verifyPostVisibility({
+    galleryId: "chatgpt",
+    postId: "120854",
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      async text() { return '<input id="no" name="no" type="hidden" value="120854">'; },
+    }),
+  });
+  const absent = await verifyPostVisibility({
+    galleryId: "chatgpt",
+    postId: "120854",
+    fetchImpl: async () => ({ ok: false, status: 404, async text() { return ""; } }),
+  });
+  const unknown = await verifyPostVisibility({
+    galleryId: "chatgpt",
+    postId: "120854",
+    fetchImpl: async () => ({ ok: true, status: 200, async text() { return "점검 페이지"; } }),
+  });
+  assert.equal(present, "present");
+  assert.equal(absent, "absent");
+  assert.equal(unknown, "unknown");
 });

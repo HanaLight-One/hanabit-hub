@@ -10,6 +10,8 @@ const DELETE_REASONS = new Set([
   "DELETE_KEY_MISSING",
   "DELETE_NOT_CONFIRMED",
   "DELETE_REQUEST_UNCERTAIN",
+  "POST_STILL_VISIBLE",
+  "PUBLIC_ABSENCE_CONFIRMED",
 ]);
 
 function publicDeleteResult(value, postId) {

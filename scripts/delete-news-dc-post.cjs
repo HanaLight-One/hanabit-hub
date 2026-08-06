@@ -48,6 +48,39 @@ function classifyDeleteResult(result) {
   return { status: "ambiguous-no-retry", reason: "DELETE_NOT_CONFIRMED" };
 }
 
+async function verifyPostVisibility({ galleryId, postId, userAgent, fetchImpl = fetch }) {
+  const target = new URL(`https://m.dcinside.com/board/${encodeURIComponent(galleryId)}/${encodeURIComponent(postId)}`);
+  target.searchParams.set("hanabit_delete_verify", Date.now().toString());
+  let response;
+  try {
+    response = await fetchImpl(target.href, {
+      headers: {
+        "user-agent": userAgent || "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Mobile Safari/537.36",
+        "cache-control": "no-cache",
+        pragma: "no-cache",
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(8_000),
+    });
+  } catch {
+    return "unknown";
+  }
+  if (response.status === 404 || response.status === 410) return "absent";
+  if (!response.ok) return "unknown";
+  const html = String(await response.text()).slice(0, 500_000);
+  const escapedPostId = String(postId).replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  const exactPostInput = new RegExp(
+    `<input[^>]+(?:id|name)=["']no["'][^>]+value=["']${escapedPostId}["']|` +
+    `<input[^>]+value=["']${escapedPostId}["'][^>]+(?:id|name)=["']no["']`,
+    "iu",
+  );
+  if (exactPostInput.test(html)) return "present";
+  if (/삭제된 게시물|존재하지 않는 게시물|게시물이 존재하지|해당 게시물은 존재하지/iu.test(html)) {
+    return "absent";
+  }
+  return "unknown";
+}
+
 async function deleteNewsPost({ jobPath, publisherRoot }) {
   if (process.env.PUBLISH_DRY_RUN !== "false") throw new Error("DRY_RUN_ENABLED");
   const job = validateJob(JSON.parse(fs.readFileSync(jobPath, "utf8")), jobPath);
@@ -72,24 +105,28 @@ async function deleteNewsPost({ jobPath, publisherRoot }) {
     postId: String(job.postId),
     submittedAt: new Date().toISOString(),
   });
-  let result;
+  let outcome;
   try {
-    result = await dc.deleteMobilePost({
+    const result = await dc.deleteMobilePost({
       galleryId: job.galleryId,
       postId: String(job.postId),
       jar: login.jar,
       userAgent,
     });
+    outcome = classifyDeleteResult(result);
   } catch (error) {
-    const failure = classifyDeleteError(error);
-    writeResult(job.resultPath, {
-      ...failure,
-      postId: String(job.postId),
-      submittedAt: new Date().toISOString(),
-    });
-    return;
+    outcome = classifyDeleteError(error);
   }
-  const outcome = classifyDeleteResult(result);
+  const visibility = await verifyPostVisibility({
+    galleryId: job.galleryId,
+    postId: String(job.postId),
+    userAgent,
+  });
+  if (visibility === "absent") {
+    outcome = { status: "deleted", reason: "PUBLIC_ABSENCE_CONFIRMED" };
+  } else if (visibility === "present") {
+    outcome = { status: "failed-preflight", reason: "POST_STILL_VISIBLE" };
+  }
   writeResult(job.resultPath, {
     ...outcome,
     postId: String(job.postId),
@@ -119,4 +156,5 @@ module.exports = {
   classifyDeleteError,
   classifyDeleteResult,
   validateJob,
+  verifyPostVisibility,
 };
