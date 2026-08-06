@@ -29,6 +29,25 @@ function validateJob(value, jobPath) {
   return value;
 }
 
+function classifyDeleteError(error) {
+  const message = String(error?.message ?? "");
+  if (message === "CSRF 토큰을 찾을 수 없습니다.") {
+    return { status: "failed-preflight", reason: "CSRF_TOKEN_MISSING" };
+  }
+  if (message === "삭제용 키(con_key)를 얻지 못했습니다.") {
+    return { status: "failed-preflight", reason: "DELETE_KEY_MISSING" };
+  }
+  return { status: "ambiguous-no-retry", reason: "DELETE_REQUEST_UNCERTAIN" };
+}
+
+function classifyDeleteResult(result) {
+  if (result?.success === true) return { status: "deleted", reason: "CONFIRMED" };
+  if (String(result?.message ?? "").toLowerCase() === "captcha") {
+    return { status: "failed-preflight", reason: "CAPTCHA_REQUIRED" };
+  }
+  return { status: "ambiguous-no-retry", reason: "DELETE_NOT_CONFIRMED" };
+}
+
 async function deleteNewsPost({ jobPath, publisherRoot }) {
   if (process.env.PUBLISH_DRY_RUN !== "false") throw new Error("DRY_RUN_ENABLED");
   const job = validateJob(JSON.parse(fs.readFileSync(jobPath, "utf8")), jobPath);
@@ -61,16 +80,18 @@ async function deleteNewsPost({ jobPath, publisherRoot }) {
       jar: login.jar,
       userAgent,
     });
-  } catch {
+  } catch (error) {
+    const failure = classifyDeleteError(error);
     writeResult(job.resultPath, {
-      status: "ambiguous-no-retry",
+      ...failure,
       postId: String(job.postId),
       submittedAt: new Date().toISOString(),
     });
     return;
   }
+  const outcome = classifyDeleteResult(result);
   writeResult(job.resultPath, {
-    status: result?.success === true ? "deleted" : "ambiguous-no-retry",
+    ...outcome,
     postId: String(job.postId),
     submittedAt: new Date().toISOString(),
   });
@@ -93,5 +114,9 @@ async function main() {
 
 if (require.main === module) main();
 
-module.exports = { automatedDcCredentials, validateJob };
-
+module.exports = {
+  automatedDcCredentials,
+  classifyDeleteError,
+  classifyDeleteResult,
+  validateJob,
+};

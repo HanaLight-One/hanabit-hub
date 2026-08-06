@@ -8,6 +8,7 @@ import {
   normalizeOpenAIStatusSummary,
   OPENAI_STATUS_SUMMARY_URL,
 } from "../src/modules/news/openai-status-monitor.mjs";
+import { createPendingNewsStore } from "../src/modules/news/news-item-store.mjs";
 
 function incident({ id = "incident-1", update = "update-1", status = "investigating" } = {}) {
   return {
@@ -107,6 +108,24 @@ test("자동 게시 영수증이 있는 장애가 사라지면 복구완료 후�
   const recovered = await monitor.poll();
   assert.equal(recovered.status, "created");
   assert.equal(recovered.phase, "recovered");
+});
+
+test("사용자가 거절한 복구완료 후보를 게시 제외하고 삭제된 현재 글을 정리한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-status-"));
+  const monitor = createOpenAIStatusMonitor({ stateRoot: root, fetchImpl: responder([[], [incident()], []]) });
+  await monitor.poll();
+  const outage = await monitor.poll();
+  await monitor.confirmPublished(outage.snapshotHash, { postId: "120854", url: "https://gall.dcinside.com/example" });
+  const recovered = await monitor.poll();
+  const suppressed = await monitor.suppressPendingSnapshot(recovered.id, { deletedPostId: "120854" });
+  assert.equal(suppressed.status, "suppressed");
+  assert.equal(suppressed.currentPostCleared, true);
+  const state = await monitor.readState();
+  assert.equal(state.currentPost, null);
+  assert.equal(state.pendingSnapshot, null);
+  const item = await createPendingNewsStore({ root }).read(recovered.id);
+  assert.equal(item.workflow.status, "ignored");
+  assert.equal(item.internal.openAIStatus.publicationSuppressionReason, "user-request");
 });
 
 test("수동 기준선 장애가 바로 끝나도 복구 글을 만들지 않는다", async () => {

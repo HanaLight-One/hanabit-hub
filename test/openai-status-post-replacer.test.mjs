@@ -55,3 +55,32 @@ test("명시적으로 채택한 수동 글도 다음 상태 글 게시 뒤 한 �
   assert.equal((await replacer.replace(adopted)).status, "deleted");
   assert.equal(calls, 1);
 });
+
+test("사람이 명시 승인한 삭제는 기존 애매한 영수증과 분리해 한 번만 실행한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-replace-"));
+  let calls = 0;
+  const replacer = createOpenAIStatusPostReplacer({
+    root,
+    publisherRoot: root,
+    deleteScriptPath: path.join(root, "delete.cjs"),
+    runDelete: async ({ jobPath }) => {
+      calls += 1;
+      const job = JSON.parse(await readFile(jobPath, "utf8"));
+      await writeFile(job.resultPath, JSON.stringify({
+        status: "failed-preflight",
+        postId: job.postId,
+        reason: "CAPTCHA_REQUIRED",
+      }), "utf8");
+    },
+  });
+  const previous = { postId: "120854", ownership: "automatic" };
+  const first = await replacer.replace(previous, { humanAuthorization: "a1b2c3d4e5f6" });
+  const second = await replacer.replace(previous, { humanAuthorization: "a1b2c3d4e5f6" });
+  assert.deepEqual(first, { status: "failed-preflight", postId: "120854", reason: "CAPTCHA_REQUIRED" });
+  assert.deepEqual(second, first);
+  assert.equal(calls, 1);
+  await assert.rejects(
+    () => replacer.replace(previous, { humanAuthorization: "../unsafe" }),
+    /식별자가 올바르지 않습니다/u,
+  );
+});

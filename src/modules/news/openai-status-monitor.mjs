@@ -426,6 +426,46 @@ export function createOpenAIStatusMonitor({
     });
   }
 
+  async function suppressPendingSnapshot(idValue, { deletedPostId = null } = {}) {
+    const id = String(idValue ?? "");
+    if (!/^[a-f0-9]{32}$/u.test(id)) {
+      throw new TypeError("게시하지 않을 상태 뉴스 ID가 올바르지 않습니다.");
+    }
+    const state = await readState();
+    if (!state || state.pendingSnapshot?.id !== id) {
+      throw new Error("현재 대기 중인 상태 뉴스와 게시 제외 요청이 일치하지 않습니다.");
+    }
+    const deleted = deletedPostId !== null;
+    if (deleted && String(state.currentPost?.postId ?? "") !== String(deletedPostId)) {
+      throw new Error("삭제 확인 글 번호와 현재 상태 글 영수증이 일치하지 않습니다.");
+    }
+    await store.update(id, (current) => ({
+      ...current,
+      workflow: { ...current.workflow, status: "ignored" },
+      internal: {
+        ...current.internal,
+        openAIStatus: {
+          ...current.internal?.openAIStatus,
+          publicationSuppressedAt: now().toISOString(),
+          publicationSuppressionReason: "user-request",
+        },
+      },
+    }));
+    await saveState({
+      ...state,
+      currentPost: deleted ? null : state.currentPost,
+      pendingSnapshot: null,
+      pendingReplacement: null,
+      history: [...state.history.slice(-99), {
+        event: "suppressed",
+        id,
+        deletedPostId: deleted ? String(deletedPostId) : null,
+        suppressedAt: now().toISOString(),
+      }],
+    });
+    return { status: "suppressed", id, currentPostCleared: deleted };
+  }
+
   return Object.freeze({
     poll,
     readState,
@@ -433,5 +473,6 @@ export function createOpenAIStatusMonitor({
     adoptProtectedPost,
     authorizeAdoptedPostReplacement,
     recordReplacement,
+    suppressPendingSnapshot,
   });
 }

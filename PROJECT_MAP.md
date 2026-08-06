@@ -150,7 +150,9 @@ OGP 조회 실패 시 일반 링크를 유지해 게시 자체는 막지 않는�
 전체 활성 장애가 사라지면 `[복구완료]` 원고를 같은 방식으로 게시한다. 수동 글은 기본적으로 삭제하지 않되, 사용자가 정확한 글 번호를
 현재 장애 기준 글로 지정하고 교체를 명시적으로 허용한 경우에만 다음 상태 글 성공 뒤 삭제한다.
 감시기 영수증 밖의 글은 삭제하지 않으며, 삭제 결과가 불명확하면 `ambiguous-no-retry`로 끝내고 사람 확인 알림을 보낸다. 삭제 실행 경계는
-`src/modules/news/openai-status-post-replacer.mjs`와 `scripts/delete-news-dc-post.cjs`다.
+`src/modules/news/openai-status-post-replacer.mjs`와 `scripts/delete-news-dc-post.cjs`다. 삭제 실패는
+캡차·CSRF·삭제 키 등 안전한 원인 코드로만 기록하고 자동 재시도하지 않는다. 사람이 특정 글 번호를
+명시 승인한 경우에만 기존 영수증과 분리된 일회성 삭제를 허용하며, 거절된 상태 원고는 게시 제외로 닫는다.
 뉴스 재분석은 `POST /api/news/:id/analysis-retry`에서 명시적 확인값을 받은
 `translation_failed` 항목에만 허용하며 이미지 분석 API는 호출하지 않는다.
 무료 API 뉴스 분석은 공용 Responses API 텍스트 실행기에 요청별 strict JSON Schema를

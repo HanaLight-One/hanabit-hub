@@ -5,6 +5,8 @@ const path = require("node:path");
 const test = require("node:test");
 const {
   automatedDcCredentials,
+  classifyDeleteError,
+  classifyDeleteResult,
   validateJob,
 } = require("../scripts/delete-news-dc-post.cjs");
 
@@ -40,4 +42,19 @@ test("상태 글 삭제 작업은 chatgpt 글 번호와 고정 결과 경로만 
     postId: "120600",
     resultPath: path.join(root, "other.json"),
   }, jobPath), /INVALID_RESULT_PATH/u);
+});
+
+test("삭제 실패는 비밀 응답 대신 안전한 원인 코드로만 분류한다", () => {
+  assert.deepEqual(classifyDeleteResult({ success: false, message: "captcha" }), {
+    status: "failed-preflight",
+    reason: "CAPTCHA_REQUIRED",
+  });
+  assert.deepEqual(classifyDeleteError(new Error("CSRF 토큰을 찾을 수 없습니다.")), {
+    status: "failed-preflight",
+    reason: "CSRF_TOKEN_MISSING",
+  });
+  assert.deepEqual(classifyDeleteError(new Error("network details")), {
+    status: "ambiguous-no-retry",
+    reason: "DELETE_REQUEST_UNCERTAIN",
+  });
 });
