@@ -255,7 +255,9 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
       const owner = context?.label || context?.account || `관련 글 ${index}`;
       const label = context?.relation === "official-document"
         ? `공식 문서 주요 내용 · ${owner}`
-        : `관련 글 번역 · ${owner}`;
+        : context?.relation === "public-background"
+          ? `인물 소개 · ${owner}`
+          : `관련 글 번역 · ${owner}`;
       return section(label, formatFastPriceContext(context, translation?.body), counter);
     }),
   ].filter(Boolean);

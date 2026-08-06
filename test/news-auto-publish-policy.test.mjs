@@ -111,3 +111,23 @@ test("신뢰 인물이 연결한 공식 활용 사례는 중간 중요도도 후
   assert.equal(result.decision, "eligible");
   assert.equal(result.code, "trusted_use_case");
 });
+
+test("인물 합류 공지는 공개 이력과 독자 설명이 있어야 자동 게시한다", () => {
+  const item = record("official");
+  item.original = {
+    content: "Very excited to welcome @somebody to the Codex team",
+    contexts: [],
+  };
+  const missing = evaluateNewsAutoPublish(item, profile);
+  assert.equal(missing.decision, "human_review");
+  assert.equal(missing.code, "person_context_missing");
+
+  item.original.contexts = [{
+    relation: "public-background",
+    account: "somebody",
+    content: "Public career facts",
+  }];
+  item.workflow.contextTranslations = [{ index: 1, body: "공개된 주요 경력" }];
+  item.workflow.readerSummary = "이 인물의 주요 경력과 새 팀에서의 의미를 설명합니다.";
+  assert.equal(evaluateNewsAutoPublish(item, profile).decision, "eligible");
+});

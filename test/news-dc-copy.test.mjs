@@ -208,6 +208,23 @@ test("공식 문서 보강은 관련 글과 구분한 주요 내용으로 표시
   assert.doesNotMatch(draft.bodyText, /관련 글 번역 · OpenAI 공식 문서/u);
 });
 
+test("인물 공개 이력은 관련 글과 구분한 소개로 표시한다", () => {
+  const sample = record();
+  sample.original.contexts = [{
+    relation: "public-background",
+    account: "nikitabier",
+    label: "Nikita Bier 공개 이력",
+    content: "Public career background",
+  }];
+  sample.workflow.contextTranslations = [{
+    index: 1,
+    body: "tbh와 Gas를 만든 소비자 제품 전문가입니다.",
+  }];
+  const draft = composeNewsDcCopy(sample);
+  assert.match(draft.bodyText, /인물 소개 · Nikita Bier 공개 이력/u);
+  assert.doesNotMatch(draft.bodyText, /관련 글 번역 · Nikita Bier 공개 이력/u);
+});
+
 test("DC 원고의 OpenAI 문서 프리뷰 링크는 공개 주소로 교정한다", () => {
   const sample = record();
   sample.source.type = "official-changelog";

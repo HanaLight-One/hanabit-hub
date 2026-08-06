@@ -9,6 +9,7 @@ import {
   NEWS_TRANSLATION_AUDIT_REVIEWER,
 } from "./news-translation-audit.mjs";
 import { enrichOfficialDocument } from "./official-document-enricher.mjs";
+import { enrichMentionedPersonContext } from "./news-person-context.mjs";
 
 const OFFICIAL_TYPES = new Set([
   "discord-announcement",
@@ -77,7 +78,8 @@ export function createNewsProcessor({
       let record = await store.read(id);
       if (record.workflow?.status !== "pending_translation") return record;
       try {
-        const enriched = await officialDocumentEnricher(record);
+        const personEnriched = enrichMentionedPersonContext(record);
+        const enriched = await officialDocumentEnricher(personEnriched);
         if (enriched !== record) {
           record = await store.update(id, () => enriched);
         }

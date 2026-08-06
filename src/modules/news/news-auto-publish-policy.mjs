@@ -1,8 +1,9 @@
 import { findOfficialOpenAiArticle } from "./official-document-enricher.mjs";
+import { isPersonnelAnnouncement } from "./news-person-context.mjs";
 
 const GOOD_IMPORTANCE = new Set(["medium", "high"]);
 const TRUSTED_SOURCES = new Set(["official", "high", "standard"]);
-export const NEWS_ANALYSIS_POLICY_VERSION = 22;
+export const NEWS_ANALYSIS_POLICY_VERSION = 23;
 
 function result(decision, code, reason) {
   return Object.freeze({ decision, code, reason });
@@ -40,6 +41,19 @@ export function evaluateNewsAutoPublish(record, sourceProfile = null) {
         "human_review",
         "official_document_untranslated",
         "연결된 OpenAI 공식 문서의 수집과 한국어 요약이 끝나지 않아 자동 게시하지 않아요.",
+      );
+    }
+  }
+  if (isPersonnelAnnouncement(record)) {
+    const contexts = Array.isArray(record?.original?.contexts) ? record.original.contexts : [];
+    const backgroundIndex = contexts.findIndex((context) => context?.relation === "public-background");
+    const translated = (workflow.contextTranslations ?? []).find((entry) =>
+      Number(entry?.index) === backgroundIndex + 1 && String(entry?.body ?? "").trim());
+    if (backgroundIndex < 0 || !translated || !String(workflow.readerSummary ?? "").trim()) {
+      return result(
+        "human_review",
+        "person_context_missing",
+        "인물 합류 소식에 누구인지와 새 팀에서의 의미를 설명할 공개 이력이 부족해 자동 게시하지 않아요.",
       );
     }
   }
