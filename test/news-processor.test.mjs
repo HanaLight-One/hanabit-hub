@@ -246,7 +246,7 @@ test("현재 정책 뉴스도 분석 모델이 바뀌면 새 모델로 다시 �
     await processor.process(id);
     await store.update(id, (record) => ({
       ...record,
-      workflow: { ...record.workflow, analysisModel: "gpt-5.4-mini-2026-03-17" },
+      workflow: { ...record.workflow, analysisModel: "gpt-legacy-test" },
     }));
     const reprocessed = await processor.reprocess(id);
     assert.equal(calls, 2);

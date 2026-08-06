@@ -113,6 +113,9 @@ function readerSummary(value) {
   if ([...text].length > 180) {
     throw new Error("독자 요약은 180자 이하여야 합니다.");
   }
+  if (text && !/(?:습니다|입니다|됩니다|합니다|있어요|없어요|해요|예요|이에요|돼요)[.!?]?$/u.test(text)) {
+    throw new Error("독자 요약은 자연스러운 존댓말 문장으로 끝나야 합니다.");
+  }
   return text;
 }
 
@@ -170,6 +173,9 @@ function containsRetryInstruction(value) {
 
 function retryCorrection(error) {
   const message = String(error?.message ?? "");
+  if (message.includes("존댓말")) {
+    return "The previous readerSummary ended in memo-style Korean. Rewrite it in natural polite Korean and end it with 합니다, 입니다, 있습니다, or another equally natural polite ending.";
+  }
   if (message.includes("자립·가능 의미")) {
     return "The previous translation flattened empower into generic assistance. Explicitly preserve that the person can do the action themselves.";
   }
@@ -312,7 +318,7 @@ function buildPrompt(record) {
     "Translate empower or empowering as enabling the person to do something themselves. Do not flatten it into a generic Korean label meaning only help or assistance.",
     "The translation object must contain only SOURCE TEXT in translation.body. Do not merge any CONTEXT statement into translation.body. The only exception for translation.title is the emoji, punctuation, or too-short SOURCE headline fallback described above.",
     "translation.body must contain the complete Korean translation of the meaningful SOURCE TEXT. Do not move the translation only into title, and omit URLs from translated text.",
-    "readerSummary is a separate plain-Korean reader aid, never part of translation.body. For an SDK, library, framework, package, or developer-tool release, first explain in plain Korean what the named software is used to build or manage; never assume readers recognize the product name. Then explain what kind of user-visible or developer-visible experience the listed changes improve. For any dense technical release, changelog, or long official update, use one or two sentences, rely only on SOURCE and directly linked CONTEXT, distinguish fixes from new features, and do not promise a future benefit when the source describes an already released change. Keep it at most 180 Korean characters and omit URLs.",
+    "readerSummary is a separate plain-Korean reader aid, never part of translation.body. Write it as natural Korean addressed politely to readers: end it with 합니다, 입니다, 있습니다, 해요, or another natural polite ending, never memo-style endings such as -다, -한다, or -있다. For an SDK, library, framework, package, or developer-tool release, first explain in plain Korean what the named software is used to build or manage; never assume readers recognize the product name. Then explain what kind of user-visible or developer-visible experience the listed changes improve. For any dense technical release, changelog, or long official update, use one or two sentences, rely only on SOURCE and directly linked CONTEXT, distinguish fixes from new features, and do not promise a future benefit when the source describes an already released change. Keep it at most 180 Korean characters and omit URLs.",
     "For a hiring, appointment, or team-joining announcement, readerSummary must briefly say who the person is and why their documented experience is relevant. Use only supplied public-background CONTEXT, distinguish documented career facts from implications, and state when the exact new role is not disclosed. If no public-background CONTEXT is supplied and the person is not explained by SOURCE, do not invent a biography: choose review and leave readerSummary empty.",
     "When SOURCE is already short and plain enough that a separate explanation would merely repeat it, return readerSummary as an empty string.",
     "Preserve meaningful paragraph breaks and list-item line breaks from SOURCE and CONTEXT in every translated body. Do not flatten a multi-line post into one paragraph.",
@@ -428,7 +434,7 @@ export async function invokeFreeNewsAnalysis(
     runtimeRoot,
     pythonExecutablePath = null,
     keyStorePath = null,
-    model = "gpt-5.4-mini-2026-03-17",
+    model = "gpt-5.6-terra",
     reasoningEffort = "none",
     runProcess = run,
     wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),

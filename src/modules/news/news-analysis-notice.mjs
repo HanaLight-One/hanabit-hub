@@ -1,11 +1,10 @@
 const MODEL_LABELS = Object.freeze({
-  "gpt-5.4-mini-2026-03-17": "GPT-5.4 mini",
   "gpt-5.6-terra": "GPT-5.6 Terra",
 });
 
 export function createNewsAnalysisNotice({
   codexReviewed = false,
-  model = "gpt-5.4-mini-2026-03-17",
+  model = "gpt-5.6-terra",
 } = {}) {
   const modelLabel = MODEL_LABELS[model] ?? (/^[a-z0-9][a-z0-9._-]{0,99}$/u.test(model) ? model : "AI 모델");
   return codexReviewed

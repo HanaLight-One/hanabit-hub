@@ -3,7 +3,7 @@ import { isPersonnelAnnouncement } from "./news-person-context.mjs";
 
 const GOOD_IMPORTANCE = new Set(["medium", "high"]);
 const TRUSTED_SOURCES = new Set(["official", "high", "standard"]);
-export const NEWS_ANALYSIS_POLICY_VERSION = 23;
+export const NEWS_ANALYSIS_POLICY_VERSION = 24;
 
 function result(decision, code, reason) {
   return Object.freeze({ decision, code, reason });

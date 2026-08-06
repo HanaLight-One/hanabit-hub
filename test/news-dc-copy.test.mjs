@@ -25,7 +25,7 @@ function record() {
         reason: "반복 작업 자동화 방향을 보여주는 초기 신호입니다.",
         advice: "‘제작 보조’ 쪽으로 조심스럽게 쓰세요. 공개 기능처럼 단정하지 말고 프레이밍하세요.",
       },
-      analysisNotice: "주의: 아래 해설은 GPT-5.4 mini가 정리한 내용입니다. 원문 번역이 아니며, 최종 판단은 독자에게 있습니다.",
+      analysisNotice: "주의: 아래 해설은 GPT-5.6 Terra가 정리한 내용입니다. 원문 번역이 아니며, 최종 판단은 독자에게 있습니다.",
     },
     media: [{ file: "media/01.png" }, { file: "media/02.png" }],
   };

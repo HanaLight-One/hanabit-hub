@@ -14,7 +14,7 @@ const DEFAULT_CONFIG = Object.freeze({
     themeThumbnails: { enabled: false },
     fortune: { enabled: false },
     news: {
-      analysisModel: "gpt-5.4-mini-2026-03-17",
+      analysisModel: "gpt-5.6-terra",
       analysisReasoningEffort: "none",
       codexReview: { enabled: false, executablePath: "", dailyLimit: 4 },
       dcPublisher: {

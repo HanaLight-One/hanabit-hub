@@ -32,7 +32,7 @@ async function fixture({ approved = true, withMedia = true } = {}) {
       status: approved ? "approved_for_dc" : "pending_review",
       translation: { title: "새 소식", body: "번역 본문" },
       triage: { decision: "publish", evidenceTag: "official", boardCategory: "news", reason: "공식 소식", advice: "세부 범위는 확인 필요" },
-      analysisNotice: "주의: 아래 해설은 GPT-5.4 mini가 정리한 내용입니다. 원문 번역이 아니며, 최종 판단은 독자에게 있습니다.",
+      analysisNotice: "주의: 아래 해설은 GPT-5.6 Terra가 정리한 내용입니다. 원문 번역이 아니며, 최종 판단은 독자에게 있습니다.",
       dcApproval: approved ? { status: "approved", approvedAt: "2026-08-02T00:01:00Z" } : null,
       dcPublication: null,
       analysisPolicyVersion: NEWS_ANALYSIS_POLICY_VERSION,

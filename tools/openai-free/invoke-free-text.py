@@ -14,7 +14,7 @@ import openai
 from openai import OpenAI
 
 
-DEFAULT_MODEL = "gpt-5.4-mini-2026-03-17"
+DEFAULT_MODEL = "gpt-5.6-terra"
 SMOKE_PROMPT = "Reply with READY only."
 
 

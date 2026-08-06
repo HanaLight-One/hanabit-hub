@@ -230,7 +230,7 @@ function publicItem(record, sourceProfiles, analysisModel) {
         !record?.workflow?.dcPublication &&
         (
           (Number(record?.workflow?.analysisPolicyVersion) || 0) < NEWS_ANALYSIS_POLICY_VERSION ||
-          (record?.workflow?.analysisModel ?? "gpt-5.4-mini-2026-03-17") !== analysisModel
+          (record?.workflow?.analysisModel ?? null) !== analysisModel
         ),
     },
     collectedAt: String(record?.collectedAt ?? ""),
@@ -241,7 +241,7 @@ function publicItem(record, sourceProfiles, analysisModel) {
 export function createNewsReader({
   root,
   sourceProfiles = new Map(),
-  analysisModel = "gpt-5.4-mini-2026-03-17",
+  analysisModel = "gpt-5.6-terra",
 }) {
   if (!path.isAbsolute(root)) throw new TypeError("뉴스 상태 루트는 절대경로여야 합니다.");
   const pendingRoot = path.join(root, "pending");

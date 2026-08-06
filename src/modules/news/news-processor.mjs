@@ -54,7 +54,7 @@ export function createNewsProcessor({
   runnerPath,
   pythonExecutablePath = null,
   keyStorePath = null,
-  model = "gpt-5.4-mini-2026-03-17",
+  model = "gpt-5.6-terra",
   reasoningEffort = "none",
   analyze = invokeFreeNewsAnalysis,
   codexReviewer = null,
@@ -247,8 +247,7 @@ export function createNewsProcessor({
     const current = await store.read(id);
     const workflow = current.workflow ?? {};
     const alreadyCurrent = Number(workflow.analysisPolicyVersion) >= NEWS_ANALYSIS_POLICY_VERSION;
-    const analyzedModel = workflow.analysisModel ?? "gpt-5.4-mini-2026-03-17";
-    const alreadyCurrentModel = analyzedModel === model;
+    const alreadyCurrentModel = workflow.analysisModel === model;
     if (
       !["pending_review", "ignored"].includes(workflow.status) ||
       workflow.dcApproval ||

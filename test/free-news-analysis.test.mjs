@@ -103,6 +103,8 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
         assertStrictObjectSchemas(schema);
         assert.equal(schema.properties.readerSummary.maxLength, 180);
         assert.match(prompt, /readerSummary is a separate plain-Korean reader aid/u);
+        assert.match(prompt, /natural Korean addressed politely to readers/u);
+        assert.match(prompt, /never memo-style endings/u);
         assert.match(prompt, /first explain in plain Korean what the named software is used to build or manage/u);
         assert.match(prompt, /never assume readers recognize the product name/u);
         assert.equal(schema.properties.contextTranslations.minItems, 1);
@@ -126,6 +128,45 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
     assert.equal(result.readerSummary, "복잡한 변경이 실제 사용에 미치는 영향을 쉽게 설명합니다.");
     assert.equal(result.contextTranslations[0].body, "오늘 새 모델을 사용할 수 있습니다.");
     await assert.rejects(() => readFile(path.join(runtimeRoot, "e".repeat(32), "prompt.txt"), "utf8"), /ENOENT/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("독자 요약의 메모체 종결은 존댓말로 교정해 재시도한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-reader-tone-"));
+  const runnerPath = path.join(root, "runner.ps1");
+  await writeFile(runnerPath, "test", "utf8");
+  let attempts = 0;
+  try {
+    const result = await invokeFreeNewsAnalysis({
+      id: "f".repeat(32),
+      source: { type: "official-page", account: "OpenAI" },
+      original: { content: "ChatGPT can search browser history within user-controlled access.", contexts: [] },
+    }, {
+      runnerPath,
+      runtimeRoot: path.join(root, "runtime"),
+      async wait() {},
+      async runProcess(_command, args) {
+        attempts += 1;
+        const promptPath = args[args.indexOf("-PromptFile") + 1];
+        const outputPath = args[args.indexOf("-Output") + 1];
+        if (attempts === 2) {
+          assert.match(await readFile(promptPath, "utf8"), /previous readerSummary ended in memo-style Korean/u);
+        }
+        await writeFile(outputPath, JSON.stringify({
+          translation: { title: "ChatGPT, 브라우저 기록 검색 지원", body: "ChatGPT가 브라우저 기록을 검색할 수 있습니다." },
+          publicHeadline: "ChatGPT, 브라우저 기록 검색 지원",
+          readerSummary: attempts === 1
+            ? "ChatGPT 브라우저는 사용자가 이전에 본 내용을 찾을 수 있다."
+            : "ChatGPT 브라우저는 사용자가 이전에 본 내용을 찾을 수 있습니다.",
+          contextTranslations: [],
+          triage: { decision: "publish", confidence: 0.9, importance: "medium", evidenceTag: "official", boardCategory: "news", reason: "공식 기능 추가입니다.", advice: "기능 범위를 함께 전합니다.", signals: [] },
+        }), "utf8");
+      },
+    });
+    assert.equal(attempts, 2);
+    assert.equal(result.readerSummary, "ChatGPT 브라우저는 사용자가 이전에 본 내용을 찾을 수 있습니다.");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

@@ -24,7 +24,7 @@ test("뉴스 리더는 내부 경로와 Discord ID 없이 공개 계약을 반�
         translation: { title: "한글 제목", body: "한글 본문" },
         contextTranslations: [{ index: 1, body: "부모 글 번역" }],
         translationReview: { status: "codex_verified", reviewer: "codex-deep-review", reason: "원문에만 근거함" },
-        analysisNotice: "주의: 아래 해설은 GPT-5.4 mini와 Codex 심층 검토 모델이 정리한 내용입니다. 원문 번역이 아니며, 최종 판단은 독자에게 있습니다.",
+        analysisNotice: "주의: 아래 해설은 GPT-5.6 Terra와 Codex 심층 검토 모델이 정리한 내용입니다. 원문 번역이 아니며, 최종 판단은 독자에게 있습니다.",
         freeTriage: { decision: "review", confidence: 0.7, importance: "medium", evidenceTag: "inference", boardCategory: "news", reason: "애매함", advice: "상위 검토" },
         triage: { decision: "publish", confidence: 0.95, importance: "high", evidenceTag: "official", boardCategory: "news", reason: "공식 발표", advice: "바로 검토하세요." },
         codexReview: { status: "complete", reviewedAt: "2026-07-31T00:01:00Z", decision: "publish", confidence: 0.95, importance: "high", evidenceTag: "official", boardCategory: "news", reason: "공식 발표", advice: "바로 검토하세요." },
