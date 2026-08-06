@@ -152,7 +152,10 @@ test("독자 요약의 메모체 종결은 존댓말로 교정해 재시도한�
         const promptPath = args[args.indexOf("-PromptFile") + 1];
         const outputPath = args[args.indexOf("-Output") + 1];
         if (attempts === 2) {
-          assert.match(await readFile(promptPath, "utf8"), /previous readerSummary ended in memo-style Korean/u);
+          const prompt = await readFile(promptPath, "utf8");
+          assert.match(prompt, /STRICT OUTPUT REQUIREMENTS/u);
+          assert.match(prompt, /Write readerSummary in natural polite Korean/u);
+          assert.doesNotMatch(prompt, /RETRY CORRECTION/u);
         }
         await writeFile(outputPath, JSON.stringify({
           translation: { title: "ChatGPT, 브라우저 기록 검색 지원", body: "ChatGPT가 브라우저 기록을 검색할 수 있습니다." },
@@ -253,9 +256,9 @@ test("empowering의 자립 의미와 링크 소개 구조가 빠진 번역은 �
         const promptPath = args[args.indexOf("-PromptFile") + 1];
         const outputPath = args[args.indexOf("-Output") + 1];
         if (attempts === 2) {
-          assert.match(await readFile(promptPath, "utf8"), /previous translation flattened empower/u);
+          assert.match(await readFile(promptPath, "utf8"), /explicitly preserving that the person can do the action themselves/u);
         } else if (attempts === 3) {
-          assert.match(await readFile(promptPath, "utf8"), /left enable, enabling, or empower in English/u);
+          assert.match(await readFile(promptPath, "utf8"), /Translate enable, enabling, and empower into fully natural Korean/u);
         }
         const body = attempts === 1
           ? "ChatGPT로 아빠가 무언가를 만들도록 돕기"

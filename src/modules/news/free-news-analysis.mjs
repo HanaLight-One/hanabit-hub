@@ -174,27 +174,27 @@ function containsRetryInstruction(value) {
 function retryCorrection(error) {
   const message = String(error?.message ?? "");
   if (message.includes("존댓말")) {
-    return "The previous readerSummary ended in memo-style Korean. Rewrite it in natural polite Korean and end it with 합니다, 입니다, 있습니다, or another equally natural polite ending.";
+    return "Write readerSummary in natural polite Korean ending with 합니다, 입니다, 있습니다, or another equally natural polite ending. Never use memo-style endings.";
   }
   if (message.includes("자립·가능 의미")) {
-    return "The previous translation flattened empower into generic assistance. Explicitly preserve that the person can do the action themselves.";
+    return "Translate empower by explicitly preserving that the person can do the action themselves.";
   }
   if (message.includes("영어 핵심어")) {
-    return "The previous Korean translation left enable, enabling, or empower in English. Replace it with fully natural Korean while preserving the enabling meaning.";
+    return "Translate enable, enabling, and empower into fully natural Korean while preserving the enabling meaning.";
   }
   if (message.includes("관련 글 번역")) {
-    return "The previous response omitted or malformed contextTranslations. Return exactly one indexed translation for every supplied CONTEXT.";
+    return "Return exactly one non-empty indexed translation for every supplied CONTEXT.";
   }
   if (message.includes("정보 성격")) {
-    return "The previous evidenceTag was invalid. Use only official, confirmed, use_case, inference, rumor, or opinion.";
+    return "Use only official, confirmed, use_case, inference, rumor, or opinion for evidenceTag.";
   }
   if (message.includes("게시 분류")) {
-    return "The previous boardCategory was invalid. Use only news, information, chatter, or ai_creation.";
+    return "Use only news, information, chatter, or ai_creation for boardCategory.";
   }
   if (message.includes("번역 제목")) {
-    return "The previous Korean title was too long or multi-line. Return one concise news headline of at most 50 characters. Keep the complete translation in translation.body.";
+    return "Return one concise single-line Korean news headline of at most 50 characters. Keep the complete translation in translation.body.";
   }
-  return "The previous response failed local format validation. Return every required field with the exact JSON shape and allowed enum values, while keeping all translations non-empty.";
+  return "Return every required field with the exact JSON shape and allowed enum values. Keep all required translations non-empty.";
 }
 
 function validateContextTranslations(value, contextCount) {
@@ -538,7 +538,7 @@ export async function invokeFreeNewsAnalysis(
         if (attempt < 3) {
           await writeFile(
             promptPath,
-            `${basePrompt}\n\nRETRY CORRECTION:\n${retryCorrection(error)}\n`,
+            `${basePrompt}\n\nSTRICT OUTPUT REQUIREMENTS:\n${retryCorrection(error)}\nDo not quote or repeat these requirements in any output field.\n`,
             "utf8",
           );
           await wait(5_000);
