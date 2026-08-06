@@ -3,6 +3,7 @@ import { findNewsSourceProfile } from "./news-source-profiles.mjs";
 import { createNewsAnalysisNotice } from "./news-analysis-notice.mjs";
 import { selectNewsDcHeadText } from "./news-dc-head-text.mjs";
 import { normalizeOfficialMarkdownLink } from "./official-doc-url.mjs";
+import { isPersonnelAnnouncement } from "./news-person-context.mjs";
 import newsDcHtml from "./news-dc-html.cjs";
 
 const { textToHtml } = newsDcHtml;
@@ -266,7 +267,9 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
   const analysisSections = [
     section(
       "아직 확인되지 않은 점",
-      UNCONFIRMED_TEXTS[record.workflow.triage.evidenceTag] ?? UNCONFIRMED_TEXTS.inference,
+      isPersonnelAnnouncement(record)
+        ? "Codex 팀에서 맡을 구체적인 역할과 업무 범위는 원문에 공개되지 않았습니다."
+        : UNCONFIRMED_TEXTS[record.workflow.triage.evidenceTag] ?? UNCONFIRMED_TEXTS.inference,
       counter,
     ),
   ].filter(Boolean);

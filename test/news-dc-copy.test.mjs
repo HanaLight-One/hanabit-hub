@@ -210,6 +210,7 @@ test("공식 문서 보강은 관련 글과 구분한 주요 내용으로 표시
 
 test("인물 공개 이력은 관련 글과 구분한 소개로 표시한다", () => {
   const sample = record();
+  sample.original.content = "Very excited to welcome @nikitabier to the Codex team";
   sample.original.contexts = [{
     relation: "public-background",
     account: "nikitabier",
@@ -222,6 +223,8 @@ test("인물 공개 이력은 관련 글과 구분한 소개로 표시한다", (
   }];
   const draft = composeNewsDcCopy(sample);
   assert.match(draft.bodyText, /인물 소개 · Nikita Bier 공개 이력/u);
+  assert.match(draft.bodyText, /Codex 팀에서 맡을 구체적인 역할과 업무 범위/u);
+  assert.doesNotMatch(draft.bodyText, /제공 범위와 적용 시점/u);
   assert.doesNotMatch(draft.bodyText, /관련 글 번역 · Nikita Bier 공개 이력/u);
 });
 
