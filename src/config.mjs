@@ -15,7 +15,7 @@ const DEFAULT_CONFIG = Object.freeze({
     fortune: { enabled: false },
     news: {
       analysisModel: "gpt-5.6-terra",
-      analysisReasoningEffort: "none",
+      analysisReasoningEffort: "medium",
       codexReview: { enabled: false, executablePath: "", dailyLimit: 4 },
       dcPublisher: {
         enabled: false,

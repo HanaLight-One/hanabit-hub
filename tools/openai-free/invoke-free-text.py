@@ -100,7 +100,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--reasoning-effort",
         choices=("none", "low", "medium", "high", "xhigh", "max"),
-        default="none",
+        default="medium",
     )
     parser.add_argument("--json-schema-file", type=Path)
     parser.add_argument("--max-output-tokens", type=int, default=512)

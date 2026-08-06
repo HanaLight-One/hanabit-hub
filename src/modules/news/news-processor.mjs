@@ -55,7 +55,7 @@ export function createNewsProcessor({
   pythonExecutablePath = null,
   keyStorePath = null,
   model = "gpt-5.6-terra",
-  reasoningEffort = "none",
+  reasoningEffort = "medium",
   analyze = invokeFreeNewsAnalysis,
   codexReviewer = null,
   officialDocumentEnricher = enrichOfficialDocument,

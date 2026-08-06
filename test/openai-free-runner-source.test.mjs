@@ -22,7 +22,7 @@ test("공용 무료 텍스트 실행기 정본은 키 없이 구조화 출력 �
   assert.match(runner, /"strict": True/);
   assert.match(runner, /client\.responses\.create/);
   assert.match(runner, /DEFAULT_MODEL = "gpt-5\.6-terra"/);
-  assert.match(runner, /default="none"/);
+  assert.match(runner, /default="medium"/);
   assert.match(runner, /request\["reasoning"\] = \{"effort": args\.reasoning_effort\}/);
   assert.doesNotMatch(wrapper + runner, /sk-[A-Za-z0-9_-]{16,}/);
   assert.match(ignore, /^runtime\/$/m);

@@ -27,7 +27,7 @@ async function fixture(source, analyze, callback, {
       pythonExecutablePath,
       keyStorePath,
       model: "gpt-5.6-terra",
-      reasoningEffort: "none",
+      reasoningEffort: "medium",
       analyze,
       codexReviewer,
       officialDocumentEnricher,
@@ -58,7 +58,7 @@ test("뉴스 분석기에 추적 실행기와 외부 Python·키 저장소 경�
       assert.equal(received.pythonExecutablePath, pythonExecutablePath);
       assert.equal(received.keyStorePath, keyStorePath);
       assert.equal(received.model, "gpt-5.6-terra");
-      assert.equal(received.reasoningEffort, "none");
+      assert.equal(received.reasoningEffort, "medium");
       assert.match(received.runnerPath, /runner\.ps1$/u);
     },
   );

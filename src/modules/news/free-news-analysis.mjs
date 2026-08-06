@@ -435,7 +435,7 @@ export async function invokeFreeNewsAnalysis(
     pythonExecutablePath = null,
     keyStorePath = null,
     model = "gpt-5.6-terra",
-    reasoningEffort = "none",
+    reasoningEffort = "medium",
     runProcess = run,
     wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
   } = {},
