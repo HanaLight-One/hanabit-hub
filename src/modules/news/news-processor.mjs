@@ -54,12 +54,20 @@ export function createNewsProcessor({
   runnerPath,
   pythonExecutablePath = null,
   keyStorePath = null,
+  model = "gpt-5.4-mini-2026-03-17",
+  reasoningEffort = "none",
   analyze = invokeFreeNewsAnalysis,
   codexReviewer = null,
   officialDocumentEnricher = enrichOfficialDocument,
   sourceProfiles = new Map(),
   now = () => new Date(),
 }) {
+  if (!/^[a-z0-9][a-z0-9._-]{0,99}$/u.test(String(model ?? ""))) {
+    throw new TypeError("뉴스 분석 모델 식별자가 올바르지 않습니다.");
+  }
+  if (!new Set(["none", "low", "medium", "high", "xhigh", "max"]).has(reasoningEffort)) {
+    throw new TypeError("뉴스 분석 reasoning effort가 올바르지 않습니다.");
+  }
   if (
     !path.isAbsolute(stateRoot) ||
     !path.isAbsolute(runnerPath) ||
@@ -92,6 +100,8 @@ export function createNewsProcessor({
           runtimeRoot,
           pythonExecutablePath,
           keyStorePath,
+          model,
+          reasoningEffort,
         });
         let finalTriage = result.triage;
         let finalTranslation = result.translation;
@@ -100,7 +110,7 @@ export function createNewsProcessor({
         let finalContextTranslations = result.contextTranslations;
         let translationReview = {
           status: "free_unverified",
-          reviewer: "gpt-5.4-mini",
+          reviewer: model,
           reviewedAt: now().toISOString(),
         };
         let freeTriage = null;
@@ -172,7 +182,11 @@ export function createNewsProcessor({
             readerSummary: finalReaderSummary || null,
             contextTranslations: finalContextTranslations,
             translationReview,
-            analysisNotice: createNewsAnalysisNotice({ codexReviewed: codexReview?.status === "complete" }),
+            analysisModel: model,
+            analysisNotice: createNewsAnalysisNotice({
+              codexReviewed: codexReview?.status === "complete",
+              model,
+            }),
             freeTriage,
             triage: {
               ...finalTriage,

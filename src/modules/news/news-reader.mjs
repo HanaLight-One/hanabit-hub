@@ -121,7 +121,10 @@ function publicItem(record, sourceProfiles) {
     ? effectiveRecord.workflow.translationReview.status
     : "free_unverified";
   const analysisNotice = safeText(record?.workflow?.analysisNotice, 300) ||
-    createNewsAnalysisNotice({ codexReviewed: codexReviewStatus === "complete" });
+    createNewsAnalysisNotice({
+      codexReviewed: codexReviewStatus === "complete",
+      model: record?.workflow?.analysisModel,
+    });
   const dcPublication = publicDcPublication(record?.workflow?.dcPublication);
   return {
     id,

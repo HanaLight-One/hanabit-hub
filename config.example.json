@@ -43,6 +43,8 @@
       "publisherStateRoot": ""
     },
     "news": {
+      "analysisModel": "gpt-5.6-terra",
+      "analysisReasoningEffort": "none",
       "codexReview": {
         "enabled": false,
         "executablePath": "",

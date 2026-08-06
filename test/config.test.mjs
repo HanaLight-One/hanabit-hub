@@ -7,6 +7,27 @@ test("application root is absolute", () => {
   assert.equal(APP_ROOT.length > 0, true);
 });
 
+test("뉴스 분석 모델과 reasoning effort는 안전한 설정값만 허용한다", () => {
+  const base = {
+    host: "127.0.0.1",
+    port: 8790,
+    operations: { timezone: "Asia/Seoul", dayStartsAtHour: 2 },
+    allowedActions: [],
+  };
+  assert.throws(() => validateConfig({
+    ...base,
+    integrations: { news: { analysisModel: "../../bad", analysisReasoningEffort: "none" } },
+  }), /모델 식별자/u);
+  assert.throws(() => validateConfig({
+    ...base,
+    integrations: { news: { analysisModel: "gpt-5.6-terra", analysisReasoningEffort: "extreme" } },
+  }), /reasoning effort/u);
+  assert.doesNotThrow(() => validateConfig({
+    ...base,
+    integrations: { news: { analysisModel: "gpt-5.6-terra", analysisReasoningEffort: "none" } },
+  }));
+});
+
 test("Image Studio 활성화 시 제작 기록 절대경로를 요구한다", () => {
   assert.throws(
     () =>

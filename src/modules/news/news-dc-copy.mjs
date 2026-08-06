@@ -278,6 +278,7 @@ export function composeNewsDcCopy(record, { sourceProfiles = new Map(), fallback
   const notice = cleanLine(
     record.workflow.analysisNotice || createNewsAnalysisNotice({
       codexReviewed: record.workflow.codexReview?.status === "complete",
+      model: record.workflow.analysisModel,
     }),
     counter,
   );

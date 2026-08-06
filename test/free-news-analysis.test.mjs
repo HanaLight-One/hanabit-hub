@@ -71,6 +71,8 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
       runtimeRoot,
       pythonExecutablePath,
       keyStorePath,
+      model: "gpt-5.6-terra",
+      reasoningEffort: "none",
       async runProcess(command, args) {
         assert.match(command, /powershell\.exe$/i);
         const promptPath = args[args.indexOf("-PromptFile") + 1];
@@ -78,6 +80,8 @@ test("무료 API runner에 제한된 번역·판정 JSON을 요청하고 실행 
         const schemaPath = args[args.indexOf("-JsonSchemaFile") + 1];
         assert.equal(args[args.indexOf("-PythonExecutablePath") + 1], pythonExecutablePath);
         assert.equal(args[args.indexOf("-KeyStorePath") + 1], keyStorePath);
+        assert.equal(args[args.indexOf("-Model") + 1], "gpt-5.6-terra");
+        assert.equal(args[args.indexOf("-ReasoningEffort") + 1], "none");
         const prompt = await readFile(promptPath, "utf8");
         const schema = JSON.parse(await readFile(schemaPath, "utf8"));
         assert.match(prompt, /One more day/);

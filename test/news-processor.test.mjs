@@ -26,6 +26,8 @@ async function fixture(source, analyze, callback, {
       runnerPath,
       pythonExecutablePath,
       keyStorePath,
+      model: "gpt-5.6-terra",
+      reasoningEffort: "none",
       analyze,
       codexReviewer,
       officialDocumentEnricher,
@@ -55,6 +57,8 @@ test("뉴스 분석기에 추적 실행기와 외부 Python·키 저장소 경�
       await processor.process("f".repeat(32));
       assert.equal(received.pythonExecutablePath, pythonExecutablePath);
       assert.equal(received.keyStorePath, keyStorePath);
+      assert.equal(received.model, "gpt-5.6-terra");
+      assert.equal(received.reasoningEffort, "none");
       assert.match(received.runnerPath, /runner\.ps1$/u);
     },
   );
@@ -80,6 +84,8 @@ test("원문 경계를 통과한 무료 번역은 자동 검증 영수증으로 
     const saved = await store.read(id);
     assert.equal(saved.workflow.translationReview.status, "local_verified");
     assert.equal(saved.workflow.translationReview.reviewer, "local-source-boundary-v3");
+    assert.equal(saved.workflow.analysisModel, "gpt-5.6-terra");
+    assert.match(saved.workflow.analysisNotice, /GPT-5\.6 Terra/u);
     assert.equal(saved.workflow.readerSummary, "복잡한 변경 내용을 일반 독자가 이해하기 쉽게 정리합니다.");
     assert.match(saved.workflow.translationReview.reason, /원문·관련 글 분리/u);
   });

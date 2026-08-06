@@ -17,9 +17,11 @@ test("공용 무료 텍스트 실행기 정본은 키 없이 구조화 출력 �
   assert.match(wrapper, /\[string\]\$KeyStorePath/);
   assert.match(wrapper, /HANABIT_OPENAI_FREE_PYTHON/);
   assert.match(wrapper, /--json-schema-file/);
+  assert.match(wrapper, /--reasoning-effort/);
   assert.match(runner, /"type": "json_schema"/);
   assert.match(runner, /"strict": True/);
   assert.match(runner, /client\.responses\.create/);
+  assert.match(runner, /request\["reasoning"\] = \{"effort": args\.reasoning_effort\}/);
   assert.doesNotMatch(wrapper + runner, /sk-[A-Za-z0-9_-]{16,}/);
   assert.match(ignore, /^runtime\/$/m);
 });

@@ -14,6 +14,8 @@ const DEFAULT_CONFIG = Object.freeze({
     themeThumbnails: { enabled: false },
     fortune: { enabled: false },
     news: {
+      analysisModel: "gpt-5.4-mini-2026-03-17",
+      analysisReasoningEffort: "none",
       codexReview: { enabled: false, executablePath: "", dailyLimit: 4 },
       dcPublisher: {
         enabled: false,
@@ -115,6 +117,18 @@ function validateConfig(config) {
   }
 
   const codexReview = config.integrations?.news?.codexReview;
+  const newsAnalysisModel = config.integrations?.news?.analysisModel ?? DEFAULT_CONFIG.integrations.news.analysisModel;
+  if (
+    typeof newsAnalysisModel !== "string" ||
+    !/^[a-z0-9][a-z0-9._-]{0,99}$/u.test(newsAnalysisModel)
+  ) {
+    throw new Error("뉴스 분석 모델은 안전한 API 모델 식별자여야 합니다.");
+  }
+  if (!new Set(["none", "low", "medium", "high", "xhigh", "max"]).has(
+    config.integrations?.news?.analysisReasoningEffort ?? DEFAULT_CONFIG.integrations.news.analysisReasoningEffort,
+  )) {
+    throw new Error("뉴스 분석 reasoning effort가 올바르지 않습니다.");
+  }
   if (codexReview?.enabled) {
     if (!path.isAbsolute(codexReview.executablePath ?? "")) {
       throw new Error("Codex 뉴스 검토에는 executablePath 절대경로가 필요합니다.");

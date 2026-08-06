@@ -227,6 +227,8 @@ const newsProcessor = path.isAbsolute(generationConfig?.freeTextRunnerPath ?? ""
       runnerPath: generationConfig.freeTextRunnerPath,
       pythonExecutablePath: generationConfig.freeTextPythonExecutablePath,
       keyStorePath: generationConfig.freeTextKeyStorePath,
+      model: config.integrations.news.analysisModel,
+      reasoningEffort: config.integrations.news.analysisReasoningEffort,
       codexReviewer: newsCodexReviewer,
       sourceProfiles: newsSourceProfiles,
     })

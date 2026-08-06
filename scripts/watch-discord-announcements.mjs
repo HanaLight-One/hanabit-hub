@@ -264,6 +264,8 @@ try {
     runnerPath,
     pythonExecutablePath,
     keyStorePath,
+    model: hubConfig.integrations.news.analysisModel,
+    reasoningEffort: hubConfig.integrations.news.analysisReasoningEffort,
     codexReviewer,
     sourceProfiles: newsSourceProfiles,
   });

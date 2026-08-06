@@ -58,6 +58,7 @@ export function createNewsApprovalService({ root, now = () => new Date() }) {
             },
             analysisNotice: workflow.analysisNotice || createNewsAnalysisNotice({
               codexReviewed: workflow.codexReview?.status === "complete",
+              model: workflow.analysisModel,
             }),
             dcApproval: {
               schemaVersion: 1,

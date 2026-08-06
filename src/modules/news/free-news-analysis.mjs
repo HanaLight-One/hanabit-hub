@@ -428,10 +428,18 @@ export async function invokeFreeNewsAnalysis(
     runtimeRoot,
     pythonExecutablePath = null,
     keyStorePath = null,
+    model = "gpt-5.4-mini-2026-03-17",
+    reasoningEffort = "none",
     runProcess = run,
     wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
   } = {},
 ) {
+  if (!/^[a-z0-9][a-z0-9._-]{0,99}$/u.test(String(model ?? ""))) {
+    throw new TypeError("뉴스 분석 모델 식별자가 올바르지 않습니다.");
+  }
+  if (!new Set(["none", "low", "medium", "high", "xhigh", "max"]).has(reasoningEffort)) {
+    throw new TypeError("뉴스 분석 reasoning effort가 올바르지 않습니다.");
+  }
   if (
     !path.isAbsolute(runnerPath) ||
     !path.isAbsolute(runtimeRoot) ||
@@ -475,6 +483,8 @@ export async function invokeFreeNewsAnalysis(
           "-JsonSchemaFile", schemaPath,
           ...(pythonExecutablePath ? ["-PythonExecutablePath", pythonExecutablePath] : []),
           ...(keyStorePath ? ["-KeyStorePath", keyStorePath] : []),
+          "-Model", model,
+          "-ReasoningEffort", reasoningEffort,
           "-MaxOutputTokens", "1800",
         ], { cwd: workRoot });
         const info = await stat(outputPath);
@@ -496,6 +506,8 @@ export async function invokeFreeNewsAnalysis(
                   "-JsonSchemaFile", contextSchemaPath,
                   ...(pythonExecutablePath ? ["-PythonExecutablePath", pythonExecutablePath] : []),
                   ...(keyStorePath ? ["-KeyStorePath", keyStorePath] : []),
+                  "-Model", model,
+                  "-ReasoningEffort", reasoningEffort,
                   "-MaxOutputTokens", "1200",
                 ], { cwd: workRoot });
                 const contextInfo = await stat(contextOutputPath);

@@ -7,6 +7,9 @@ param(
 
     [string]$Model,
 
+    [ValidateSet("none", "low", "medium", "high", "xhigh", "max")]
+    [string]$ReasoningEffort,
+
     [string]$JsonSchemaFile,
 
     [string]$PythonExecutablePath,
@@ -61,6 +64,9 @@ try {
         )
         if ($Model) {
             $arguments += @("--model", $Model)
+        }
+        if ($ReasoningEffort) {
+            $arguments += @("--reasoning-effort", $ReasoningEffort)
         }
         if ($JsonSchemaFile) {
             $arguments += @("--json-schema-file", [IO.Path]::GetFullPath($JsonSchemaFile))
