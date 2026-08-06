@@ -97,7 +97,11 @@ def build_parser() -> argparse.ArgumentParser:
     source.add_argument("--smoke-test", action="store_true")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--model")
-    parser.add_argument("--reasoning-effort", choices=("none", "low", "medium", "high", "xhigh", "max"))
+    parser.add_argument(
+        "--reasoning-effort",
+        choices=("none", "low", "medium", "high", "xhigh", "max"),
+        default="none",
+    )
     parser.add_argument("--json-schema-file", type=Path)
     parser.add_argument("--max-output-tokens", type=int, default=512)
     return parser
@@ -146,8 +150,7 @@ def main() -> int:
                     "input": prompt,
                     "max_output_tokens": max_output_tokens,
                 }
-                if args.reasoning_effort:
-                    request["reasoning"] = {"effort": args.reasoning_effort}
+                request["reasoning"] = {"effort": args.reasoning_effort}
                 if json_schema is not None:
                     request["text"] = {
                         "format": {
