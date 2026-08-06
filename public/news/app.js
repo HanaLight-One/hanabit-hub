@@ -8318,7 +8318,7 @@ function D({ bodyText: e }) {
 		})
 	});
 }
-function O({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a, onNoteChange: o, onNoteSave: s }) {
+function O({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a, onNoteChange: o, onNoteSave: s, onConfirmAbsent: c }) {
 	return e.workflow.publishedToDc ? /* @__PURE__ */ (0, x.jsxs)("div", {
 		className: "approval approved",
 		children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: "DC 게시 완료" }), e.workflow.dcPublication?.url && /* @__PURE__ */ (0, x.jsx)("a", {
@@ -8332,7 +8332,17 @@ function O({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a,
 		children: "DC에 한 번 제출하고 있어요. 완료될 때까지 다시 누르지 마세요."
 	}) : e.workflow.dcPublication?.status === "ambiguous-no-retry" ? /* @__PURE__ */ (0, x.jsxs)("div", {
 		className: "approval danger",
-		children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: "게시 결과를 자동으로 확정하지 못했어요." }), /* @__PURE__ */ (0, x.jsx)("span", { children: "중복 게시를 막기 위해 다시 제출하지 않습니다. DC 게시판에서 직접 확인해 주세요." })]
+		children: [
+			/* @__PURE__ */ (0, x.jsx)("strong", { children: "게시 결과를 자동으로 확정하지 못했어요." }),
+			/* @__PURE__ */ (0, x.jsx)("span", { children: "중복 게시를 막기 위해 다시 제출하지 않습니다. DC 게시판에서 직접 확인해 주세요." }),
+			/* @__PURE__ */ (0, x.jsx)("button", {
+				type: "button",
+				className: "preview-button",
+				onClick: c,
+				disabled: n,
+				children: n ? "확인 내용을 저장하는 중…" : "DC에 게시물 없음 · 수동 게시 다시 열기"
+			})
+		]
 	}) : !e.workflow.canApproveForDc && !e.workflow.dcApproval ? /* @__PURE__ */ (0, x.jsx)("div", {
 		className: "approval unavailable",
 		children: "번역과 판정이 끝난 검토 후보만 승인할 수 있어요."
@@ -8430,8 +8440,8 @@ function O({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a,
 		]
 	});
 }
-function he({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a, onNoteChange: o, onNoteSave: s, onRetry: c, onReanalyze: l }) {
-	let u = e.workflow.triage, d = e.workflow.freeTriage, f = e.workflow.codexReview, p = e.workflow.status === "shadow_radar";
+function he({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a, onNoteChange: o, onNoteSave: s, onConfirmAbsent: c, onRetry: l, onReanalyze: u }) {
+	let d = e.workflow.triage, f = e.workflow.freeTriage, p = e.workflow.codexReview, m = e.workflow.status === "shadow_radar";
 	return /* @__PURE__ */ (0, x.jsxs)("article", {
 		className: "news-card",
 		children: [
@@ -8444,19 +8454,19 @@ function he({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 							className: "status",
 							children: ee[e.workflow.status] ?? "상태 확인 필요"
 						}),
-						u && /* @__PURE__ */ (0, x.jsx)("span", {
-							className: `decision decision-${u.decision}`,
-							children: S[u.decision]
+						d && /* @__PURE__ */ (0, x.jsx)("span", {
+							className: `decision decision-${d.decision}`,
+							children: S[d.decision]
 						}),
-						u?.evidenceTag && /* @__PURE__ */ (0, x.jsxs)("span", {
-							className: `evidence evidence-${u.evidenceTag}`,
+						d?.evidenceTag && /* @__PURE__ */ (0, x.jsxs)("span", {
+							className: `evidence evidence-${d.evidenceTag}`,
 							children: [
 								"[",
-								te[u.evidenceTag],
+								te[d.evidenceTag],
 								"]"
 							]
 						}),
-						f?.status === "complete" && /* @__PURE__ */ (0, x.jsx)("span", {
+						p?.status === "complete" && /* @__PURE__ */ (0, x.jsx)("span", {
 							className: "decision codex-badge",
 							children: "Codex 검토 완료"
 						})
@@ -8470,11 +8480,11 @@ function he({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 					children: [
 						e.source.label ?? e.source.account,
 						" · ",
-						e.source.type === "x-post" ? "X" : p ? "외신 RSS" : "Discord"
+						e.source.type === "x-post" ? "X" : m ? "외신 RSS" : "Discord"
 					]
 				}), /* @__PURE__ */ (0, x.jsx)(de, { profile: e.source.profile })]
 			}),
-			p ? /* @__PURE__ */ (0, x.jsxs)("section", {
+			m ? /* @__PURE__ */ (0, x.jsxs)("section", {
 				className: "shadow-radar-box",
 				children: [
 					/* @__PURE__ */ (0, x.jsx)("p", {
@@ -8492,7 +8502,7 @@ function he({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 						className: "section-label",
 						children: "제목"
 					}),
-					/* @__PURE__ */ (0, x.jsxs)("h2", { children: [u?.evidenceTag && `[${te[u.evidenceTag]}] `, e.workflow.translation.title || "제목 없음"] }),
+					/* @__PURE__ */ (0, x.jsxs)("h2", { children: [d?.evidenceTag && `[${te[d.evidenceTag]}] `, e.workflow.translation.title || "제목 없음"] }),
 					e.workflow.readerSummary && /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [/* @__PURE__ */ (0, x.jsx)("p", {
 						className: "section-label body-label",
 						children: "한눈에 보면"
@@ -8531,7 +8541,7 @@ function he({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 								type: "button",
 								className: "retry-button",
 								disabled: n,
-								onClick: c,
+								onClick: l,
 								children: n ? "다시 분석 중…" : "무료 텍스트 API로 다시 분석"
 							})
 						]
@@ -8539,37 +8549,37 @@ function he({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 				]
 			}),
 			/* @__PURE__ */ (0, x.jsx)(fe, { item: e }),
-			d && /* @__PURE__ */ (0, x.jsx)(E, {
-				triage: d,
+			f && /* @__PURE__ */ (0, x.jsx)(E, {
+				triage: f,
 				label: "무료 API 1차 판정",
-				advice: d.advice || "애매함을 감지해 Codex 하나빛에게 전달했어요.",
+				advice: f.advice || "애매함을 감지해 Codex 하나빛에게 전달했어요.",
 				className: "free-triage"
 			}),
-			u && /* @__PURE__ */ (0, x.jsx)("p", {
+			d && /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "analysis-notice",
 				children: e.workflow.analysisNotice
 			}),
-			u && /* @__PURE__ */ (0, x.jsx)(E, {
-				triage: u,
-				label: f?.status === "complete" ? "Codex 하나빛 심층검토" : "무료 API 판정",
-				advice: oe(e) ? T(e) : u.advice || T(e),
-				className: f?.status === "complete" ? "codex-triage" : ""
+			d && /* @__PURE__ */ (0, x.jsx)(E, {
+				triage: d,
+				label: p?.status === "complete" ? "Codex 하나빛 심층검토" : "무료 API 판정",
+				advice: oe(e) ? T(e) : d.advice || T(e),
+				className: p?.status === "complete" ? "codex-triage" : ""
 			}),
-			f?.status === "daily_limit" && /* @__PURE__ */ (0, x.jsx)("p", {
+			p?.status === "daily_limit" && /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "codex-review-note",
 				children: "오늘의 Codex 심층검토 상한에 도달해 사람 확인으로 남겼어요."
 			}),
-			f?.status === "failed" && /* @__PURE__ */ (0, x.jsx)("p", {
+			p?.status === "failed" && /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "codex-review-note",
 				children: "Codex 심층검토를 완료하지 못해 무료 API 판정을 보존했어요."
 			}),
-			!p && /* @__PURE__ */ (0, x.jsx)(pe, { gate: e.workflow.autoPublishGate }),
-			!p && /* @__PURE__ */ (0, x.jsx)(me, { shadow: e.workflow.editorialShadow }),
+			!m && /* @__PURE__ */ (0, x.jsx)(pe, { gate: e.workflow.autoPublishGate }),
+			!m && /* @__PURE__ */ (0, x.jsx)(me, { shadow: e.workflow.editorialShadow }),
 			e.workflow.canReanalyze && /* @__PURE__ */ (0, x.jsx)("button", {
 				type: "button",
 				className: "reanalysis-button",
 				disabled: n,
-				onClick: l,
+				onClick: u,
 				children: n ? "새 정책으로 판정 중…" : "↻ 새 정책으로 다시 판정"
 			}),
 			e.media.length > 0 && /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [oe(e) && /* @__PURE__ */ (0, x.jsx)("p", {
@@ -8584,7 +8594,7 @@ function he({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 				}, e.url))
 			})] }),
 			/* @__PURE__ */ (0, x.jsx)(ue, { item: e }),
-			!p && /* @__PURE__ */ (0, x.jsx)(O, {
+			!m && /* @__PURE__ */ (0, x.jsx)(O, {
 				item: e,
 				preview: t,
 				busy: n,
@@ -8592,7 +8602,8 @@ function he({ item: e, preview: t, busy: n, error: r, onPreview: i, onPublish: a
 				onPreview: i,
 				onPublish: a,
 				onNoteChange: o,
-				onNoteSave: s
+				onNoteSave: s,
+				onConfirmAbsent: c
 			})
 		]
 	});
@@ -8714,6 +8725,27 @@ function ge() {
 		}
 	}
 	async function te(e) {
+		if (window.confirm("DC 게시판에서 이 글이 실제로 없음을 확인했나요?\n이전 제출 자료는 보존하고 수동 게시 버튼만 다시 엽니다.")) {
+			s(e.id), l(""), d(null);
+			try {
+				let t = await fetch(`/api/news/${e.id}/dc-ambiguity-resolution`, {
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify({ confirmation: "confirm-dc-post-absent" })
+				}), n = await t.json();
+				if (!t.ok) throw Error(n.error || "게시 잠금을 다시 열지 못했어요.");
+				a((t) => {
+					let n = { ...t };
+					return delete n[e.id], n;
+				}), await h();
+			} catch (t) {
+				l(t.message), d(e.id);
+			} finally {
+				s(null);
+			}
+		}
+	}
+	async function ne(e) {
 		s(e.id), l(""), d(null);
 		try {
 			let t = await fetch(`/api/news/${e.id}/analysis-retry`, {
@@ -8729,7 +8761,7 @@ function ge() {
 			s(null);
 		}
 	}
-	async function ne(e) {
+	async function re(e) {
 		if (window.confirm("번역과 판정을 새 정책으로 다시 실행할까요? 무료 API와 필요한 경우 Codex 토큰을 사용합니다.")) {
 			s(e.id), l(""), d(null);
 			try {
@@ -8818,8 +8850,9 @@ function ge() {
 				onPublish: () => C(e),
 				onNoteChange: (t) => b(e, t),
 				onNoteSave: () => S(e),
-				onRetry: () => te(e),
-				onReanalyze: () => ne(e)
+				onConfirmAbsent: () => te(e),
+				onRetry: () => ne(e),
+				onReanalyze: () => re(e)
 			}, e.id))
 		})
 	] })] });

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -457,6 +457,49 @@ test("승인 없는 뉴스와 비활성 게시자는 실제 실행을 거부한�
       publisherScriptPath: sample.scriptPath,
     });
     await assert.rejects(() => disabled.publish(ID), { code: "RUNTIME_UNAVAILABLE" });
+  } finally {
+    await rm(sample.root, { recursive: true, force: true });
+  }
+});
+
+test("소유자가 게시물 부재를 확인하면 모호한 시도를 보존하고 수동 게시를 다시 연다", async () => {
+  const sample = await fixture({ approved: false });
+  try {
+    const itemPath = path.join(sample.itemRoot, "item.json");
+    const item = JSON.parse(await readFile(itemPath, "utf8"));
+    item.workflow.status = "pending_review";
+    item.workflow.dcPublication = {
+      schemaVersion: 1,
+      status: "ambiguous-no-retry",
+      mode: "automatic",
+      submittedAt: "2026-08-06T13:21:27.772Z",
+      contentHash: "a".repeat(64),
+    };
+    await writeFile(itemPath, JSON.stringify(item), "utf8");
+    const jobPath = path.join(sample.newsRoot, "dc-publication-jobs", ID);
+    await mkdir(jobPath, { recursive: true });
+    await writeFile(path.join(jobPath, "result.json"), "ambiguous", "utf8");
+
+    const service = createNewsDcPublicationService({
+      root: sample.newsRoot,
+      enabled: true,
+      publisherRoot: sample.publisherRoot,
+      coverRoot: sample.coverRoot,
+      publisherScriptPath: sample.scriptPath,
+      now: () => new Date("2026-08-06T13:30:00.000Z"),
+    });
+    const result = await service.confirmAmbiguousPostAbsent(ID);
+    const saved = JSON.parse(await readFile(itemPath, "utf8"));
+    const archives = await readdir(path.join(sample.newsRoot, "dc-publication-attempts", ID));
+
+    assert.deepEqual(result, { id: ID, status: "reopened", archived: true });
+    assert.equal(saved.workflow.dcPublication, null);
+    assert.equal(saved.workflow.dcApproval, null);
+    assert.equal(saved.workflow.canApproveForDc, undefined);
+    assert.equal(saved.workflow.dcPublicationAttempts.at(-1).resolution, "confirmed_absent_by_owner");
+    assert.equal(archives.length, 1);
+    assert.equal(await readFile(path.join(sample.newsRoot, "dc-publication-attempts", ID, archives[0], "result.json"), "utf8"), "ambiguous");
+    await assert.rejects(() => service.confirmAmbiguousPostAbsent(ID), { code: "NOT_AMBIGUOUS" });
   } finally {
     await rm(sample.root, { recursive: true, force: true });
   }

@@ -116,6 +116,7 @@ export function createNewsDcPublicationService({
   const store = createPendingNewsStore({ root });
   const covers = createNewsDcCoverCatalog({ root: coverRoot });
   const jobRoot = path.join(root, "dc-publication-jobs");
+  const attemptArchiveRoot = path.join(root, "dc-publication-attempts");
   const autoStatePath = path.join(root, "auto-publication.json");
   const active = new Set();
   let autoActivation;
@@ -307,6 +308,56 @@ export function createNewsDcPublicationService({
     }
   }
 
+  async function confirmAmbiguousPostAbsent(id) {
+    const safeId = validateId(id);
+    if (active.has(safeId)) {
+      throw publicationError("ALREADY_SUBMITTING", "이미 DC 게시 요청을 처리하고 있습니다.");
+    }
+    const resolvedAt = now().toISOString();
+    const record = await store.read(safeId).catch((error) => {
+      if (error.code === "ENOENT") throw publicationError("NOT_FOUND", "뉴스 항목을 찾을 수 없습니다.");
+      throw error;
+    });
+    const publication = safePublication(record.workflow?.dcPublication);
+    if (publication?.status !== "ambiguous-no-retry") {
+      throw publicationError("NOT_AMBIGUOUS", "게시 결과 확인이 필요한 뉴스만 다시 열 수 있습니다.");
+    }
+
+    const targetRoot = path.join(jobRoot, safeId);
+    const archiveParent = path.join(attemptArchiveRoot, safeId);
+    const archiveName = `${resolvedAt.replace(/[:.]/gu, "-")}-${randomUUID()}`;
+    let archived = false;
+    try {
+      await mkdir(archiveParent, { recursive: true });
+      await rename(targetRoot, path.join(archiveParent, archiveName));
+      archived = true;
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+
+    await store.update(safeId, (current) => ({
+      ...current,
+      workflow: {
+        ...current.workflow,
+        status: "pending_review",
+        dcApproval: null,
+        dcPublication: null,
+        dcPublicationAttempts: [
+          ...(Array.isArray(current.workflow?.dcPublicationAttempts)
+            ? current.workflow.dcPublicationAttempts
+            : []),
+          {
+            ...publication,
+            resolution: "confirmed_absent_by_owner",
+            resolvedAt,
+            archived,
+          },
+        ],
+      },
+    }));
+    return { id: safeId, status: "reopened", archived };
+  }
+
   async function publish(id, { automatic = false, automaticDecision = null } = {}) {
     const safeId = validateId(id);
     if (active.has(safeId)) {
@@ -480,6 +531,7 @@ export function createNewsDcPublicationService({
   return Object.freeze({
     preview,
     saveEditorNote,
+    confirmAmbiguousPostAbsent,
     publish,
     autoPublish,
     initializeAutoPublishing,

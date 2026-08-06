@@ -85,6 +85,32 @@ test("게시 코멘트 저장 API는 같은 출처와 정확한 확인값을 요
   });
 });
 
+test("모호한 게시 잠금 해제 API는 게시물 부재 확인값을 요구한다", async () => {
+  let resolved = null;
+  await withServer({
+    async confirmAmbiguousPostAbsent(id) { resolved = id; return { id, status: "reopened", archived: true }; },
+  }, async (baseUrl) => {
+    const target = `${baseUrl}/api/news/${ID}/dc-ambiguity-resolution`;
+    assert.equal((await fetch(target, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ confirmation: "confirm-dc-post-absent" }),
+    })).status, 403);
+    assert.equal((await fetch(target, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: baseUrl, "sec-fetch-site": "same-origin" },
+      body: JSON.stringify({ confirmation: "wrong" }),
+    })).status, 400);
+    const response = await fetch(target, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: baseUrl, "sec-fetch-site": "same-origin" },
+      body: JSON.stringify({ confirmation: "confirm-dc-post-absent" }),
+    });
+    assert.equal(response.status, 200);
+    assert.equal(resolved, ID);
+  });
+});
+
 test("DC 기본 커버 API는 고정된 커버만 읽기 전용으로 제공한다", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-news-cover-route-"));
   const target = path.join(root, "news.png");

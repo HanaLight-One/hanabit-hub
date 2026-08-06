@@ -281,7 +281,7 @@ function DcBodyPreview({ bodyText }) {
   );
 }
 
-function DcPublicationPanel({ item, preview, busy, error, onPreview, onPublish, onNoteChange, onNoteSave }) {
+function DcPublicationPanel({ item, preview, busy, error, onPreview, onPublish, onNoteChange, onNoteSave, onConfirmAbsent }) {
   if (item.workflow.publishedToDc) {
     return (
       <div className="approval approved">
@@ -300,6 +300,9 @@ function DcPublicationPanel({ item, preview, busy, error, onPreview, onPublish, 
       <div className="approval danger">
         <strong>게시 결과를 자동으로 확정하지 못했어요.</strong>
         <span>중복 게시를 막기 위해 다시 제출하지 않습니다. DC 게시판에서 직접 확인해 주세요.</span>
+        <button type="button" className="preview-button" onClick={onConfirmAbsent} disabled={busy}>
+          {busy ? "확인 내용을 저장하는 중…" : "DC에 게시물 없음 · 수동 게시 다시 열기"}
+        </button>
       </div>
     );
   }
@@ -390,6 +393,7 @@ function NewsCard({
   onPublish,
   onNoteChange,
   onNoteSave,
+  onConfirmAbsent,
   onRetry,
   onReanalyze,
 }) {
@@ -532,6 +536,7 @@ function NewsCard({
           onPublish={onPublish}
           onNoteChange={onNoteChange}
           onNoteSave={onNoteSave}
+          onConfirmAbsent={onConfirmAbsent}
         />
       )}
     </article>
@@ -676,6 +681,33 @@ function App() {
     }
   }
 
+  async function confirmAmbiguousPostAbsent(item) {
+    if (!window.confirm("DC 게시판에서 이 글이 실제로 없음을 확인했나요?\n이전 제출 자료는 보존하고 수동 게시 버튼만 다시 엽니다.")) return;
+    setBusyId(item.id);
+    setActionError("");
+    setActionErrorId(null);
+    try {
+      const response = await fetch(`/api/news/${item.id}/dc-ambiguity-resolution`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ confirmation: "confirm-dc-post-absent" }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "게시 잠금을 다시 열지 못했어요.");
+      setPreviews((current) => {
+        const next = { ...current };
+        delete next[item.id];
+        return next;
+      });
+      await load();
+    } catch (error) {
+      setActionError(error.message);
+      setActionErrorId(item.id);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function retry(item) {
     setBusyId(item.id);
     setActionError("");
@@ -770,6 +802,7 @@ function App() {
               onPublish={() => publishToDc(item)}
               onNoteChange={(note) => changeEditorNote(item, note)}
               onNoteSave={() => saveEditorNote(item)}
+              onConfirmAbsent={() => confirmAmbiguousPostAbsent(item)}
               onRetry={() => retry(item)}
               onReanalyze={() => reanalyze(item)}
             />

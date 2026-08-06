@@ -1,6 +1,7 @@
 const PREVIEW_ROUTE = /^\/api\/news\/([a-f0-9]{32})\/dc-preview$/u;
 const PUBLICATION_ROUTE = /^\/api\/news\/([a-f0-9]{32})\/dc-publication$/u;
 const EDITOR_NOTE_ROUTE = /^\/api\/news\/([a-f0-9]{32})\/dc-editor-note$/u;
+const AMBIGUITY_ROUTE = /^\/api\/news\/([a-f0-9]{32})\/dc-ambiguity-resolution$/u;
 const CONFIRMATION = "publish-news-to-dc-now";
 const EDITOR_NOTE_CONFIRMATION = "save-news-dc-editor-note";
 
@@ -25,6 +26,20 @@ async function readConfirmation(request) {
   }
   try {
     return JSON.parse(raw || "{}")?.confirmation === CONFIRMATION ? CONFIRMATION : null;
+  } catch {
+    return null;
+  }
+}
+
+async function readExactConfirmation(request, expected) {
+  if (!String(request.headers["content-type"] ?? "").startsWith("application/json")) return null;
+  let raw = "";
+  for await (const chunk of request) {
+    raw += chunk;
+    if (Buffer.byteLength(raw, "utf8") > 1_024) return null;
+  }
+  try {
+    return JSON.parse(raw || "{}")?.confirmation === expected ? expected : null;
   } catch {
     return null;
   }
@@ -99,6 +114,32 @@ export async function handleNewsDcPublicationRoute({
     }
     try {
       sendJson(response, 200, await publicationService.saveEditorNote(editorNoteMatch[1], note));
+    } catch (error) {
+      sendJson(response, statusFor(error), { error: error.message });
+    }
+    return true;
+  }
+
+  const ambiguityMatch = pathname.match(AMBIGUITY_ROUTE);
+  if (ambiguityMatch) {
+    if (request.method !== "POST") {
+      sendJson(response, 405, { error: "Method not allowed" });
+      return true;
+    }
+    if (!publicationService) {
+      sendJson(response, 404, { error: "Not found" });
+      return true;
+    }
+    if (!isSameOriginRequest(request)) {
+      sendJson(response, 403, { error: "같은 출처 요청만 허용합니다." });
+      return true;
+    }
+    if ((await readExactConfirmation(request, "confirm-dc-post-absent")) === null) {
+      sendJson(response, 400, { error: "DC 게시물 부재 확인값이 필요합니다." });
+      return true;
+    }
+    try {
+      sendJson(response, 200, await publicationService.confirmAmbiguousPostAbsent(ambiguityMatch[1]));
     } catch (error) {
       sendJson(response, statusFor(error), { error: error.message });
     }
