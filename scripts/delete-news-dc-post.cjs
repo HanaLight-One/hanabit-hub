@@ -48,17 +48,61 @@ function classifyDeleteResult(result) {
   return { status: "ambiguous-no-retry", reason: "DELETE_NOT_CONFIRMED" };
 }
 
-async function verifyPostVisibility({ galleryId, postId, userAgent, fetchImpl = fetch }) {
-  const target = new URL(`https://m.dcinside.com/board/${encodeURIComponent(galleryId)}/${encodeURIComponent(postId)}`);
-  target.searchParams.set("hanabit_delete_verify", Date.now().toString());
+function mobileDeleteHeaders(common, csrfToken, postUrl) {
+  return {
+    ...common.AJAX_HEADERS,
+    accept: "application/json, text/javascript, */*; q=0.01",
+    Origin: common.WRITE_BASE_URL,
+    "x-csrf-token": csrfToken,
+    Referer: postUrl,
+  };
+}
+
+async function deleteMobilePostWithOrigin({ publisherRequire, galleryId, postId, jar, userAgent }) {
+  const common = publisherRequire("@gurumnyang/dcinside.js/dist/src/post/mobileCommon.js");
+  const cheerio = publisherRequire("cheerio");
+  const client = common.createMobileClient(jar, userAgent);
+  const boardUrl = `${common.WRITE_BASE_URL}/board/${encodeURIComponent(galleryId)}`;
+  const postUrl = `${boardUrl}/${encodeURIComponent(postId)}`;
+  try {
+    await common.getWithRedirect(client, boardUrl, {
+      headers: { ...common.HTML_HEADERS, Referer: `${common.WRITE_BASE_URL}/` },
+      responseType: "text",
+    });
+  } catch {}
+  const view = await common.getWithRedirect(client, postUrl, {
+    headers: { ...common.HTML_HEADERS, Referer: boardUrl },
+    responseType: "text",
+  });
+  const csrfToken = cheerio.load(view.data)('meta[name="csrf-token"]').attr("content") || "";
+  if (!csrfToken) throw new Error("CSRF 토큰을 찾을 수 없습니다.");
+  const headers = mobileDeleteHeaders(common, csrfToken, postUrl);
+  const access = await client.post(
+    `${common.WRITE_BASE_URL}/ajax/access`,
+    new URLSearchParams({ token_verify: "board_Del" }).toString(),
+    { headers, validateStatus: (status) => status >= 200 && status < 400 },
+  );
+  const conKey = common.findBlockOrConKey(access.data);
+  if (!conKey) throw new Error("삭제용 키(con_key)를 얻지 못했습니다.");
+  const deletion = await client.post(
+    common.DELETE_POST_ENDPOINT,
+    new URLSearchParams({ id: galleryId, no: String(postId), con_key: conKey }).toString(),
+    { headers, responseType: "text", validateStatus: () => true },
+  );
+  let value = null;
+  try { value = JSON.parse(String(deletion.data ?? "").trim()); } catch {}
+  return {
+    success: [1, true, "1"].includes(value?.result),
+    message: value?.cause || value?.message,
+    responseStatus: deletion.status,
+  };
+}
+
+async function fetchPostVisibility(target, postId, userAgent, fetchImpl) {
   let response;
   try {
     response = await fetchImpl(target.href, {
-      headers: {
-        "user-agent": userAgent || "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Mobile Safari/537.36",
-        "cache-control": "no-cache",
-        pragma: "no-cache",
-      },
+      headers: { "user-agent": userAgent, "cache-control": "no-cache", pragma: "no-cache" },
       cache: "no-store",
       signal: AbortSignal.timeout(8_000),
     });
@@ -75,10 +119,27 @@ async function verifyPostVisibility({ galleryId, postId, userAgent, fetchImpl = 
     "iu",
   );
   if (exactPostInput.test(html)) return "present";
-  if (/삭제된 게시물|존재하지 않는 게시물|게시물이 존재하지|해당 게시물은 존재하지/iu.test(html)) {
-    return "absent";
-  }
+  if (/삭제된 게시물|존재하지 않는 게시물|게시물이 존재하지|해당 게시물은 존재하지/iu.test(html)) return "absent";
   return "unknown";
+}
+
+async function verifyPostVisibility({ galleryId, postId, userAgent, fetchImpl = fetch }) {
+  const target = new URL(`https://m.dcinside.com/board/${encodeURIComponent(galleryId)}/${encodeURIComponent(postId)}`);
+  target.searchParams.set("hanabit_delete_verify", Date.now().toString());
+  const mobile = await fetchPostVisibility(
+    target,
+    postId,
+    userAgent || "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Mobile Safari/537.36",
+    fetchImpl,
+  );
+  if (mobile !== "unknown") return mobile;
+  target.searchParams.set("hanabit_delete_verify", `${Date.now()}-desktop`);
+  return fetchPostVisibility(
+    target,
+    postId,
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140 Safari/537.36",
+    fetchImpl,
+  );
 }
 
 async function deleteNewsPost({ jobPath, publisherRoot }) {
@@ -107,7 +168,8 @@ async function deleteNewsPost({ jobPath, publisherRoot }) {
   });
   let outcome;
   try {
-    const result = await dc.deleteMobilePost({
+    const result = await deleteMobilePostWithOrigin({
+      publisherRequire,
       galleryId: job.galleryId,
       postId: String(job.postId),
       jar: login.jar,
@@ -155,6 +217,7 @@ module.exports = {
   automatedDcCredentials,
   classifyDeleteError,
   classifyDeleteResult,
+  mobileDeleteHeaders,
   validateJob,
   verifyPostVisibility,
 };

@@ -474,6 +474,25 @@ export function createOpenAIStatusMonitor({
     return { status: "suppressed", id, currentPostCleared: deleted };
   }
 
+  async function confirmCurrentPostAbsent(postIdValue) {
+    const postId = String(postIdValue ?? "");
+    const state = await readState();
+    if (!/^\d{4,}$/u.test(postId) || state?.currentPost?.postId !== postId) {
+      throw new Error("공개 부재를 확인한 글 번호와 현재 상태 글 영수증이 일치하지 않습니다.");
+    }
+    await saveState({
+      ...state,
+      currentPost: null,
+      pendingReplacement: null,
+      history: [...state.history.slice(-99), {
+        event: "absence-confirmed",
+        postId,
+        confirmedAt: now().toISOString(),
+      }],
+    });
+    return { status: "cleared", postId };
+  }
+
   return Object.freeze({
     poll,
     readState,
@@ -482,5 +501,6 @@ export function createOpenAIStatusMonitor({
     authorizeAdoptedPostReplacement,
     recordReplacement,
     suppressPendingSnapshot,
+    confirmCurrentPostAbsent,
   });
 }

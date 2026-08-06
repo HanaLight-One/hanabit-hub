@@ -147,6 +147,17 @@ test("사용자가 거절한 복구완료 후보를 게시 제외하고 삭제�
   assert.equal(item.internal.openAIStatus.publicationSuppressionReason, "user-request");
 });
 
+test("공개 부재가 확인된 현재 상태 글 영수증만 정확히 정리한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-status-"));
+  const monitor = createOpenAIStatusMonitor({ stateRoot: root, fetchImpl: responder([[], [incident()]]) });
+  await monitor.poll();
+  const outage = await monitor.poll();
+  await monitor.confirmPublished(outage.snapshotHash, { postId: "120854", url: "https://gall.dcinside.com/example" });
+  await assert.rejects(() => monitor.confirmCurrentPostAbsent("120855"), /일치하지 않습니다/u);
+  assert.deepEqual(await monitor.confirmCurrentPostAbsent("120854"), { status: "cleared", postId: "120854" });
+  assert.equal((await monitor.readState()).currentPost, null);
+});
+
 test("수동 기준선 장애가 바로 끝나도 복구 글을 만들지 않는다", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-status-"));
   const monitor = createOpenAIStatusMonitor({ stateRoot: root, fetchImpl: responder([[incident()], []]) });

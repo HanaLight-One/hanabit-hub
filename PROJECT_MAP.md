@@ -155,7 +155,8 @@ OGP 조회 실패 시 일반 링크를 유지해 게시 자체는 막지 않는�
 `src/modules/news/openai-status-post-replacer.mjs`와 `scripts/delete-news-dc-post.cjs`다. 삭제 실패는
 캡차·CSRF·삭제 키 등 안전한 원인 코드로만 기록하고 자동 재시도하지 않는다. 사람이 특정 글 번호를
 명시 승인한 경우에만 기존 영수증과 분리된 일회성 삭제를 허용한다. 삭제 요청 뒤에는 캐시를 우회해
-공개 글 번호를 다시 조회하고, 실제 부재가 확인될 때만 `deleted`로 기록한다. 거절된 상태 원고는 게시 제외로 닫는다.
+모바일과 데스크톱 공개 글 번호를 다시 조회하고, 실제 부재가 확인될 때만 `deleted`로 기록한다.
+모바일 삭제 요청은 브라우저와 같은 Origin을 포함한다. 거절된 상태 원고는 게시 제외로 닫는다.
 뉴스 재분석은 `POST /api/news/:id/analysis-retry`에서 명시적 확인값을 받은
 `translation_failed` 항목에만 허용하며 이미지 분석 API는 호출하지 않는다.
 무료 API 뉴스 분석은 공용 Responses API 텍스트 실행기에 요청별 strict JSON Schema를

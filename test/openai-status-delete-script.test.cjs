@@ -7,6 +7,7 @@ const {
   automatedDcCredentials,
   classifyDeleteError,
   classifyDeleteResult,
+  mobileDeleteHeaders,
   validateJob,
   verifyPostVisibility,
 } = require("../scripts/delete-news-dc-post.cjs");
@@ -83,4 +84,27 @@ test("삭제 뒤 공개 페이지에서 정확한 글 번호의 존재 여부를
   assert.equal(present, "present");
   assert.equal(absent, "absent");
   assert.equal(unknown, "unknown");
+});
+
+test("모바일 삭제 요청은 실제 브라우저와 같은 Origin을 포함한다", () => {
+  const headers = mobileDeleteHeaders({ AJAX_HEADERS: { "x-requested-with": "XMLHttpRequest" }, WRITE_BASE_URL: "https://m.dcinside.com" }, "csrf", "https://m.dcinside.com/board/chatgpt/120854");
+  assert.equal(headers.Origin, "https://m.dcinside.com");
+  assert.equal(headers.Referer, "https://m.dcinside.com/board/chatgpt/120854");
+  assert.equal(headers["x-csrf-token"], "csrf");
+});
+
+test("모바일 공개 조회가 차단되면 데스크톱 조회의 404로 부재를 확정한다", async () => {
+  let calls = 0;
+  const result = await verifyPostVisibility({
+    galleryId: "chatgpt",
+    postId: "120854",
+    fetchImpl: async () => {
+      calls += 1;
+      return calls === 1
+        ? { ok: false, status: 403, async text() { return ""; } }
+        : { ok: false, status: 404, async text() { return ""; } };
+    },
+  });
+  assert.equal(result, "absent");
+  assert.equal(calls, 2);
 });
