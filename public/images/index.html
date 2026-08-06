@@ -7,10 +7,10 @@
     <meta name="theme-color" content="#090c10" />
     <meta name="description" content="하나빛 허브의 읽기 전용 이미지 아카이브" />
     <title>이미지 아카이브 · Hanabit Hub</title>
-    <link rel="stylesheet" href="/images/styles.css?v=20260803-prompt-copy" />
+    <link rel="stylesheet" href="/images/styles.css?v=20260806-image-refresh" />
     <link rel="stylesheet" href="/codex-usage-indicator.css" />
     <script src="/codex-usage-indicator.js" type="module"></script>
-    <script src="/images/app.js?v=20260803-prompt-copy" type="module"></script>
+    <script src="/images/app.js?v=20260806-image-refresh" type="module"></script>
   </head>
   <body>
     <header class="topbar">
@@ -46,6 +46,9 @@
             <h2 id="archive-title">날짜별 이미지</h2>
           </div>
           <div class="toolbar-controls">
+            <button id="archive-refresh" class="toolbar-action refresh-action" type="button">
+              ↻ 이미지 새로고침
+            </button>
             <a id="generation-status" class="generation-status" href="/images/create#jobs">
               생성 작업 확인 중
             </a>
@@ -97,7 +100,12 @@
           <p class="section-label">PRODUCTION RECORD</p>
           <h2 id="detail-title">제작 기록</h2>
         </div>
-        <button id="panel-close" class="icon-button" type="button" aria-label="제작 기록 닫기">×</button>
+        <div class="panel-head-actions">
+          <button id="detail-refresh" class="detail-refresh-button" type="button">
+            ↻ 새로고침
+          </button>
+          <button id="panel-close" class="icon-button" type="button" aria-label="제작 기록 닫기">×</button>
+        </div>
       </div>
       <img id="detail-image" class="detail-image" alt="" />
       <dl id="basic-record" class="record-list"></dl>

@@ -183,6 +183,13 @@ h1 em { color: var(--accent); font-style: normal; }
   white-space: nowrap;
 }
 .secondary-toolbar-action { border: 1px solid var(--line); background: var(--panel); color: var(--text); }
+.refresh-action {
+  border: 1px solid rgb(216 255 82 / 36%);
+  background: rgb(216 255 82 / 8%);
+  color: var(--accent);
+  cursor: pointer;
+}
+.refresh-action:disabled { cursor: wait; opacity: .62; }
 
 .generation-status {
   min-height: 42px;
@@ -418,6 +425,27 @@ h1 em { color: var(--accent); font-style: normal; }
 }
 
 .panel-head h2 { margin: 0; font-size: 28px; }
+
+.panel-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detail-refresh-button {
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1px solid rgb(216 255 82 / 32%);
+  border-radius: 999px;
+  background: rgb(216 255 82 / 7%);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.detail-refresh-button:disabled { cursor: wait; opacity: .62; }
 
 .icon-button {
   width: 40px;

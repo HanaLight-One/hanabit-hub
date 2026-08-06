@@ -33,10 +33,12 @@ test("/images가 읽기 전용 이미지 화면을 제공한다", async () => {
     assert.match(body, /오테 추가/);
     assert.match(body, /자유 추가/);
     assert.match(body, /id="generation-status"/);
+    assert.match(body, /id="archive-refresh"/);
+    assert.match(body, /id="detail-refresh"/);
     assert.match(body, /id="prompt-record"/);
     assert.match(body, /id="prompt-copy"/);
-    assert.match(body, /styles\.css\?v=20260803-prompt-copy/);
-    assert.match(body, /app\.js\?v=20260803-prompt-copy/);
+    assert.match(body, /styles\.css\?v=20260806-image-refresh/);
+    assert.match(body, /app\.js\?v=20260806-image-refresh/);
     assert.equal(body.includes("삭제"), false);
   });
 });
@@ -65,6 +67,9 @@ test("이미지 화면의 스크립트와 스타일을 제공한다", async () =
     assert.match(scriptBody, /function displayTitle/u);
     assert.match(scriptBody, /원본 파일/u);
     assert.match(scriptBody, /source-upload/u);
+    assert.match(scriptBody, /refreshArchiveImages/u);
+    assert.match(scriptBody, /refreshSelectedImage/u);
+    assert.match(scriptBody, /fetch\("\/api\/images", \{ cache: "no-store" \}\)/u);
     assert.equal(style.status, 200);
     assert.match(style.headers.get("content-type"), /text\/css/);
   });

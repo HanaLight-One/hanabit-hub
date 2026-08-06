@@ -6,6 +6,7 @@ const elements = {
   dateCount: document.querySelector("#date-count"),
   dateFilter: document.querySelector("#date-filter"),
   categoryTabs: document.querySelector("#category-tabs"),
+  archiveRefresh: document.querySelector("#archive-refresh"),
   generationStatus: document.querySelector("#generation-status"),
   themeLabel: document.querySelector("#theme-label"),
   themeTitle: document.querySelector("#theme-title"),
@@ -14,6 +15,7 @@ const elements = {
   panel: document.querySelector("#detail-panel"),
   backdrop: document.querySelector("#panel-backdrop"),
   close: document.querySelector("#panel-close"),
+  detailRefresh: document.querySelector("#detail-refresh"),
   detailTitle: document.querySelector("#detail-title"),
   detailImage: document.querySelector("#detail-image"),
   basicRecord: document.querySelector("#basic-record"),
@@ -364,7 +366,7 @@ async function loadProductionRecord(image) {
   elements.recordMessage.textContent = "제작 기록을 확인하는 중이에요.";
 
   try {
-    const response = await fetch(image.productionRecordUrl);
+    const response = await fetch(image.productionRecordUrl, { cache: "no-store" });
     if (state.selectedImageId !== requestedImageId) return;
     if (response.status === 404) {
       elements.recordMessage.textContent =
@@ -427,11 +429,12 @@ elements.promptCopy.addEventListener("click", (event) => {
   copyText(elements.promptText.textContent, elements.promptCopy);
 });
 
-function openPanel(image, trigger) {
-  state.selectedImageId = image.id;
-  state.lastFocused = trigger;
+function renderPanelImage(image, { refreshPreview = false } = {}) {
   elements.detailTitle.textContent = image.name;
-  elements.detailImage.src = image.thumbnailUrl;
+  const separator = image.thumbnailUrl.includes("?") ? "&" : "?";
+  elements.detailImage.src = refreshPreview
+    ? `${image.thumbnailUrl}${separator}refresh=${Date.now()}`
+    : image.thumbnailUrl;
   elements.detailImage.alt = `${image.name} 미리보기`;
   elements.createLink.href =
     `/images/create?source=${encodeURIComponent(image.id)}&mode=same-combination`;
@@ -445,6 +448,12 @@ function openPanel(image, trigger) {
     ["파일 크기", formatBytes(image.size)],
     ["수정 시각", formatDateTime(image.modifiedAt)],
   ]);
+}
+
+function openPanel(image, trigger) {
+  state.selectedImageId = image.id;
+  state.lastFocused = trigger;
+  renderPanelImage(image);
   elements.backdrop.hidden = false;
   elements.panel.classList.add("open");
   elements.panel.setAttribute("aria-hidden", "false");
@@ -481,13 +490,68 @@ elements.trashButton.addEventListener("click", () => {
   const image = state.images.find((candidate) => candidate.id === state.selectedImageId);
   if (image) moveToTrash(image);
 });
+
+async function refreshArchiveImages() {
+  if (elements.archiveRefresh.disabled) return;
+  const original = elements.archiveRefresh.textContent;
+  elements.archiveRefresh.disabled = true;
+  elements.archiveRefresh.textContent = "↻ 불러오는 중…";
+  state.productionRecords.clear();
+  const loaded = await loadImages();
+  elements.archiveRefresh.textContent = loaded ? "✓ 새로고침 완료" : "새로고침 실패";
+  setTimeout(() => {
+    elements.archiveRefresh.textContent = original;
+    elements.archiveRefresh.disabled = false;
+  }, 900);
+}
+
+async function refreshSelectedImage() {
+  if (elements.detailRefresh.disabled || !state.selectedImageId) return;
+  const requestedImageId = state.selectedImageId;
+  const original = elements.detailRefresh.textContent;
+  elements.detailRefresh.disabled = true;
+  elements.detailRefresh.textContent = "불러오는 중…";
+  try {
+    const response = await fetch(`/api/images/${encodeURIComponent(requestedImageId)}`, {
+      cache: "no-store",
+    });
+    if (!response.ok) throw new Error("Image detail request failed");
+    const payload = await response.json();
+    if (state.selectedImageId !== requestedImageId) return;
+    const image = {
+      ...payload.image,
+      category: payload.image.category
+        ?? (payload.image.group === "extra-requests" ? "legacy-extra" : "daily-theme"),
+    };
+    const index = state.images.findIndex((candidate) => candidate.id === requestedImageId);
+    if (index >= 0) state.images[index] = image;
+    state.productionRecords.delete(requestedImageId);
+    renderPanelImage(image, { refreshPreview: true });
+    await loadProductionRecord(image);
+    if (state.selectedImageId === requestedImageId) {
+      elements.detailRefresh.textContent = "✓ 완료";
+    }
+  } catch {
+    if (state.selectedImageId === requestedImageId) {
+      elements.detailRefresh.textContent = "다시 시도";
+    }
+  } finally {
+    setTimeout(() => {
+      elements.detailRefresh.textContent = original;
+      elements.detailRefresh.disabled = false;
+    }, 900);
+  }
+}
+
+elements.archiveRefresh.addEventListener("click", refreshArchiveImages);
+elements.detailRefresh.addEventListener("click", refreshSelectedImage);
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && elements.panel.classList.contains("open")) closePanel();
 });
 
 async function loadImages() {
 try {
-  const response = await fetch("/api/images");
+  const response = await fetch("/api/images", { cache: "no-store" });
   if (!response.ok) throw new Error("Archive request failed");
   const payload = await response.json();
   state.images = Array.isArray(payload.images) ? payload.images : [];
