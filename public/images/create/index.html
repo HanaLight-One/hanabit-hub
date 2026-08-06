@@ -8,10 +8,10 @@
     <meta name="description" content="하나빛 이미지 추가생성 초안실" />
     <title>추가 이미지 생성실 · Hanabit Hub</title>
     <link rel="stylesheet" href="/images/styles.css" />
-    <link rel="stylesheet" href="/images/create/styles.css?v=20260805-oracle-defaults" />
+    <link rel="stylesheet" href="/images/create/styles.css?v=20260806-jobs-refresh" />
     <link rel="stylesheet" href="/codex-usage-indicator.css" />
     <script src="/codex-usage-indicator.js" type="module"></script>
-    <script src="/images/create/app.js?v=20260805-oracle-defaults" type="module"></script>
+    <script src="/images/create/app.js?v=20260806-jobs-refresh" type="module"></script>
   </head>
   <body>
     <header class="topbar">
@@ -253,7 +253,10 @@
             <p class="section-label">RECENT GENERATION</p>
             <h2 id="jobs-title">최근 생성 작업</h2>
           </div>
-          <p id="jobs-summary" aria-live="polite">작업 상태를 확인하는 중이에요.</p>
+          <div class="jobs-heading-status">
+            <p id="jobs-summary" aria-live="polite">작업 상태를 확인하는 중이에요.</p>
+            <button id="jobs-refresh" class="jobs-refresh" type="button">↻ 새로고침</button>
+          </div>
         </div>
         <div id="jobs-list" class="jobs-list" aria-live="polite"></div>
         <button id="jobs-load-more" class="jobs-load-more" type="button" hidden>

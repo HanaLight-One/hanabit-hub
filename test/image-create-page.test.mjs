@@ -36,7 +36,7 @@ test("/images/create가 안전한 추가생성 초안 화면을 제공한다", a
     assert.match(body, /id="preview-scene-details"/);
     assert.match(body, /id="preview-scene-summary"/);
     assert.match(body, /id="preview-scene-copy"/);
-    assert.match(body, /20260805-oracle-defaults/);
+    assert.match(body, /20260806-jobs-refresh/);
     assert.match(body, /id="oracle-reroll"/);
     assert.match(body, /id="oracle-preset"/);
     assert.match(body, /id="oracle-chaos"/);
@@ -53,6 +53,7 @@ test("/images/create가 안전한 추가생성 초안 화면을 제공한다", a
     assert.match(body, /id="batch-count"/);
     assert.match(body, /id="preview-batch"/);
     assert.match(body, /id="jobs-list"/);
+    assert.match(body, /id="jobs-refresh"/);
     assert.match(body, /id="source-remove"/);
     assert.match(body, /연결 해제/);
     assert.match(body, /id="source-picker"/);
@@ -130,6 +131,9 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(scriptBody, /현재 프롬프트를 새 신탁으로 바꿀까요/);
     assert.match(scriptBody, /jobDisplayLimit \+= JOB_PAGE_SIZE/);
     assert.match(scriptBody, /generation-jobs\?limit=/);
+    assert.match(scriptBody, /최근 작업 영수증이 오고 있어요/u);
+    assert.match(scriptBody, /3_000/u);
+    assert.match(scriptBody, /jobsRefresh\.addEventListener/u);
     assert.match(scriptBody, /같은 조합으로/);
     assert.match(scriptBody, /인물만 유지/);
     assert.match(scriptBody, /화풍만 유지/);

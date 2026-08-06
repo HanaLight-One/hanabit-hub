@@ -88,6 +88,7 @@ const elements = {
   draftButton: document.querySelector("#draft-button"),
   executeButton: document.querySelector("#execute-button"),
   jobsSummary: document.querySelector("#jobs-summary"),
+  jobsRefresh: document.querySelector("#jobs-refresh"),
   jobsList: document.querySelector("#jobs-list"),
   jobsLoadMore: document.querySelector("#jobs-load-more"),
 };
@@ -1418,10 +1419,21 @@ async function loadJobs({ loadMore = false } = {}) {
   jobsLoading = true;
   const previousLimit = jobDisplayLimit;
   if (loadMore) jobDisplayLimit += JOB_PAGE_SIZE;
+  elements.jobsRefresh.disabled = true;
+  elements.jobsRefresh.textContent = "↻ 확인 중…";
+  if (!loadMore && !elements.jobsList.children.length) {
+    const waiting = document.createElement("p");
+    waiting.className = "jobs-waiting";
+    waiting.textContent = "최근 작업 영수증이 오고 있어요…";
+    elements.jobsList.replaceChildren(waiting);
+  }
   if (loadMore) {
     elements.jobsLoadMore.disabled = true;
     elements.jobsLoadMore.textContent = "이전 작업 불러오는 중…";
   }
+  const slowNotice = setTimeout(() => {
+    elements.jobsSummary.textContent = "저장소에서 작업 기록을 모으고 있어요. 조금만 기다려주세요.";
+  }, 3_000);
   try {
     const response = await fetch(
       `/api/images/generation-jobs?limit=${encodeURIComponent(jobDisplayLimit)}`,
@@ -1429,17 +1441,25 @@ async function loadJobs({ loadMore = false } = {}) {
     );
     if (!response.ok) throw new Error();
     renderJobs(await response.json());
+    elements.jobsRefresh.textContent = "✓ 완료";
   } catch {
     jobDisplayLimit = previousLimit;
     elements.jobsSummary.textContent = "작업 상태를 불러오지 못했어요.";
     elements.jobsLoadMore.disabled = false;
     elements.jobsLoadMore.textContent = "다시 불러오기";
+    elements.jobsRefresh.textContent = "↻ 다시 시도";
   } finally {
+    clearTimeout(slowNotice);
     jobsLoading = false;
+    setTimeout(() => {
+      elements.jobsRefresh.disabled = false;
+      elements.jobsRefresh.textContent = "↻ 새로고침";
+    }, 700);
   }
 }
 
 elements.jobsLoadMore.addEventListener("click", () => loadJobs({ loadMore: true }));
+elements.jobsRefresh.addEventListener("click", () => loadJobs());
 loadOracleSettings();
 loadJobs();
 setInterval(loadJobs, 10_000);

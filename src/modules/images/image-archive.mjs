@@ -232,6 +232,34 @@ export function createImageArchive({
     return null;
   }
 
+  async function findManyByTargets(targets) {
+    if (!Array.isArray(targets)) throw new TypeError("이미지 대상 목록은 배열이어야 합니다.");
+    const requested = new Set(targets
+      .filter((target) => path.isAbsolute(target ?? ""))
+      .map((target) => path.resolve(target).toLowerCase()));
+    const found = new Map();
+    if (!requested.size) return found;
+
+    for (const source of sources) {
+      for (const root of roots[source]) {
+        const inspection = await inspectRoot(root);
+        if (!inspection.available) continue;
+        for (const entry of await walkImages(root, source)) {
+          const key = path.resolve(entry.target).toLowerCase();
+          if (!requested.has(key) || found.has(key)) continue;
+          found.set(key, Object.freeze({
+            target: entry.target,
+            storageKey: entry.storageKey,
+            extension: entry.extension,
+            record: entry.publicRecord,
+          }));
+        }
+        if (found.size === requested.size) return found;
+      }
+    }
+    return found;
+  }
+
   async function listIndexable() {
     const entriesById = new Map();
     for (const source of sources) {
@@ -260,5 +288,5 @@ export function createImageArchive({
     }));
   }
 
-  return Object.freeze({ find, findByTarget, list, listIndexable, containsTarget });
+  return Object.freeze({ find, findByTarget, findManyByTargets, list, listIndexable, containsTarget });
 }

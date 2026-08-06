@@ -67,6 +67,7 @@ async function fixture(callback, { now } = {}) {
     styles: [{ id: "calm", label: "calm" }, { id: "vivid", label: "vivid" }],
     characters: [{ id: "pink-bridge", label: "핑크브릿지" }, { id: "헤일라", label: "헤일라" }],
   }; } };
+  const archiveLookups = { findManyCalls: 0, requestedTargets: [] };
   const archive = {
     async find(id) {
       return id === SOURCE_ID
@@ -82,6 +83,20 @@ async function fixture(callback, { now } = {}) {
         contentUrl: `/api/images/${"a".repeat(64)}/content`,
         downloadUrl: `/api/images/${"a".repeat(64)}/download`,
       } };
+    },
+    async findManyByTargets(targets) {
+      archiveLookups.findManyCalls += 1;
+      archiveLookups.requestedTargets = [...targets];
+      return new Map(targets.map((target, index) => [
+        path.resolve(target).toLowerCase(),
+        { record: {
+          id: (index + 1).toString(16).padStart(64, "0"),
+          name: path.basename(target),
+          thumbnailUrl: `/api/images/${(index + 1).toString(16).padStart(64, "0")}/thumbnail`,
+          contentUrl: `/api/images/${(index + 1).toString(16).padStart(64, "0")}/content`,
+          downloadUrl: `/api/images/${(index + 1).toString(16).padStart(64, "0")}/download`,
+        } },
+      ]));
     },
   };
   const drafts = createGenerationDraftStore({ root: draftRoot, catalog, archive });
@@ -110,6 +125,7 @@ async function fixture(callback, { now } = {}) {
       outputRoot,
       freeTextPythonExecutablePath,
       freeTextKeyStorePath,
+      archiveLookups,
     });
   }
   finally { await rm(root, { recursive: true, force: true }); }
@@ -196,6 +212,36 @@ test("인물 없는 10장 변주 배치는 한 작업으로 worker에 전달한�
       () => executor.start(draft.id, { confirmation: "generate-one-draft-image" }),
       /10장 실제 생성 확인/,
     );
+  });
+});
+
+test("최근 작업 목록은 전체 영수증 중 표시할 작업의 결과만 한 번에 찾는다", async () => {
+  await fixture(async ({ executor, jobRoot, outputRoot, archiveLookups }) => {
+    await mkdir(jobRoot, { recursive: true });
+    for (let index = 1; index <= 12; index += 1) {
+      const id = index.toString(16).padStart(32, "0");
+      await writeFile(path.join(jobRoot, `${id}.json`), JSON.stringify({
+        id,
+        createdAt: `2026-08-01T00:${String(index).padStart(2, "0")}:00.000Z`,
+        startedAt: `2026-08-01T00:${String(index).padStart(2, "0")}:00.000Z`,
+        completedAt: `2026-08-01T00:${String(index).padStart(2, "0")}:10.000Z`,
+        status: "complete",
+        prompt: `작업 ${index}`,
+        count: 1,
+        purpose: "free-play",
+        characters: { mode: "none", ids: [] },
+        style: { mode: "none", id: null },
+        outputs: [path.join(outputRoot, `${id}.png`)],
+        progress: { completed: 1, total: 1 },
+      }), "utf8");
+    }
+
+    const listing = await executor.list({ limit: 5 });
+
+    assert.equal(listing.totalCount, 12);
+    assert.equal(listing.jobs.length, 5);
+    assert.equal(archiveLookups.findManyCalls, 1);
+    assert.equal(archiveLookups.requestedTargets.length, 5);
   });
 });
 

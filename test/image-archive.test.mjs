@@ -99,6 +99,23 @@ test("이미지 ID를 허용된 저장소 안의 파일로만 해석한다", asy
   await assert.rejects(() => archive.find("../secret"), /64자리/);
 });
 
+test("여러 생성 결과 경로를 저장소 한 번 순회로 함께 찾는다", async (context) => {
+  const { daily, pilot } = await fixture(context);
+  const archive = createImageArchive({ dailyImagesRoot: daily, pilotImagesRoot: pilot });
+  const { images } = await archive.list();
+  const targets = [];
+  for (const image of images) targets.push((await archive.find(image.id)).target);
+
+  const found = await archive.findManyByTargets(targets);
+
+  assert.equal(found.size, 2);
+  assert.deepEqual(
+    [...found.values()].map((entry) => entry.record.id).sort(),
+    images.map((image) => image.id).sort(),
+  );
+  assert.equal(JSON.stringify([...found.values()].map((entry) => entry.record)).includes(daily), false);
+});
+
 test("없는 저장소는 경로 대신 안전한 준비 상태만 반환한다", async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-images-"));
   context.after(() => rm(root, { recursive: true, force: true }));

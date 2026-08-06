@@ -291,7 +291,7 @@ export function createPromptOnlyExecutor({
     return Object.freeze({ ...started, regeneratedFrom: safeId, slot: safeSlot });
   }
 
-  async function normalizeJob(job, currentTime = now()) {
+  function statusDetails(job, currentTime = now()) {
     const id = validateId(job.id);
     const startedAtMs = Date.parse(job.startedAt ?? job.createdAt ?? "");
     const completedAtMs = Date.parse(job.completedAt ?? job.failedAt ?? "");
@@ -313,7 +313,10 @@ export function createPromptOnlyExecutor({
             : job.textApi
               ? "generating"
               : "planning";
-    const purpose = PURPOSES.has(job.purpose) ? job.purpose : "legacy-extra";
+    return { id, elapsedMs, rawStatus, status, stage };
+  }
+
+  async function readOptionLabels() {
     let optionLabels = { characters: new Map(), styles: new Map() };
     if (optionsCatalog) {
       try {
@@ -324,6 +327,13 @@ export function createPromptOnlyExecutor({
         };
       } catch {}
     }
+    return optionLabels;
+  }
+
+  async function normalizeJob(job, currentTime = now(), prepared = {}) {
+    const { id, elapsedMs, rawStatus, status, stage } = statusDetails(job, currentTime);
+    const purpose = PURPOSES.has(job.purpose) ? job.purpose : "legacy-extra";
+    const optionLabels = prepared.optionLabels ?? await readOptionLabels();
     const count = Math.max(1, Math.min(10, Number(job.count) || 1));
     const batchMode = ["single", "per-character", "variants"].includes(job.batchMode)
       ? job.batchMode
@@ -344,7 +354,9 @@ export function createPromptOnlyExecutor({
     if (archive?.findByTarget && Array.isArray(job.outputs)) {
       for (const output of job.outputs.slice(0, 10)) {
         if (!path.isAbsolute(output ?? "")) continue;
-        const image = await archive.findByTarget(output);
+        const image = prepared.imagesByTarget
+          ? prepared.imagesByTarget.get(path.resolve(output).toLowerCase())
+          : await archive.findByTarget(output);
         if (image) {
           const numbered = path.basename(output).match(/^(\d{1,2})\./u);
           const slot = numbered ? Number(numbered[1]) : images.length + 1;
@@ -425,11 +437,13 @@ export function createPromptOnlyExecutor({
       }
       throw error;
     }
-    const jobs = [];
+    const rawJobs = [];
     for (const entry of entries) {
       if (!entry.isFile() || !ID_PATTERN.test(entry.name.replace(/\.json$/u, ""))) continue;
       try {
-        jobs.push(await normalizeJob(JSON.parse(await readFile(path.join(jobRoot, entry.name), "utf8"))));
+        const job = JSON.parse(await readFile(path.join(jobRoot, entry.name), "utf8"));
+        validateId(job.id);
+        rawJobs.push(job);
       } catch (error) {
         if (
           !(error instanceof SyntaxError)
@@ -438,14 +452,30 @@ export function createPromptOnlyExecutor({
         ) throw error;
       }
     }
-    jobs.sort((left, right) => right.startedAt.localeCompare(left.startedAt));
-    const recent = jobs.slice(0, safeLimit);
+    rawJobs.sort((left, right) =>
+      String(right.startedAt ?? right.createdAt ?? "")
+        .localeCompare(String(left.startedAt ?? left.createdAt ?? "")),
+    );
+    const currentTime = now();
+    const recentRaw = rawJobs.slice(0, safeLimit);
+    const optionLabels = await readOptionLabels();
+    const outputTargets = recentRaw.flatMap((job) => Array.isArray(job.outputs)
+      ? job.outputs.slice(0, 10).filter((target) => path.isAbsolute(target ?? ""))
+      : []);
+    const imagesByTarget = outputTargets.length && archive?.findManyByTargets
+      ? await archive.findManyByTargets(outputTargets)
+      : outputTargets.length ? null : new Map();
+    const recent = [];
+    for (const job of recentRaw) {
+      recent.push(await normalizeJob(job, currentTime, { optionLabels, imagesByTarget }));
+    }
+    const statuses = rawJobs.map((job) => statusDetails(job, currentTime).status);
     return Object.freeze({
       jobs: Object.freeze(recent),
-      totalCount: jobs.length,
-      hasMore: jobs.length > recent.length,
-      activeCount: jobs.filter((job) => job.status === "processing").length,
-      attentionCount: jobs.filter((job) => job.status === "attention").length,
+      totalCount: rawJobs.length,
+      hasMore: rawJobs.length > recent.length,
+      activeCount: statuses.filter((status) => status === "processing").length,
+      attentionCount: statuses.filter((status) => status === "attention").length,
     });
   }
 
