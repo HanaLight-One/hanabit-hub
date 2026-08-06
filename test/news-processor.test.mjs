@@ -237,6 +237,24 @@ test("승인 전 기존 뉴스는 분석 세대를 올려 새 정책으로 다�
   });
 });
 
+test("현재 정책 뉴스도 분석 모델이 바뀌면 새 모델로 다시 판정한다", async () => {
+  let calls = 0;
+  await fixture({ type: "x-post" }, async () => {
+    calls += 1;
+    return result("publish");
+  }, async ({ processor, store, id }) => {
+    await processor.process(id);
+    await store.update(id, (record) => ({
+      ...record,
+      workflow: { ...record.workflow, analysisModel: "gpt-5.4-mini-2026-03-17" },
+    }));
+    const reprocessed = await processor.reprocess(id);
+    assert.equal(calls, 2);
+    assert.equal(reprocessed.workflow.analysisModel, "gpt-5.6-terra");
+    assert.equal(reprocessed.workflow.analysisRevision, 2);
+  });
+});
+
 test("분석 전에 공식 문서 보강 결과를 저장하고 번역기에 함께 전달한다", async () => {
   let analyzedContext;
   await fixture(

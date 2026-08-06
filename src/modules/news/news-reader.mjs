@@ -62,7 +62,7 @@ function publicDcPublication(value) {
   };
 }
 
-function publicItem(record, sourceProfiles) {
+function publicItem(record, sourceProfiles, analysisModel) {
   const id = validateId(String(record?.id ?? ""));
   const embeds = Array.isArray(record?.original?.embeds)
     ? record.original.embeds.map((embed) => ({
@@ -228,14 +228,21 @@ function publicItem(record, sourceProfiles) {
         ["pending_review", "ignored"].includes(record?.workflow?.status) &&
         !record?.workflow?.dcApproval &&
         !record?.workflow?.dcPublication &&
-        (Number(record?.workflow?.analysisPolicyVersion) || 0) < NEWS_ANALYSIS_POLICY_VERSION,
+        (
+          (Number(record?.workflow?.analysisPolicyVersion) || 0) < NEWS_ANALYSIS_POLICY_VERSION ||
+          (record?.workflow?.analysisModel ?? "gpt-5.4-mini-2026-03-17") !== analysisModel
+        ),
     },
     collectedAt: String(record?.collectedAt ?? ""),
     media,
   };
 }
 
-export function createNewsReader({ root, sourceProfiles = new Map() }) {
+export function createNewsReader({
+  root,
+  sourceProfiles = new Map(),
+  analysisModel = "gpt-5.4-mini-2026-03-17",
+}) {
   if (!path.isAbsolute(root)) throw new TypeError("뉴스 상태 루트는 절대경로여야 합니다.");
   const pendingRoot = path.join(root, "pending");
 
@@ -258,7 +265,7 @@ export function createNewsReader({ root, sourceProfiles = new Map() }) {
     for (const entry of entries) {
       if (!entry.isDirectory() || !ID_PATTERN.test(entry.name)) continue;
       try {
-        const item = publicItem(await readRecord(entry.name), sourceProfiles);
+        const item = publicItem(await readRecord(entry.name), sourceProfiles, analysisModel);
         if (item.id !== entry.name) throw new Error("뉴스 ID가 일치하지 않습니다.");
         items.push(item);
       } catch {

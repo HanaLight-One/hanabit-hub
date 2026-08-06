@@ -212,6 +212,7 @@ const newsSourceProfiles = createNewsSourceProfileIndex(
 const newsReader = createNewsReader({
   root: path.join(APP_ROOT, "state", "news"),
   sourceProfiles: newsSourceProfiles,
+  analysisModel: config.integrations.news.analysisModel,
 });
 const newsCodexReviewConfig = config.integrations?.news?.codexReview;
 const newsCodexReviewer = newsCodexReviewConfig?.enabled

@@ -247,11 +247,13 @@ export function createNewsProcessor({
     const current = await store.read(id);
     const workflow = current.workflow ?? {};
     const alreadyCurrent = Number(workflow.analysisPolicyVersion) >= NEWS_ANALYSIS_POLICY_VERSION;
+    const analyzedModel = workflow.analysisModel ?? "gpt-5.4-mini-2026-03-17";
+    const alreadyCurrentModel = analyzedModel === model;
     if (
       !["pending_review", "ignored"].includes(workflow.status) ||
       workflow.dcApproval ||
       workflow.dcPublication ||
-      alreadyCurrent
+      (alreadyCurrent && alreadyCurrentModel)
     ) {
       const error = new Error("승인·게시 전의 판정 완료 뉴스만 새 정책으로 다시 판정할 수 있습니다.");
       error.code = "NOT_REPROCESSABLE";
