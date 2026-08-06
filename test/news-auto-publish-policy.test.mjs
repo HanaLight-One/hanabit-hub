@@ -35,6 +35,17 @@ test("공식과 핵심 인물의 고신뢰 유추 및 중요 사례는 자동 �
   assert.equal(useCase.code, "trusted_use_case");
 });
 
+test("ChatGPT 학습 문서도 한국어 문맥 번역 없이는 자동 게시하지 않는다", () => {
+  const item = record("official");
+  item.original = {
+    links: ["https://learn.chatgpt.com/docs/security/security-review"],
+    contexts: [],
+  };
+  const missing = evaluateNewsAutoPublish(item, profile);
+  assert.equal(missing.decision, "human_review");
+  assert.equal(missing.code, "official_document_untranslated");
+});
+
 test("가치 있는 루머·의견은 허용하고 잡담·낮은 중요도는 제외한다", () => {
   assert.equal(evaluateNewsAutoPublish(record("rumor", { importance: "high" }), profile).decision, "eligible");
   assert.equal(evaluateNewsAutoPublish(record("opinion", { importance: "high" }), profile).decision, "eligible");

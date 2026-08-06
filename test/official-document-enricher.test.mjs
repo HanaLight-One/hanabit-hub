@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   enrichOfficialDocument,
   findOfficialOpenAiArticle,
+  findOfficialOpenAiKnowledgeDoc,
   findOfficialOpenAiPricing,
 } from "../src/modules/news/official-document-enricher.mjs";
 
@@ -24,6 +25,43 @@ test("OpenAI 공식 발표 링크 한 개를 안전한 문서 후보로 고른�
     findOfficialOpenAiArticle(item),
     "https://openai.com/index/ten-advances-in-mathematics",
   );
+});
+
+test("learn.chatgpt.com 문서를 공식 문맥으로 수집한다", async () => {
+  const target = "https://learn.chatgpt.com/docs/security/security-review";
+  const item = record([`${target}?utm_source=x#enable`]);
+  assert.equal(findOfficialOpenAiKnowledgeDoc(item), target);
+  let requested;
+  const enriched = await enrichOfficialDocument(item, {
+    fetchImpl: async (url) => {
+      requested = String(url);
+      return new Response([
+        "URL Source: https://learn.chatgpt.com/docs/security/security-review/",
+        "Markdown Content:",
+        "# Codex Security Review",
+        "Security Review analyzes code changes and reports findings.",
+      ].join("\n"), { status: 200, headers: { "content-type": "text/plain" } });
+    },
+  });
+  assert.equal(requested, "https://r.jina.ai/https://learn.chatgpt.com/docs/security/security-review");
+  assert.equal(enriched.original.contexts[0].relation, "official-document");
+  assert.equal(enriched.original.contexts[0].url, target);
+  assert.match(enriched.original.contexts[0].content, /analyzes code changes/u);
+});
+
+test("ChatGPT 학습 문서는 허용 경로와 정확한 응답 출처만 받는다", async () => {
+  assert.equal(findOfficialOpenAiKnowledgeDoc(record([
+    "https://learn.chatgpt.com/unsafe/security-review",
+  ])), null);
+  const item = record(["https://learn.chatgpt.com/docs/security/security-review"]);
+  const result = await enrichOfficialDocument(item, {
+    fetchImpl: async () => new Response([
+      "URL Source: https://learn.chatgpt.com/docs/security/other",
+      "Markdown Content:",
+      "Unrelated",
+    ].join("\n"), { status: 200 }),
+  });
+  assert.equal(result, item);
 });
 
 test("공식 발표를 읽어 별도 공식 문서 문맥으로 보강한다", async () => {

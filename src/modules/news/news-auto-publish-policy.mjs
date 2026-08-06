@@ -1,4 +1,4 @@
-import { findOfficialOpenAiArticle } from "./official-document-enricher.mjs";
+import { findOfficialOpenAiDocument } from "./official-document-enricher.mjs";
 import { isPersonnelAnnouncement } from "./news-person-context.mjs";
 
 const GOOD_IMPORTANCE = new Set(["medium", "high"]);
@@ -31,7 +31,7 @@ export function evaluateNewsAutoPublish(record, sourceProfile = null) {
   if (!String(workflow.analysisNotice ?? "").includes("원문 번역이 아니며")) {
     return result("human_review", "analysis_notice_missing", "AI 해설 주의 문구가 없어 자동 게시하지 않아요.");
   }
-  if (findOfficialOpenAiArticle(record)) {
+  if (findOfficialOpenAiDocument(record)) {
     const contexts = Array.isArray(record?.original?.contexts) ? record.original.contexts : [];
     const officialIndex = contexts.findIndex((context) => context?.relation === "official-document");
     const translated = (workflow.contextTranslations ?? []).find((entry) =>
