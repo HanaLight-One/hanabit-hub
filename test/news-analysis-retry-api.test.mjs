@@ -5,9 +5,12 @@ import { createServer } from "../src/server.mjs";
 test("뉴스 다시 분석 API는 명시적 확인과 실패 상태를 요구한다", async () => {
   let calls = 0;
   const processor = {
-    async retry(id) {
+    async queueRetry(id) {
       calls += 1;
-      return { id, workflow: { status: "pending_review" } };
+      return {
+        record: { id, workflow: { status: "pending_translation" } },
+        completion: new Promise(() => {}),
+      };
     },
   };
   const server = createServer({ newsAnalysisProcessor: processor });
@@ -28,7 +31,8 @@ test("뉴스 다시 분석 API는 명시적 확인과 실패 상태를 요구한
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ confirmation: "retry-news-analysis" }),
     });
-    assert.equal(response.status, 200);
+    assert.equal(response.status, 202);
+    assert.equal((await response.json()).status, "pending_translation");
     assert.equal(calls, 1);
   } finally {
     await new Promise((resolve) => server.close(resolve));

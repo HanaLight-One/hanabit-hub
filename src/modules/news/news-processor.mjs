@@ -225,14 +225,14 @@ export function createNewsProcessor({
     finally { inFlight.delete(id); }
   }
 
-  async function retry(id) {
+  async function queueRetry(id) {
     const current = await store.read(id);
     if (current.workflow?.status !== "translation_failed") {
       const error = new Error("번역 실패한 뉴스만 다시 분석할 수 있습니다.");
       error.code = "NOT_RETRYABLE";
       throw error;
     }
-    await store.update(id, (record) => ({
+    const queued = await store.update(id, (record) => ({
       ...record,
       workflow: {
         ...record.workflow,
@@ -240,7 +240,15 @@ export function createNewsProcessor({
         analysisFailure: null,
       },
     }));
-    return process(id);
+    return Object.freeze({
+      record: queued,
+      completion: process(id),
+    });
+  }
+
+  async function retry(id) {
+    const queued = await queueRetry(id);
+    return queued.completion;
   }
 
   async function reprocess(id) {
@@ -280,5 +288,5 @@ export function createNewsProcessor({
     return process(id);
   }
 
-  return Object.freeze({ process, retry, reprocess });
+  return Object.freeze({ process, queueRetry, retry, reprocess });
 }

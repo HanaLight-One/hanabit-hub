@@ -30,8 +30,9 @@ export async function handleNewsAnalysisRetryRoute({ request, response, pathname
     return true;
   }
   try {
-    const result = await processor.retry(match[1]);
-    sendJson(response, 200, { id: result.id, status: result.workflow.status });
+    const queued = await processor.queueRetry(match[1]);
+    void queued.completion.catch(() => {});
+    sendJson(response, 202, { id: queued.record.id, status: queued.record.workflow.status });
   } catch (error) {
     sendJson(response, error.code === "NOT_RETRYABLE" ? 409 : 400, { error: error.message });
   }
