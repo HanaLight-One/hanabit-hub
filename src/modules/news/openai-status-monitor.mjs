@@ -270,7 +270,10 @@ export function createOpenAIStatusMonitor({
         componentCount: degradedComponents.length,
       };
     }
-    const id = createHash("sha256").update(`openai-status\0${hash}`, "utf8").digest("hex").slice(0, 32);
+    const id = createHash("sha256")
+      .update(`openai-status\0${phase}\0${state.lastSnapshotHash}\0${hash}`, "utf8")
+      .digest("hex")
+      .slice(0, 32);
     const publishedAt = incidents.reduce(
       (latest, incident) => incident.updatedAt > latest ? incident.updatedAt : latest,
       checkedAt,
@@ -439,18 +442,23 @@ export function createOpenAIStatusMonitor({
     if (deleted && String(state.currentPost?.postId ?? "") !== String(deletedPostId)) {
       throw new Error("삭제 확인 글 번호와 현재 상태 글 영수증이 일치하지 않습니다.");
     }
-    await store.update(id, (current) => ({
-      ...current,
-      workflow: { ...current.workflow, status: "ignored" },
-      internal: {
-        ...current.internal,
-        openAIStatus: {
-          ...current.internal?.openAIStatus,
-          publicationSuppressedAt: now().toISOString(),
-          publicationSuppressionReason: "user-request",
+    await store.update(id, (current) => {
+      if (current.workflow?.dcPublication?.status === "posted") {
+        throw new Error("이미 게시된 상태 뉴스는 게시 제외 기록으로 덮을 수 없습니다.");
+      }
+      return {
+        ...current,
+        workflow: { ...current.workflow, status: "ignored" },
+        internal: {
+          ...current.internal,
+          openAIStatus: {
+            ...current.internal?.openAIStatus,
+            publicationSuppressedAt: now().toISOString(),
+            publicationSuppressionReason: "user-request",
+          },
         },
-      },
-    }));
+      };
+    });
     await saveState({
       ...state,
       currentPost: deleted ? null : state.currentPost,

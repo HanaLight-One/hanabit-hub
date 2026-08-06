@@ -110,6 +110,25 @@ test("자동 게시 영수증이 있는 장애가 사라지면 복구완료 후�
   assert.equal(recovered.phase, "recovered");
 });
 
+test("서로 다른 장애 주기의 복구완료는 정상 스냅샷이 같아도 별도 후보로 만든다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-status-"));
+  const monitor = createOpenAIStatusMonitor({
+    stateRoot: root,
+    fetchImpl: responder([[], [incident()], [], [incident({ id: "incident-2", update: "update-2" })], []]),
+  });
+  await monitor.poll();
+  const outage1 = await monitor.poll();
+  await monitor.confirmPublished(outage1.snapshotHash, { postId: "120600", url: "https://gall.dcinside.com/example" });
+  const recovered1 = await monitor.poll();
+  await monitor.confirmPublished(recovered1.snapshotHash, { postId: "120601", url: "https://gall.dcinside.com/example" });
+  const outage2 = await monitor.poll();
+  await monitor.confirmPublished(outage2.snapshotHash, { postId: "120602", url: "https://gall.dcinside.com/example" });
+  const recovered2 = await monitor.poll();
+  assert.equal(recovered1.phase, "recovered");
+  assert.equal(recovered2.phase, "recovered");
+  assert.notEqual(recovered1.id, recovered2.id);
+});
+
 test("사용자가 거절한 복구완료 후보를 게시 제외하고 삭제된 현재 글을 정리한다", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-status-"));
   const monitor = createOpenAIStatusMonitor({ stateRoot: root, fetchImpl: responder([[], [incident()], []]) });
