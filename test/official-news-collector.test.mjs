@@ -85,6 +85,31 @@ test("공식 GitHub 릴리스는 제품명을 제목에 붙이고 Markdown을 �
   }
 });
 
+test("공식 GitHub 릴리스는 상세 PR Changelog를 번역 원문에서 제외한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-official-highlights-"));
+  let payload = [release(25, "0.146.0")];
+  const collector = createOfficialNewsCollector({
+    stateRoot: root,
+    sources: [source],
+    now: () => new Date("2026-08-07T02:00:00Z"),
+    async fetchImpl() { return new Response(JSON.stringify(payload), { status: 200 }); },
+  });
+  try {
+    await collector.collectAll();
+    payload = [{
+      ...release(26, "0.147.0"),
+      body: "## New Features\n\n* Add portable plugins.\n\n## Bug Fixes\n\n* Protect secrets.\n\n## Changelog\n\n* #123 internal detail\n* #124 another detail",
+    }, ...payload];
+    const result = await collector.collectAll();
+    const saved = await createPendingNewsStore({ root }).read(result.ids[0]);
+    assert.match(saved.original.content, /Add portable plugins/u);
+    assert.match(saved.original.content, /Protect secrets/u);
+    assert.doesNotMatch(saved.original.content, /#123|another detail/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("의존성과 빌드 설정만 바뀐 공식 릴리스는 대기함에 만들지 않는다", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-official-maintenance-"));
   let payload = [release(30, "7.3.0")];

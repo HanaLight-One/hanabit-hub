@@ -130,6 +130,17 @@ export function prepareNewsSourceText(value) {
     .trim();
 }
 
+export function prepareNewsAnalysisSourceText(record) {
+  const text = prepareNewsSourceText(record?.original?.content);
+  if (record?.source?.type !== "official-github-release") return text;
+  const marker = text.search(/^\s*(?:Changelog|Full Changelog:)\s*$/imu);
+  const highlights = marker > 0 ? text.slice(0, marker).trim() : text;
+  if ([...highlights].length <= 6_000) return highlights;
+  const limited = [...highlights].slice(0, 6_000).join("");
+  const boundary = limited.lastIndexOf("\n");
+  return (boundary > 0 ? limited.slice(0, boundary) : limited).trim();
+}
+
 function translatedText(value, maximum, label) {
   return limited(cleanTranslatedText(value), maximum, label);
 }
@@ -290,7 +301,7 @@ function validateResult(value, contextCount, sourceText) {
   });
 }
 
-function buildPrompt(record) {
+function buildPrompt(record, sourceText) {
   const embeds = (record.original?.embeds ?? []).flatMap((embed) => [
     embed.title,
     embed.description,
@@ -351,7 +362,7 @@ function buildPrompt(record) {
     `SOURCE TRUST: ${record.source?.profile?.trustLabel ?? "unknown"}`,
     `WHY TRACKED: ${record.source?.profile?.whyTracked ?? "unknown"}`,
     "SOURCE TEXT:",
-    prepareNewsSourceText(record.original?.content),
+    sourceText,
     embeds,
     contexts,
   ].join("\n");
@@ -465,10 +476,11 @@ export async function invokeFreeNewsAnalysis(
   await mkdir(workRoot, { recursive: true });
   try {
     const contextCount = Array.isArray(record.original?.contexts) ? Math.min(3, record.original.contexts.length) : 0;
-    if (!prepareNewsSourceText(record.original?.content) && contextCount === 0) {
+    const sourceText = prepareNewsAnalysisSourceText(record);
+    if (!sourceText && contextCount === 0) {
       throw new Error("번역할 X 원문이나 연결 문맥이 없습니다.");
     }
-    const basePrompt = buildPrompt(record);
+    const basePrompt = buildPrompt(record, sourceText);
     await Promise.all([
       writeFile(promptPath, `${basePrompt}\n`, "utf8"),
       writeFile(schemaPath, `${JSON.stringify(analysisSchema(contextCount), null, 2)}\n`, "utf8"),
@@ -532,7 +544,7 @@ export async function invokeFreeNewsAnalysis(
             if (contextError) throw contextError;
           }
         }
-        return validateResult(parsed, contextCount, record.original?.content);
+        return validateResult(parsed, contextCount, sourceText);
       } catch (error) {
         lastError = error;
         if (attempt < 3) {

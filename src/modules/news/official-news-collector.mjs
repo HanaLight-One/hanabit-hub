@@ -100,6 +100,12 @@ function cleanMarkdown(value) {
     .slice(0, 12_000);
 }
 
+function releaseHighlights(value) {
+  const raw = String(value ?? "").replace(/\r\n?/gu, "\n");
+  const marker = raw.search(/^#{0,6}[ \t]*(?:Changelog|Full Changelog:)[ \t]*$/imu);
+  return marker > 0 ? raw.slice(0, marker).trim() : raw;
+}
+
 function releaseTitle(repository, release) {
   const rawTitle = String(release.name || release.tag_name || "Release").trim().slice(0, 200);
   const label = REPOSITORY_LABELS[repository] ?? repository.split("/").at(-1);
@@ -177,7 +183,7 @@ async function fetchEntries(source, fetchImpl, now) {
     return payload.filter((release) => !release?.draft && !release?.prerelease).map((release) => ({
       externalId: String(release.id),
       title: releaseTitle(source.repository, release),
-      content: cleanMarkdown(release.body || `${release.tag_name} release`),
+      content: cleanMarkdown(releaseHighlights(release.body) || `${release.tag_name} release`),
       maintenanceOnly: isMaintenanceOnlyRelease(release.body),
       url: safeUrl(release.html_url, new Set(["github.com"])),
       publishedAt: new Date(release.published_at || release.created_at || now()).toISOString(),

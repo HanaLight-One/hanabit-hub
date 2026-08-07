@@ -6,6 +6,7 @@ import test from "node:test";
 import {
   classifyProviderReason,
   invokeFreeNewsAnalysis,
+  prepareNewsAnalysisSourceText,
   prepareNewsSourceText,
 } from "../src/modules/news/free-news-analysis.mjs";
 
@@ -27,6 +28,18 @@ test("Discord 숨김 미디어 링크와 커스텀 이모지는 번역 입력에
     prepareNewsSourceText("Update rates[.](https://video.twimg.com/a.mp4)\n\n[Jump to blog post](<https://openai.com/news>) <:_:1362396578412892313>"),
     "Update rates.\n\nJump to blog post",
   );
+});
+
+test("공식 GitHub 릴리스 분석은 상세 Changelog 앞의 주요 변경만 사용한다", () => {
+  const source = prepareNewsAnalysisSourceText({
+    source: { type: "official-github-release" },
+    original: {
+      content: "Codex 0.147.0\n\nNew Features\n• Add plugins\n\nBug Fixes\n• Protect secrets\n\nChangelog\n\n• #123 internal detail",
+    },
+  });
+  assert.match(source, /Add plugins/u);
+  assert.match(source, /Protect secrets/u);
+  assert.doesNotMatch(source, /#123|internal detail/u);
 });
 
 test("무료 API 오류 이름은 비밀값 없이 안전한 원인 코드로 줄인다", () => {
