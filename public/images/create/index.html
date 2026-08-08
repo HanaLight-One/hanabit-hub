@@ -8,10 +8,10 @@
     <meta name="description" content="하나빛 이미지 추가생성 초안실" />
     <title>추가 이미지 생성실 · Hanabit Hub</title>
     <link rel="stylesheet" href="/images/styles.css" />
-    <link rel="stylesheet" href="/images/create/styles.css?v=20260806-jobs-refresh" />
+    <link rel="stylesheet" href="/images/create/styles.css?v=20260809-pose-advisor" />
     <link rel="stylesheet" href="/codex-usage-indicator.css" />
     <script src="/codex-usage-indicator.js" type="module"></script>
-    <script src="/images/create/app.js?v=20260809-generation-flow" type="module"></script>
+    <script src="/images/create/app.js?v=20260809-pose-advisor" type="module"></script>
   </head>
   <body>
     <header class="topbar">
@@ -180,6 +180,29 @@
             <p id="oracle-result" class="oracle-result" aria-live="polite"></p>
           </section>
 
+          <section class="pose-field" aria-labelledby="pose-title">
+            <div class="pose-heading">
+              <div>
+                <label id="pose-title" for="pose-direction">🎬 구도·자세</label>
+                <small>장면을 바꾸지 않고 카메라와 몸짓만 따로 덧붙여요.</small>
+              </div>
+              <select id="pose-intensity" aria-label="구도 역동성">
+                <option value="auto">자동 균형</option>
+                <option value="stable">차분하게</option>
+                <option value="mild_dynamic">살짝 역동적</option>
+                <option value="strong_dynamic">과감하게</option>
+              </select>
+            </div>
+            <textarea id="pose-direction" maxlength="1200"
+              placeholder="비워두어도 괜찮아요. 직접 적거나 Terra에게 장면에 어울리는 구도를 물어보세요."></textarea>
+            <div class="pose-actions">
+              <button id="pose-suggest" type="button">✨ 이런 자세 어떰 ㅇㅅㅇ?</button>
+              <button id="pose-clear" class="scene-clear" type="button">비우기</button>
+              <small><span id="pose-count">0</span> / 1,200</small>
+            </div>
+            <p id="pose-status" class="pose-status" aria-live="polite">추천은 문구만 채우며 이미지 생성은 시작하지 않아요.</p>
+          </section>
+
           <div class="safety-note">
             <b>입력하는 동안 미리보기가 자동으로 바뀌어요</b>
             <span>실제 생성은 오른쪽 버튼과 마지막 확인 뒤에만 시작하며, 내부 격리 초안과 1회 실행 영수증은 그대로 남겨요.</span>
@@ -230,6 +253,8 @@
                 <p id="preview-scene">왼쪽에서 장면을 적어주세요.</p>
               </details>
             </dd>
+            <dt>구도·자세</dt>
+            <dd id="preview-composition">자동 구성</dd>
             <dt>처리 방식</dt>
             <dd id="preview-route">선택을 확인하면 결정돼요.</dd>
           </dl>

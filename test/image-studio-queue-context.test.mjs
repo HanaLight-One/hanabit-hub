@@ -77,6 +77,7 @@ test("02시 운영일 경계와 설정 기반 출력 루트를 사용한다", as
     {
       id: "natural-test",
       prompt: "조용한 새벽",
+      compositionDirection: "높은 시점에서 길게 뻗은 길을 내려다본다.",
       count: 2,
       mode: "natural",
     },
@@ -92,6 +93,7 @@ test("02시 운영일 경계와 설정 기반 출력 루트를 사용한다", as
     path.join(outputRoot, "2026-07-29", "extra-requests", "natural-test"),
   );
   assert.equal(context.job.count, 2);
+  assert.match(context.job.composition_direction, /높은 시점/u);
 });
 
 test("핑크브릿지는 전용 외형 앵커를 일반 cast worker 문맥으로 고정한다", async () => {

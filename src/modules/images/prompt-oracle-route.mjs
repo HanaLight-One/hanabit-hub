@@ -1,5 +1,6 @@
 const SETTINGS_PATH = "/api/images/prompt-oracle/settings";
 const REROLL_PATH = "/api/images/prompt-oracle/reroll";
+const POSE_SUGGEST_PATH = "/api/images/pose-advisor/suggest";
 const MAX_BODY_BYTES = 32 * 1024;
 
 function isSameOriginRequest(request) {
@@ -21,7 +22,7 @@ async function readJsonBody(request) {
 }
 
 export async function handlePromptOracleRoute({ request, response, pathname, oracle, sendJson }) {
-  if (![SETTINGS_PATH, REROLL_PATH].includes(pathname)) return false;
+  if (![SETTINGS_PATH, REROLL_PATH, POSE_SUGGEST_PATH].includes(pathname)) return false;
   if (!oracle) { sendJson(response, 404, { error: "Not found" }); return true; }
 
   if (pathname === SETTINGS_PATH && request.method === "GET") {
@@ -47,6 +48,14 @@ export async function handlePromptOracleRoute({ request, response, pathname, ora
     try { sendJson(response, 200, await oracle.reroll(await readJsonBody(request))); }
     catch (error) {
       const status = error.code === "BUSY" ? 409 : ["INVALID_SETTINGS", "INVALID_PRESET", "NO_INGREDIENTS", "INVALID_JSON"].includes(error.code) ? 400 : 503;
+      sendJson(response, status, { error: error.message });
+    }
+    return true;
+  }
+  if (pathname === POSE_SUGGEST_PATH && request.method === "POST") {
+    try { sendJson(response, 200, await oracle.suggestPose(await readJsonBody(request))); }
+    catch (error) {
+      const status = error.code === "BUSY" ? 409 : ["INVALID_POSE_REQUEST", "INVALID_JSON"].includes(error.code) ? 400 : 503;
       sendJson(response, status, { error: error.message });
     }
     return true;

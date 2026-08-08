@@ -86,7 +86,7 @@ HTTP 라우트는 검증과 응답만 맡고 실제 동작은 같은 기능 폴�
 | Hub SQLite | `state/hanabit-hub.sqlite` | 뉴스 원장, 이미지 제작 기록과 직접 업로드 출처, DC 혼합 블록 초안(v6) | 제외 |
 | Push 구독·키 | `state/notifications/` | 모바일 Web Push 상태 | 제외 |
 | 이미지 생성 초안·작업 | `state/image-generation-*` | Hub가 만든 초안과 1~10장 배치 작업 상태 | 제외 |
-| 혼돈의 신탁 설정 | `state/image-prompt-oracle/` | 사용자 재료·가중치, 분위기 프리셋과 임시 무료 API 실행 상태 | 제외 |
+| 혼돈의 신탁·구도 조언 실행 | `state/image-prompt-oracle/` | 사용자 재료·가중치, 분위기 프리셋과 신탁·구도 Terra 임시 실행 상태 | 제외 |
 | 직접 업로드 생성 소스 | `state/image-source-uploads/YYYY-MM-DD/` | 사용자가 올린 PNG·JPG·WebP를 오테와 분리해 Responses 주 참조로 보관 | 제외 |
 | 이미지·테마·제작 기록 | 외부 설정 루트 | 기존 저장소를 이동 없이 연결 | 외부 |
 | 이미지 휴지통 | 외부 `stateRoot/trash/hub-v1/` | 추가 생성 파일의 복원 영수증과 격리 파일 | 외부 |
@@ -302,9 +302,13 @@ DC 편집기의 실제 게시자는 외부 게시자 `.env`의 기존 `DC_ID`, `
 - 외부 파이프라인과 Hub 사이의 소유권 경계
 
 `test/project-map.test.mjs`는 백엔드 모듈과 React 진입점이 지도에서 빠지면
-`npm.cmd run check`를 실패시킨다. 마지막 구조 대조일은 **2026-08-02**다.
+`npm.cmd run check`를 실패시킨다. 마지막 구조 대조일은 **2026-08-09**다.
 
 ## 2026-08-01 추가 연결
+
+- 이미지 생성실의 `POST /api/images/pose-advisor/suggest`는 현재 장면·인물 수·화풍·배치 방식을
+  Terra 공용 실행기에 전달해 편집 가능한 구도·자세 문구만 반환한다. 문구는 장면 본문과 분리해
+  생성 초안과 worker 문맥에 보존하며, 추천 실패 시 사용자가 적은 기존 문구를 변경하지 않는다.
 
 - 오테 완료 manifest -> 이미지 SQLite 제작 기록: `src/modules/images/image-metadata-catalog.mjs`
 - 추가 생성 작업 카드 -> 안전한 프롬프트·선택 인물·최대 3개 저장 화풍 혼합·결과 이미지와 후속 생성 링크:

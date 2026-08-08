@@ -4,6 +4,7 @@ import path from "node:path";
 import { RENDERING_PRESETS } from "./rendering-presets.mjs";
 
 const MAX_PROMPT_LENGTH = 12_000;
+const MAX_COMPOSITION_DIRECTION_LENGTH = 1_200;
 const SOURCE_ID_PATTERN = /^[a-f0-9]{64}$/u;
 const MODES = new Set(["new", "same-combination", "same-characters", "same-style"]);
 const SOURCE_MODES = new Set(["same-combination", "same-characters", "same-style"]);
@@ -38,6 +39,18 @@ function normalizePrompt(value) {
     throw draftError("INVALID_PROMPT", `장면 요청은 ${MAX_PROMPT_LENGTH.toLocaleString("ko-KR")}자 이하여야 합니다.`);
   }
   return prompt;
+}
+
+function normalizeCompositionDirection(value) {
+  if (value == null || value === "") return "";
+  if (typeof value !== "string") {
+    throw draftError("INVALID_COMPOSITION", "구도·자세 문장을 확인해주세요.");
+  }
+  const direction = value.trim();
+  if (direction.length > MAX_COMPOSITION_DIRECTION_LENGTH) {
+    throw draftError("INVALID_COMPOSITION", `구도·자세 문장은 ${MAX_COMPOSITION_DIRECTION_LENGTH.toLocaleString("ko-KR")}자 이하여야 합니다.`);
+  }
+  return direction;
 }
 
 function normalizeBatch(value) {
@@ -117,6 +130,7 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
   async function create(input) {
     if (!plainObject(input)) throw draftError("INVALID_REQUEST", "생성 초안 JSON이 필요합니다.");
     const prompt = normalizePrompt(input.prompt);
+    const compositionDirection = normalizeCompositionDirection(input.compositionDirection);
     const mode = String(input.mode ?? "");
     if (!MODES.has(mode)) throw draftError("INVALID_MODE", "생성 방식이 올바르지 않습니다.");
     const purpose = String(input.purpose ?? "");
@@ -177,7 +191,7 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
     const id = randomUUID().replaceAll("-", "");
     const createdAt = new Date().toISOString();
     const record = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       id,
       createdAt,
       status: "draft",
@@ -185,6 +199,7 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
       route,
       purpose,
       prompt,
+      compositionDirection,
       mode,
       sourceImageId,
       templateImageId,

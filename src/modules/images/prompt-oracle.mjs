@@ -8,6 +8,23 @@ const POWERSHELL = path.join(
   "System32", "WindowsPowerShell", "v1.0", "powershell.exe",
 );
 const MAX_INGREDIENTS = 40;
+const MAX_POSE_DIRECTION_LENGTH = 1_200;
+const POSE_INTENSITIES = Object.freeze({
+  stable: Object.freeze([
+    "eye_level_medium", "clean_halfbody", "clean_fullbody", "balanced_two_shot",
+    "readable_group", "environmental_wide", "seated_medium",
+  ]),
+  mild_dynamic: Object.freeze([
+    "slight_high_angle", "slight_low_angle", "over_shoulder", "top_down",
+    "prop_near_face", "foreground_prop", "hand_near_camera", "mild_wide_angle",
+    "asymmetric_two_shot", "layered_group", "contextual_closeup",
+  ]),
+  strong_dynamic: Object.freeze([
+    "playful_fisheye", "dramatic_low_angle", "dramatic_top_down",
+    "reaching_toward_camera", "extreme_foreground_prop", "strong_foreshortening",
+    "thematic_face_closeup",
+  ]),
+});
 
 function presetIngredient(id, name, weight) {
   return Object.freeze({ id, name, weight, enabled: true });
@@ -186,6 +203,120 @@ function responseSchema() {
   };
 }
 
+function poseResponseSchema(intensity, preset) {
+  return {
+    type: "object",
+    properties: {
+      intensity: { type: "string", enum: [intensity] },
+      preset: { type: "string", enum: [preset] },
+      direction: { type: "string", minLength: 20, maxLength: MAX_POSE_DIRECTION_LENGTH },
+    },
+    required: ["intensity", "preset", "direction"],
+    additionalProperties: false,
+  };
+}
+
+function normalizePoseRequest(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw oracleError("INVALID_POSE_REQUEST", "구도 추천 요청을 확인해주세요.");
+  }
+  const scene = String(value.scene ?? "").trim();
+  if (scene.length < 3 || scene.length > 12_000) {
+    throw oracleError("INVALID_POSE_REQUEST", "장면 요청을 3자 이상 입력해주세요.");
+  }
+  const requestedIntensity = String(value.intensity ?? "auto");
+  if (!["auto", ...Object.keys(POSE_INTENSITIES)].includes(requestedIntensity)) {
+    throw oracleError("INVALID_POSE_REQUEST", "구도 강도를 확인해주세요.");
+  }
+  const characterMode = String(value.characterMode ?? "auto");
+  if (!["auto", "none", "custom"].includes(characterMode)) {
+    throw oracleError("INVALID_POSE_REQUEST", "등장인물 선택을 확인해주세요.");
+  }
+  const characters = Array.isArray(value.characters)
+    ? value.characters.map((item) => String(item ?? "").trim()).filter(Boolean)
+    : [];
+  if (characters.length > 10 || characters.some((item) => item.length > 80)) {
+    throw oracleError("INVALID_POSE_REQUEST", "등장인물 목록을 확인해주세요.");
+  }
+  if ((characterMode === "custom") !== (characters.length > 0)) {
+    throw oracleError("INVALID_POSE_REQUEST", "등장인물 선택과 이름 목록이 맞지 않아요.");
+  }
+  const batchMode = String(value.batchMode ?? "single");
+  if (!["single", "per-character", "variants"].includes(batchMode)) {
+    throw oracleError("INVALID_POSE_REQUEST", "출력 묶음을 확인해주세요.");
+  }
+  const recentDirections = Array.isArray(value.recentDirections)
+    ? value.recentDirections.slice(0, 3).map((item) => String(item ?? "").trim()).filter(Boolean)
+    : [];
+  if (recentDirections.some((item) => item.length > MAX_POSE_DIRECTION_LENGTH)) {
+    throw oracleError("INVALID_POSE_REQUEST", "최근 구도 문장이 너무 길어요.");
+  }
+  const style = String(value.style ?? "").trim();
+  if (style.length > 300) throw oracleError("INVALID_POSE_REQUEST", "화풍 설명이 너무 길어요.");
+  return Object.freeze({
+    scene,
+    requestedIntensity,
+    characterMode,
+    characters: Object.freeze(characters),
+    batchMode,
+    style,
+    sourceImage: value.sourceImage === true,
+    recentDirections: Object.freeze(recentDirections),
+  });
+}
+
+function choosePoseIntensity(request, random) {
+  if (request.requestedIntensity !== "auto") return request.requestedIntensity;
+  const effectiveCount = request.batchMode === "per-character"
+    ? 1
+    : request.characterMode === "custom"
+      ? request.characters.length
+      : request.characterMode === "none" ? 0 : null;
+  const roll = random();
+  let selected = roll < 0.55 ? "stable" : roll < 0.85 ? "mild_dynamic" : "strong_dynamic";
+  if ((effectiveCount ?? 1) >= 3 && selected === "strong_dynamic") selected = "mild_dynamic";
+  return selected;
+}
+
+function choosePosePreset(intensity, random) {
+  const presets = POSE_INTENSITIES[intensity];
+  return presets[Math.min(presets.length - 1, Math.floor(random() * presets.length))];
+}
+
+function buildPosePrompt(request, intensity, preset) {
+  const effectiveCast = request.batchMode === "per-character"
+    ? "Each output is a one-character image even if several character names are selected."
+    : request.characterMode === "custom"
+      ? `Exact requested cast (${request.characters.length}): ${request.characters.join(", ")}`
+      : request.characterMode === "none"
+        ? "No characters are requested. Do not invent a person or creature."
+        : "Characters are selected later. Suggest a flexible composition for one to three characters without inventing names.";
+  return [
+    "You are the composition and pose advisor for a vertical 3:4 image studio.",
+    "Return one editable Korean direction as JSON. Do not generate an image and do not rewrite the scene prompt.",
+    "Describe camera angle, framing, body pose or object placement, depth, and the visual focus in one compact paragraph.",
+    "Keep the result concrete and drawable. Avoid generic praise, emotional commentary, and multiple alternatives.",
+    `Requested intensity: ${request.requestedIntensity}. Chosen safe intensity: ${intensity}. Suggested preset: ${preset}.`,
+    effectiveCast,
+    request.characterMode === "custom" && request.batchMode !== "per-character"
+      ? "Preserve the exact requested character count. Every requested character must appear clearly and distinctly; never omit, merge, replace, or reduce them to one representative character."
+      : "",
+    request.characterMode === "custom" && request.characters.length >= 3 && request.batchMode !== "per-character"
+      ? "Use readable spacing and layered depth. Avoid extreme close-ups, fisheye distortion, or poses that hide members of the group."
+      : "",
+    "If the scene requests a speech bubble or visible text, reserve clean negative space for it.",
+    request.sourceImage
+      ? "A source image is attached for reference. Do not force-copy its pose or camera angle; recommend a fresh composition that still respects the user's scene."
+      : "No source image is attached.",
+    `Style context: ${request.style || "automatic or unspecified"}`,
+    `Scene prompt: ${request.scene}`,
+    request.recentDirections.length
+      ? `Avoid repeating these recent directions: ${request.recentDirections.join(" | ")}`
+      : "No recent pose directions to avoid.",
+    "Write 1 to 3 Korean sentences, 40 to 350 Korean characters. The direction must work as an instruction appended to an image prompt.",
+  ].filter(Boolean).join("\n");
+}
+
 function buildPrompt({ chaos, ingredients, preset }) {
   return [
     "You are the scene oracle for an image creation studio.",
@@ -300,9 +431,53 @@ export function createPromptOracle({
     }
   }
 
+  async function suggestPose(value = {}) {
+    if (busy) throw oracleError("BUSY", "다른 무료 API 작업을 준비하고 있어요.");
+    busy = true;
+    const workRoot = path.join(runtimeRoot, randomUUID());
+    try {
+      if (!(await stat(runnerPath)).isFile()) throw oracleError("NOT_READY", "무료 API 실행기가 준비되지 않았어요.");
+      const request = normalizePoseRequest(value);
+      const intensity = choosePoseIntensity(request, random);
+      const preset = choosePosePreset(intensity, random);
+      const promptPath = path.join(workRoot, "prompt.txt");
+      const schemaPath = path.join(workRoot, "response-schema.json");
+      const outputPath = path.join(workRoot, "output.json");
+      await mkdir(workRoot, { recursive: true });
+      await Promise.all([
+        writeFile(promptPath, `${buildPosePrompt(request, intensity, preset)}\n`, "utf8"),
+        writeFile(schemaPath, `${JSON.stringify(poseResponseSchema(intensity, preset), null, 2)}\n`, "utf8"),
+      ]);
+      await runProcess(POWERSHELL, [
+        "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+        "-File", runnerPath,
+        "-PromptFile", promptPath,
+        "-Output", outputPath,
+        "-JsonSchemaFile", schemaPath,
+        ...(pythonExecutablePath ? ["-PythonExecutablePath", pythonExecutablePath] : []),
+        ...(keyStorePath ? ["-KeyStorePath", keyStorePath] : []),
+        "-MaxOutputTokens", "700",
+      ], { cwd: workRoot });
+      const output = JSON.parse(await readFile(outputPath, "utf8"));
+      const direction = String(output?.direction ?? "").trim();
+      if (
+        output?.intensity !== intensity ||
+        output?.preset !== preset ||
+        direction.length < 20 || direction.length > MAX_POSE_DIRECTION_LENGTH
+      ) {
+        throw oracleError("INVALID_RESPONSE", "무료 API 구도 문장 형식이 올바르지 않아요.");
+      }
+      return Object.freeze({ intensity, preset, direction });
+    } finally {
+      busy = false;
+      await rm(workRoot, { recursive: true, force: true });
+    }
+  }
+
   return Object.freeze({
     async readSettings() { return publicSettings(await readSettings()); },
     updateSettings,
     reroll,
+    suggestPose,
   });
 }

@@ -36,7 +36,7 @@ test("/images/create가 안전한 추가생성 초안 화면을 제공한다", a
     assert.match(body, /id="preview-scene-details"/);
     assert.match(body, /id="preview-scene-summary"/);
     assert.match(body, /id="preview-scene-copy"/);
-    assert.match(body, /20260806-jobs-refresh/);
+    assert.match(body, /20260809-pose-advisor/);
     assert.match(body, /id="oracle-reroll"/);
     assert.match(body, /id="oracle-preset"/);
     assert.match(body, /id="oracle-chaos"/);
@@ -66,7 +66,7 @@ test("/images/create가 안전한 추가생성 초안 화면을 제공한다", a
     assert.match(body, /＋ 소스 이미지 선택/);
     assert.match(body, /소스 이미지 고르기/);
     assert.match(body, /⚡ 실제 생성/);
-    assert.match(body, /app\.js\?v=20260809-generation-flow/);
+    assert.match(body, /app\.js\?v=20260809-pose-advisor/);
     assert.match(body, /disabled/);
     assert.equal(body.includes("<form action="), false);
   });
@@ -122,6 +122,10 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(scriptBody, /JOB_PAGE_SIZE = 10/);
     assert.match(scriptBody, /\/api\/images\/prompt-oracle\/settings/);
     assert.match(scriptBody, /\/api\/images\/prompt-oracle\/reroll/);
+    assert.match(body, /🎬 구도·자세/u);
+    assert.match(body, /이런 자세 어떰 ㅇㅅㅇ/u);
+    assert.match(scriptBody, /\/api\/images\/pose-advisor\/suggest/);
+    assert.match(scriptBody, /compositionDirection/u);
     assert.match(scriptBody, /renderOraclePresets/);
     assert.match(scriptBody, /defaultIngredients/);
     assert.match(scriptBody, /oraclePresetsById/);

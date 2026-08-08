@@ -56,6 +56,12 @@ const elements = {
   oracleNewWeight: document.querySelector("#oracle-new-weight"),
   oracleAdd: document.querySelector("#oracle-add"),
   oracleResult: document.querySelector("#oracle-result"),
+  poseIntensity: document.querySelector("#pose-intensity"),
+  poseDirection: document.querySelector("#pose-direction"),
+  poseSuggest: document.querySelector("#pose-suggest"),
+  poseClear: document.querySelector("#pose-clear"),
+  poseCount: document.querySelector("#pose-count"),
+  poseStatus: document.querySelector("#pose-status"),
   characterGrid: document.querySelector("#character-grid"),
   characterStatus: document.querySelector("#character-status"),
   characterToggle: document.querySelector("#character-toggle"),
@@ -84,6 +90,7 @@ const elements = {
   previewSceneSummary: document.querySelector("#preview-scene-summary"),
   previewSceneCopy: document.querySelector("#preview-scene-copy"),
   previewScene: document.querySelector("#preview-scene"),
+  previewComposition: document.querySelector("#preview-composition"),
   previewRoute: document.querySelector("#preview-route"),
   previewMessage: document.querySelector("#preview-message"),
   draftButton: document.querySelector("#draft-button"),
@@ -123,6 +130,7 @@ let oracleSettings = null;
 let oracleSaving = false;
 let oracleSavePending = false;
 let oraclePresetsById = new Map();
+let recentPoseDirections = [];
 
 async function copyText(value, button) {
   const text = String(value ?? "");
@@ -309,6 +317,66 @@ async function rerollOracle() {
   } finally {
     elements.oracleReroll.disabled = false;
     elements.oracleReroll.textContent = "🎲 혼돈의 신탁";
+  }
+}
+
+function setPoseStatus(message, state = "") {
+  elements.poseStatus.textContent = message;
+  elements.poseStatus.dataset.state = state;
+}
+
+async function suggestPose() {
+  const scene = elements.scene.value.trim();
+  if (scene.length < 3) {
+    setPoseStatus("먼저 원하는 장면을 3자 이상 적어주세요.", "error");
+    elements.scene.focus();
+    return;
+  }
+  const selectedInputs = [
+    ...elements.characterGrid.querySelectorAll('input[name="character"]:checked'),
+  ];
+  const selectedMode = elements.characterGrid.querySelector('input[name="character-mode"]:checked')?.value;
+  const characters = selectedInputs.map((input) => characterLabels.get(input.value) ?? input.value);
+  const characterMode = characters.length ? "custom" : selectedMode === "none" ? "none" : "auto";
+  const selectedStyles = selectedStyleInputs();
+  const styleMode = elements.styleGrid.querySelector('input[name="style-mode"]:checked')?.value;
+  const style = selectedStyles.length
+    ? selectedStyles.map((input) => styleLabels.get(input.value) ?? input.value).join(" + ")
+    : styleLabels.get(styleMode) ?? "자동 선택";
+  elements.poseSuggest.disabled = true;
+  elements.poseSuggest.textContent = "Terra가 구도 보는 중…";
+  setPoseStatus("장면과 인원수를 보며 겹치지 않는 구도를 고르고 있어요…");
+  try {
+    const response = await fetch("/api/images/pose-advisor/suggest", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        scene,
+        intensity: elements.poseIntensity.value,
+        characterMode,
+        characters,
+        batchMode: selectedBatchMode(),
+        style,
+        sourceImage: Boolean(source),
+        recentDirections: recentPoseDirections,
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "구도 추천을 받아오지 못했어요.");
+    elements.poseDirection.value = result.direction;
+    recentPoseDirections = [result.direction, ...recentPoseDirections.filter((item) => item !== result.direction)].slice(0, 3);
+    elements.poseDirection.dispatchEvent(new Event("input", { bubbles: true }));
+    const intensityLabel = {
+      stable: "차분하게",
+      mild_dynamic: "살짝 역동적",
+      strong_dynamic: "과감하게",
+    }[result.intensity] ?? "자동 균형";
+    setPoseStatus(`추천 완료 · ${intensityLabel} · 다시 누르면 다른 구도를 골라요.`, "success");
+  } catch (error) {
+    setPoseStatus(`${error.message} 기존 구도 문구는 그대로 두었어요.`, "error");
+  } finally {
+    elements.poseSuggest.disabled = false;
+    elements.poseSuggest.textContent = "✨ 이런 자세 어떰 ㅇㅅㅇ?";
   }
 }
 
@@ -981,6 +1049,16 @@ elements.sceneClear.addEventListener("click", () => {
   elements.scene.dispatchEvent(new Event("input", { bubbles: true }));
   elements.scene.focus();
 });
+elements.poseDirection.addEventListener("input", () => {
+  elements.poseCount.textContent = elements.poseDirection.value.length;
+});
+elements.poseClear.addEventListener("click", () => {
+  elements.poseDirection.value = "";
+  elements.poseDirection.dispatchEvent(new Event("input", { bubbles: true }));
+  setPoseStatus("구도·자세를 비웠어요. 이미지 생성기가 장면에 맞춰 자동 구성해요.");
+  elements.poseDirection.focus();
+});
+elements.poseSuggest.addEventListener("click", suggestPose);
 
 elements.oracleChaos.addEventListener("input", () => {
   elements.oracleChaosValue.textContent = elements.oracleChaos.value;
@@ -1058,6 +1136,7 @@ function renderPreview({ interactive = false } = {}) {
     ? selectedStyles.map((input) => styleLabels.get(input.value)).join(" + ")
     : styleLabels.get(styleModeValue) ?? "자동 선택";
   const scene = elements.scene.value.trim();
+  const compositionDirection = elements.poseDirection.value.trim();
   const selectedCharacters = [
     ...elements.characterGrid.querySelectorAll('input[name="character"]:checked'),
   ].map((input) => input.value);
@@ -1102,6 +1181,7 @@ function renderPreview({ interactive = false } = {}) {
 
   previewPayload = {
     prompt: scene,
+    compositionDirection,
     purpose,
     mode: data.get("mode"),
     sourceImageId,
@@ -1130,6 +1210,7 @@ function renderPreview({ interactive = false } = {}) {
     : "빈 프롬프트 펼치기";
   elements.previewSceneDetails.open = false;
   elements.previewSceneCopy.disabled = !scene;
+  elements.previewComposition.textContent = compositionDirection || "자동 구성";
   elements.previewRoute.textContent =
     route === "prompt-only"
       ? styleSelection.mode === "selected"

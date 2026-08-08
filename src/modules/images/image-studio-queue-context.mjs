@@ -246,6 +246,7 @@ export async function buildImageStudioQueueContext(
     job: {
       id: job.id,
       prompt: String(job.prompt || "").trim(),
+      composition_direction: String(job.compositionDirection || "").trim() || null,
       count,
       mode: job.mode,
       style_request: job.style || null,

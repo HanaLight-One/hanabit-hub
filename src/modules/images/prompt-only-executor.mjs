@@ -188,6 +188,7 @@ export function createPromptOnlyExecutor({
       startedAt,
       status: "processing",
       prompt: draft.prompt,
+      compositionDirection: String(draft.compositionDirection ?? "").trim(),
       count,
       batchMode: batch.mode,
       mode: executionMode === "guided-cast"
@@ -279,6 +280,7 @@ export function createPromptOnlyExecutor({
     }
     const draft = await draftStore.create({
       prompt: original.prompt,
+      compositionDirection: original.compositionDirection,
       purpose: original.purpose,
       mode: "new",
       sourceImageId: null,
@@ -389,6 +391,7 @@ export function createPromptOnlyExecutor({
       count,
       batchMode,
       prompt: safePublicPrompt(job.prompt),
+      compositionDirection: safePublicPrompt(job.compositionDirection),
       characters: Object.freeze(characters),
       characterMode: job.characters?.mode ?? "unknown",
       style: styleLabel,

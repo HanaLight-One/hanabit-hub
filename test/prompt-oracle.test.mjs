@@ -120,3 +120,39 @@ test("신탁 요청에 전달한 프리셋 재료는 저장 지연과 관계없�
     ["선명한 빗줄기", "젖은 반사광"].sort(),
   );
 });
+
+test("구도 조언은 장면과 정확한 인원 계약을 Terra 실행기에 전달한다", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "hanabit-pose-advisor-"));
+  const runnerPath = path.join(root, "runner.ps1");
+  await writeFile(runnerPath, "# mock", "utf8");
+  const oracle = createPromptOracle({
+    settingsPath: path.join(root, "state", "settings.json"),
+    runtimeRoot: path.join(root, "runtime"),
+    runnerPath,
+    random: () => 0.6,
+    async runProcess(_command, args) {
+      const prompt = await readFile(args[args.indexOf("-PromptFile") + 1], "utf8");
+      assert.match(prompt, /Exact requested cast \(2\): 리벨라, 세이라/u);
+      assert.match(prompt, /Preserve the exact requested character count/u);
+      assert.match(prompt, /speech bubble/u);
+      const outputPath = args[args.indexOf("-Output") + 1];
+      await writeFile(outputPath, JSON.stringify({
+        intensity: "mild_dynamic",
+        preset: "hand_near_camera",
+        direction: "살짝 낮은 시점에서 두 인물이 서로 겹치지 않게 서고, 한 사람의 손을 전경에 두어 깊이감을 만든다.",
+      }), "utf8");
+    },
+  });
+  const result = await oracle.suggestPose({
+    scene: "두 사람이 밤 인사를 건넨다. 위에 말풍선 좋은 밤!",
+    intensity: "auto",
+    characterMode: "custom",
+    characters: ["리벨라", "세이라"],
+    batchMode: "single",
+    style: "클린 에디토리얼 셀",
+    sourceImage: false,
+  });
+  assert.equal(result.intensity, "mild_dynamic");
+  assert.equal(result.preset, "hand_near_camera");
+  assert.match(result.direction, /전경/u);
+});

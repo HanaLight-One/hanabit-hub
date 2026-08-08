@@ -73,8 +73,33 @@ test("인물별 배치는 최대 10명을 한 사람당 한 장으로 보존한�
     assert.deepEqual(result.batch, { mode: "per-character", count: 10 });
     assert.equal(result.executionMode, "guided-cast");
     const saved = await store.get(result.id);
-    assert.equal(saved.schemaVersion, 2);
+    assert.equal(saved.schemaVersion, 3);
     assert.equal(saved.characters.ids.length, 10);
+  });
+});
+
+test("구도·자세 문장을 장면과 분리해 초안에 보존한다", async () => {
+  await fixture(async ({ store }) => {
+    const result = await store.create({
+      prompt: "두 사람이 온실에서 밤 인사를 한다",
+      compositionDirection: "살짝 낮은 시점에서 두 사람을 서로 겹치지 않게 반신으로 담는다.",
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "custom", ids: ["리벨라", "세이라"] },
+      style: { mode: "auto", id: null },
+    });
+    const saved = await store.get(result.id);
+    assert.match(saved.compositionDirection, /낮은 시점/u);
+    await assert.rejects(() => store.create({
+      prompt: "장면 요청",
+      compositionDirection: "x".repeat(1_201),
+      purpose: "free-play",
+      mode: "new",
+      sourceImageId: null,
+      characters: { mode: "none", ids: [] },
+      style: { mode: "auto", id: null },
+    }), /1,200자/u);
   });
 });
 

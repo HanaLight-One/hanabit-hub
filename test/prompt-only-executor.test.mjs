@@ -142,6 +142,7 @@ test("프롬프트 자유 생성은 모의 worker에 1장으로 한 번만 전�
   }) => {
     const draft = await drafts.create({
       prompt: "자유로운 우주 정거장 장면",
+      compositionDirection: "아래에서 위로 올려다보며 손을 전경에 둔다.",
       purpose: "free-play",
       mode: "new",
       sourceImageId: null,
@@ -161,6 +162,7 @@ test("프롬프트 자유 생성은 모의 worker에 1장으로 한 번만 전�
     assert.equal(job.mode, "natural");
     assert.equal(job.purpose, "free-play");
     assert.equal(context.job.prompt, "자유로운 우주 정거장 장면");
+    assert.match(context.job.composition_direction, /손을 전경/u);
     assert.equal(context.generation_rules.one_image_per_call, true);
     await assert.rejects(() => executor.start(draft.id), /이미 실행/);
     assert.equal(launches.length, 1);
@@ -249,6 +251,7 @@ test("인물별 배치의 한 슬롯을 소스 이미지 없이 같은 설정으
   await fixture(async ({ drafts, executor, jobRoot, launches }) => {
     const draft = await drafts.create({
       prompt: "각자 같은 우산을 들고 다른 골목에 선다",
+      compositionDirection: "각 인물을 눈높이 전신 구도로 담는다.",
       purpose: "free-play",
       mode: "new",
       sourceImageId: SOURCE_ID,
@@ -277,6 +280,7 @@ test("인물별 배치의 한 슬롯을 소스 이미지 없이 같은 설정으
     assert.deepEqual(retry.characters, { mode: "custom", ids: ["헤일라"] });
     assert.deepEqual(retry.style, { mode: "selected", id: "calm", ids: ["calm"] });
     assert.equal(retry.prompt, original.prompt);
+    assert.equal(retry.compositionDirection, original.compositionDirection);
     assert.equal(retry.useImageAnchors, true);
     await assert.rejects(() => executor.regenerate(draft.id, { slot: 3 }), /번호가 올바르지/);
   });

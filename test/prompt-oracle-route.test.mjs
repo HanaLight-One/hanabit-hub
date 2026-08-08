@@ -26,6 +26,7 @@ test("신탁 설정과 리롤 API는 같은 출처 요청만 처리한다", asyn
     async readSettings() { return { chaos: 68, ingredients: [], limits: { ingredients: 40 } }; },
     async updateSettings(body) { calls.push(["settings", body]); return body; },
     async reroll(body) { calls.push(["reroll", body]); return { scene: "예상하지 못한 빛의 정원이 열린다.", chaos: body.chaos, ingredients: [] }; },
+    async suggestPose(body) { calls.push(["pose", body]); return { intensity: "stable", preset: "eye_level_medium", direction: "눈높이 중간 구도로 인물과 배경의 관계를 또렷하게 보여준다." }; },
   };
   await withServer(oracle, async (baseUrl) => {
     const settings = await fetch(`${baseUrl}/api/images/prompt-oracle/settings`);
@@ -47,6 +48,10 @@ test("신탁 설정과 리롤 API는 같은 출처 요청만 처리한다", asyn
       method: "POST", headers: sameOrigin(baseUrl), body: JSON.stringify({ chaos: 77 }),
     });
     assert.equal(reroll.status, 200);
-    assert.deepEqual(calls.map(([name]) => name), ["settings", "reroll"]);
+    const pose = await fetch(`${baseUrl}/api/images/pose-advisor/suggest`, {
+      method: "POST", headers: sameOrigin(baseUrl), body: JSON.stringify({ scene: "빛의 정원" }),
+    });
+    assert.equal(pose.status, 200);
+    assert.deepEqual(calls.map(([name]) => name), ["settings", "reroll", "pose"]);
   });
 });
