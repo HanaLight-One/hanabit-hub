@@ -30,7 +30,7 @@ test("/images/create가 안전한 추가생성 초안 화면을 제공한다", a
     assert.match(body, /id="character-grid"/);
     assert.match(body, /id="character-toggle"/);
     assert.match(body, /aria-expanded="false"/);
-    assert.match(body, /격리 초안 저장/);
+    assert.match(body, /미리보기가 자동으로 바뀌어요/);
     assert.match(body, /maxlength="12000"/);
     assert.match(body, /id="preview-route"/);
     assert.match(body, /id="preview-scene-details"/);
@@ -44,7 +44,7 @@ test("/images/create가 안전한 추가생성 초안 화면을 제공한다", a
     assert.match(body, /id="scene-clear"/);
     assert.match(body, />비우기</);
     assert.match(body, /혼돈의 신탁/);
-    assert.match(body, /id="execute-button"/);
+    assert.doesNotMatch(body, /id="execute-button"/);
     assert.match(body, /name="purpose"/);
     assert.match(body, /value="theme-followup"/);
     assert.match(body, /value="free-play"/);
@@ -55,6 +55,7 @@ test("/images/create가 안전한 추가생성 초안 화면을 제공한다", a
     assert.match(body, /id="jobs-list"/);
     assert.match(body, /id="jobs-refresh"/);
     assert.match(body, /id="source-remove"/);
+    assert.match(body, /id="source-context-label"/);
     assert.match(body, /연결 해제/);
     assert.match(body, /id="source-picker"/);
     assert.match(body, /id="source-picker-open"/);
@@ -64,7 +65,8 @@ test("/images/create가 안전한 추가생성 초안 화면을 제공한다", a
     assert.match(body, /aria-haspopup="dialog"/);
     assert.match(body, /＋ 소스 이미지 선택/);
     assert.match(body, /소스 이미지 고르기/);
-    assert.match(body, /1장 실제 생성/);
+    assert.match(body, /⚡ 실제 생성/);
+    assert.match(body, /app\.js\?v=20260809-generation-flow/);
     assert.match(body, /disabled/);
     assert.equal(body.includes("<form action="), false);
   });
@@ -99,7 +101,6 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(scriptBody, /그대로 재생성/);
     assert.match(scriptBody, /기존 이미지를 레퍼런스로 사용하지 않고/);
     assert.match(scriptBody, /MAX_BATCH_IMAGES = 10/);
-    assert.match(scriptBody, /선택 인물로 1장 실제 생성/);
     assert.match(scriptBody, /MAX_CUSTOM_CHARACTERS = 6/);
     assert.match(scriptBody, /MAX_SELECTED_STYLES = 3/);
     assert.match(scriptBody, /최대 \$\{MAX_SELECTED_STYLES\}개 혼합/);
@@ -107,12 +108,11 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.doesNotMatch(scriptBody, /pinkBridge\.checked = false/);
     assert.match(body, /이미지 앵커 사용/);
     assert.match(scriptBody, /useImageAnchors/);
-    assert.match(scriptBody, /선택 자산 실제 생성 · 연결 준비 중/);
     assert.match(scriptBody, /프롬프트 자유 생성 · 선택 화풍만 적용/);
-    assert.match(scriptBody, /선택 화풍으로 1장 실제 생성/);
     assert.match(scriptBody, /\["auto", "selected", "prompt", "rendering"\]/);
-    assert.match(scriptBody, /자동 선택은 실행 시 확정되어 제작 기록에 남아요/);
-    assert.match(scriptBody, /자동 화풍으로 1장 실제 생성/);
+    assert.match(scriptBody, /안전 초안 저장 중/);
+    assert.match(scriptBody, /templateImageId/);
+    assert.match(scriptBody, /설정만 불러왔어요/);
     assert.match(scriptBody, /previewSceneDetails\.open = false/);
     assert.match(scriptBody, /navigator\.clipboard/);
     assert.match(scriptBody, /복사됨/);
@@ -137,6 +137,10 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(scriptBody, /같은 조합으로/);
     assert.match(scriptBody, /인물만 유지/);
     assert.match(scriptBody, /화풍만 유지/);
+    assert.match(scriptBody, /이미지 재사용/);
+    assert.match(scriptBody, /\?template=/);
+    assert.match(scriptBody, /\?source=/);
+    assert.match(scriptBody, /record\.prompt/);
     assert.match(scriptBody, /job\.images/);
     assert.match(scriptBody, /applySourcePurpose/);
     assert.match(scriptBody, /history\.replaceState/);
@@ -161,7 +165,7 @@ test("추가생성 초안 화면의 스크립트와 스타일을 제공한다", 
     assert.match(scriptBody, /applySourceStyle/);
     assert.match(scriptBody, /await loadCreationOptions\(\)/);
     assert.match(scriptBody, /await loadSourceContext\(\)/);
-    assert.match(scriptBody, /제작 기록과 선택을 불러왔어요/);
+    assert.match(scriptBody, /이전 이미지는 넣지 않고 설정만 불러왔어요/);
     assert.match(scriptBody, /purpose/);
     assert.equal((scriptBody.match(/method: "PUT"/gu) ?? []).length, 1);
     assert.equal(scriptBody.includes('method: "DELETE"'), false);

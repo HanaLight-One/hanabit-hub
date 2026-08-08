@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="/images/create/styles.css?v=20260806-jobs-refresh" />
     <link rel="stylesheet" href="/codex-usage-indicator.css" />
     <script src="/codex-usage-indicator.js" type="module"></script>
-    <script src="/images/create/app.js?v=20260806-jobs-refresh" type="module"></script>
+    <script src="/images/create/app.js?v=20260809-generation-flow" type="module"></script>
   </head>
   <body>
     <header class="topbar">
@@ -181,11 +181,9 @@
           </section>
 
           <div class="safety-note">
-            <b>지금은 안전한 초안 단계</b>
-            <span>초안을 저장해도 격리 보관만 하며 운영 대기열·Python·무료 API는 실행하지 않아요.</span>
+            <b>입력하는 동안 미리보기가 자동으로 바뀌어요</b>
+            <span>실제 생성은 오른쪽 버튼과 마지막 확인 뒤에만 시작하며, 내부 격리 초안과 1회 실행 영수증은 그대로 남겨요.</span>
           </div>
-
-          <button class="preview-button" type="submit">초안 미리보기</button>
         </form>
 
         <aside class="draft-preview" aria-live="polite">
@@ -193,7 +191,7 @@
             <img id="source-image" alt="" />
             <div>
               <div class="source-heading">
-                <p class="section-label">SOURCE IMAGE</p>
+                <p id="source-context-label" class="section-label">IMAGE REFERENCE</p>
                 <button id="source-remove" class="source-remove" type="button">연결 해제</button>
               </div>
               <h2 id="source-name">선택한 이미지</h2>
@@ -236,13 +234,10 @@
             <dd id="preview-route">선택을 확인하면 결정돼요.</dd>
           </dl>
           <p id="preview-message" class="preview-message">
-            미리보기를 만든 뒤 격리 초안으로 저장할 수 있어요.
+            장면 요청을 적으면 미리보기가 자동으로 갱신돼요.
           </p>
-          <button id="draft-button" class="queue-button" type="button" disabled>
-            격리 초안 저장
-          </button>
-          <button id="execute-button" class="execute-button" type="button" hidden>
-            ⚡ 프롬프트로 1장 실제 생성
+          <button id="draft-button" class="execute-button" type="button" disabled>
+            ⚡ 실제 생성
           </button>
         </aside>
       </section>

@@ -129,11 +129,22 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
       throw draftError("INVALID_SOURCE", "원본 이미지 ID가 올바르지 않습니다.");
     }
     const sourceImageId = suppliedSourceImageId;
-    if (SOURCE_MODES.has(mode) && sourceImageId === null) {
-      throw draftError("INVALID_SOURCE", "이 생성 방식에는 원본 이미지가 필요합니다.");
+    const suppliedTemplateImageId = input.templateImageId == null ? null : String(input.templateImageId);
+    if (suppliedTemplateImageId !== null && !SOURCE_ID_PATTERN.test(suppliedTemplateImageId)) {
+      throw draftError("INVALID_SOURCE", "설정 원본 이미지 ID가 올바르지 않습니다.");
+    }
+    const templateImageId = suppliedTemplateImageId;
+    if (sourceImageId !== null && templateImageId !== null) {
+      throw draftError("INVALID_SOURCE", "이미지 레퍼런스와 설정 원본을 동시에 보낼 수 없습니다.");
+    }
+    if (SOURCE_MODES.has(mode) && sourceImageId === null && templateImageId === null) {
+      throw draftError("INVALID_SOURCE", "이 생성 방식에는 설정 원본 이미지가 필요합니다.");
     }
     if (sourceImageId !== null && (!archive || !(await archive.find(sourceImageId)))) {
       throw draftError("INVALID_SOURCE", "원본 이미지를 찾을 수 없습니다.");
+    }
+    if (templateImageId !== null && (!archive || !(await archive.find(templateImageId)))) {
+      throw draftError("INVALID_SOURCE", "설정 원본 이미지를 찾을 수 없습니다.");
     }
 
     const options = await catalog.list();
@@ -176,6 +187,7 @@ export function createGenerationDraftStore({ root, catalog, archive }) {
       prompt,
       mode,
       sourceImageId,
+      templateImageId,
       characters,
       style,
       useImageAnchors,

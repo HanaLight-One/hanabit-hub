@@ -66,6 +66,7 @@ const elements = {
   styleStatus: document.querySelector("#style-status"),
   styleToggle: document.querySelector("#style-toggle"),
   sourceContext: document.querySelector("#source-context"),
+  sourceContextLabel: document.querySelector("#source-context-label"),
   sourceRemove: document.querySelector("#source-remove"),
   sourceImage: document.querySelector("#source-image"),
   sourceName: document.querySelector("#source-name"),
@@ -86,7 +87,6 @@ const elements = {
   previewRoute: document.querySelector("#preview-route"),
   previewMessage: document.querySelector("#preview-message"),
   draftButton: document.querySelector("#draft-button"),
-  executeButton: document.querySelector("#execute-button"),
   jobsSummary: document.querySelector("#jobs-summary"),
   jobsRefresh: document.querySelector("#jobs-refresh"),
   jobsList: document.querySelector("#jobs-list"),
@@ -96,6 +96,9 @@ const elements = {
 const params = new URLSearchParams(window.location.search);
 let source = SAFE_SOURCE_ID.test(params.get("source") ?? "")
   ? params.get("source")
+  : null;
+let template = SAFE_SOURCE_ID.test(params.get("template") ?? "")
+  ? params.get("template")
   : null;
 const requestedMode = params.get("mode");
 const sourceModes = document.querySelectorAll("[data-needs-source]");
@@ -113,9 +116,7 @@ let jobsLoading = false;
 let connectedStyleCount = 0;
 let connectedCharacterCount = 0;
 let previewPayload = null;
-let savedDraftId = null;
-let savedExecutionMode = null;
-let savedBatchCount = 1;
+let generationStarted = false;
 let purposeTouched = false;
 let sourceImages = null;
 let oracleSettings = null;
@@ -344,7 +345,7 @@ function setSourceModesEnabled(enabled) {
 }
 
 function selectRequestedMode(mode = requestedMode) {
-  if (!source || !(mode in MODE_LABELS)) return;
+  if (!(source || template) || !(mode in MODE_LABELS)) return;
   const requestedInput = document.querySelector(
     `input[name="mode"][value="${mode}"]`,
   );
@@ -577,14 +578,21 @@ function applySourceStyle(record) {
 function applySourceProductionSelection(record, mode) {
   const keepsCharacters = ["same-combination", "same-characters"].includes(mode);
   const keepsStyle = ["same-combination", "same-style"].includes(mode);
+  const prompt = typeof record.prompt === "string" ? record.prompt.trim() : "";
+  const promptApplied = mode !== "new" && prompt && !elements.scene.value.trim();
+  if (promptApplied) elements.scene.value = prompt;
+  if (promptApplied) elements.characterCount.textContent = elements.scene.value.length;
   return {
     characters: keepsCharacters ? applySourceCharacters(record) : 0,
     styles: keepsStyle ? applySourceStyle(record) : 0,
+    prompt: Boolean(promptApplied),
   };
 }
 
 async function loadSourceContext(preferredMode = requestedMode) {
-  if (!source) {
+  const contextImageId = template ?? source;
+  const isTemplate = Boolean(template);
+  if (!contextImageId) {
     elements.sourceStatus.textContent = "새 요청";
     elements.sourcePickerOpen.textContent = "＋ 소스 이미지 선택";
     elements.previewSource.textContent = "없음";
@@ -600,15 +608,16 @@ async function loadSourceContext(preferredMode = requestedMode) {
   elements.previewSource.textContent = "확인 중";
 
   try {
-    const imageResponse = await fetch(`/api/images/${encodeURIComponent(source)}`);
+    const imageResponse = await fetch(`/api/images/${encodeURIComponent(contextImageId)}`);
     if (!imageResponse.ok) throw new Error("Source image request failed");
     const { image } = await imageResponse.json();
     elements.sourceImage.src = image.thumbnailUrl;
     elements.sourceImage.alt = `${image.name} 미리보기`;
     elements.sourceName.textContent = image.name;
     elements.sourceMeta.textContent = `${image.date ?? "날짜 없음"} · ${image.group}`;
-    elements.sourceStatus.textContent = "이미지 연결됨";
-    elements.previewSource.textContent = image.name;
+    elements.sourceStatus.textContent = isTemplate ? "설정 원본 연결됨" : "이미지 레퍼런스 연결됨";
+    elements.sourceContextLabel.textContent = isTemplate ? "SETTINGS TEMPLATE" : "IMAGE REFERENCE";
+    elements.previewSource.textContent = isTemplate ? "없음 · 설정만 복원" : image.name;
     applySourcePurpose(image.category);
 
     const recordResponse = await fetch(image.productionRecordUrl);
@@ -630,9 +639,17 @@ async function loadSourceContext(preferredMode = requestedMode) {
     setSourceModesEnabled(true);
     selectRequestedMode(preferredMode);
     const applied = applySourceProductionSelection(record, preferredMode);
-    if (applied.characters || applied.styles) {
-      elements.sourceMessage.textContent = `제작 기록과 선택을 불러왔어요. 인물 ${applied.characters}명 · 화풍 ${applied.styles}개`;
+    if (applied.characters || applied.styles || applied.prompt) {
+      const restored = [
+        applied.characters ? `인물 ${applied.characters}명` : null,
+        applied.styles ? `화풍 ${applied.styles}개` : null,
+        applied.prompt ? "프롬프트" : null,
+      ].filter(Boolean).join(" · ");
+      elements.sourceMessage.textContent = isTemplate
+        ? `이전 이미지는 넣지 않고 설정만 불러왔어요. ${restored}`
+        : `이미지 레퍼런스와 제작 설정을 불러왔어요. ${restored}`;
     }
+    renderPreview({ interactive: false });
   } catch {
     elements.sourceStatus.textContent = "연결 실패";
     elements.previewSource.textContent = "불러오지 못함";
@@ -645,17 +662,15 @@ setSourceModesEnabled(false);
 async function initializeCreationPage() {
   await loadCreationOptions();
   await loadSourceContext();
+  renderPreview({ interactive: false });
 }
 initializeCreationPage();
 
 function resetDraftAfterSourceChange() {
   previewPayload = null;
-  savedDraftId = null;
-  savedExecutionMode = null;
-  elements.draftButton.disabled = true;
-  elements.draftButton.textContent = "격리 초안 저장";
-  elements.executeButton.hidden = true;
-  elements.executeButton.disabled = false;
+  generationStarted = false;
+  elements.draftButton.disabled = elements.scene.value.trim().length < 3;
+  elements.draftButton.textContent = "⚡ 실제 생성";
 }
 
 function renderSourcePicker(query = "") {
@@ -768,6 +783,7 @@ async function selectSourceImage(image, button = null) {
     ? currentMode && currentMode !== "new" ? currentMode : "same-combination"
     : "new";
   source = image.id;
+  template = null;
   const query = new URLSearchParams({ source, mode: preferredMode });
   window.history.replaceState(null, "", `${window.location.pathname}?${query}`);
   closeSourcePicker();
@@ -867,6 +883,7 @@ elements.sourcePicker.addEventListener("paste", async (event) => {
 
 elements.sourceRemove.addEventListener("click", () => {
   source = null;
+  template = null;
   window.history.replaceState(null, "", window.location.pathname);
   elements.sourceContext.hidden = true;
   elements.sourceImage.removeAttribute("src");
@@ -1026,18 +1043,12 @@ elements.form.addEventListener("input", (event) => {
     updateBatchSelection();
   }
   previewPayload = null;
-  savedDraftId = null;
-  savedExecutionMode = null;
-  savedBatchCount = 1;
-  elements.draftButton.disabled = true;
-  elements.draftButton.textContent = "격리 초안 저장";
-  elements.executeButton.hidden = true;
-  elements.executeButton.disabled = false;
-  elements.executeButton.textContent = "⚡ 프롬프트로 1장 실제 생성";
+  generationStarted = false;
+  elements.draftButton.textContent = "⚡ 실제 생성";
+  renderPreview({ interactive: false });
 });
 
-elements.form.addEventListener("submit", (event) => {
-  event.preventDefault();
+function renderPreview({ interactive = false } = {}) {
   const data = new FormData(elements.form);
   const mode = MODE_LABELS[data.get("mode")] ?? MODE_LABELS.new;
   const characterSummary = selectedCharacterSummary();
@@ -1069,15 +1080,20 @@ elements.form.addEventListener("submit", (event) => {
           ? { mode: "rendering", id: styleValue.slice("render:".length) }
           : { mode: "selected", id: styleValue };
   const sourceImageId = source;
+  const templateImageId = template;
   const useImageAnchors = data.has("use-image-anchors");
   const batch = selectedBatch();
   if (batch.mode === "per-character" && batch.count < 2) {
-    window.alert("인물별 배치는 인물을 2명 이상 선택해주세요.");
-    return;
+    if (interactive) window.alert("인물별 배치는 인물을 2명 이상 선택해주세요.");
+    previewPayload = null;
+    elements.draftButton.disabled = true;
+    return false;
   }
   if (batch.mode === "variants" && characterSelection.mode !== "none") {
-    window.alert("인물 없는 변주 배치는 등장인물 없음을 선택해주세요.");
-    return;
+    if (interactive) window.alert("인물 없는 변주 배치는 등장인물 없음을 선택해주세요.");
+    previewPayload = null;
+    elements.draftButton.disabled = true;
+    return false;
   }
   const route =
     characterSelection.mode === "none" && ["auto", "selected", "prompt", "rendering"].includes(styleSelection.mode)
@@ -1089,6 +1105,7 @@ elements.form.addEventListener("submit", (event) => {
     purpose,
     mode: data.get("mode"),
     sourceImageId,
+    templateImageId,
     characters: characterSelection,
     style: styleSelection,
     useImageAnchors,
@@ -1119,14 +1136,28 @@ elements.form.addEventListener("submit", (event) => {
         ? "프롬프트 자유 생성 · 선택 화풍만 적용"
         : "프롬프트 자유 생성 · 인물 자산 매칭 없음"
       : "선택 자산을 보존하는 안내 생성";
-  elements.previewMessage.textContent = "미리보기를 확인했어요. 격리 초안으로 저장할 수 있습니다.";
-  elements.draftButton.disabled = !scene;
-});
+  elements.previewMessage.textContent = scene.length >= 3
+    ? "미리보기가 자동으로 갱신됐어요. 생성 버튼을 누르면 마지막으로 한 번만 확인해요."
+    : "장면 요청을 3자 이상 적으면 실제 생성을 시작할 수 있어요.";
+  elements.draftButton.disabled = generationStarted || scene.length < 3;
+  return scene.length >= 3;
+}
+
+elements.form.addEventListener("submit", (event) => event.preventDefault());
 
 elements.draftButton.addEventListener("click", async () => {
-  if (!previewPayload) return;
+  if (!renderPreview({ interactive: true }) || !previewPayload || generationStarted) return;
+  const batchCount = previewPayload.batch?.count ?? 1;
+  const confirmed = window.confirm(
+    batchCount > 1
+      ? `이 설정으로 독립 이미지 ${batchCount}장을 실제 생성할까요? 격리 초안을 안전하게 저장한 뒤 한 번만 실행합니다.`
+      : "이 설정으로 이미지 1장을 실제 생성할까요? 격리 초안을 안전하게 저장한 뒤 한 번만 실행합니다.",
+  );
+  if (!confirmed) return;
+
+  generationStarted = true;
   elements.draftButton.disabled = true;
-  elements.draftButton.textContent = "초안 저장 중…";
+  elements.draftButton.textContent = "안전 초안 저장 중…";
   try {
     const response = await fetch("/api/images/generation-drafts", {
       method: "POST",
@@ -1135,35 +1166,31 @@ elements.draftButton.addEventListener("click", async () => {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "초안을 저장하지 못했습니다.");
-    elements.previewMessage.textContent =
-      result.route === "prompt-only"
-        ? ["auto", "selected"].includes(result.styleMode)
-          ? "화풍 선택과 프롬프트 초안을 저장했어요. 자동 선택은 실행 시 확정되어 제작 기록에 남아요."
-          : "프롬프트 자유 생성 초안을 저장했어요. Python과 무료 API는 실행하지 않았습니다."
-        : result.executionMode === "guided-cast"
-          ? "선택한 인물 안내 생성 초안을 저장했어요. 아래 버튼에서 실제 1장 생성을 확인할 수 있어요."
-          : "안내 생성 초안을 저장했어요. 이 선택 조합의 실제 실행은 아직 연결 전이에요.";
-    elements.draftButton.textContent = "격리 초안 저장 완료";
-    savedDraftId = result.id;
-    savedExecutionMode = result.executionMode;
-    savedBatchCount = result.batch?.count ?? 1;
-    elements.executeButton.hidden = false;
-    elements.executeButton.disabled = !result.executionMode;
-    elements.executeButton.textContent = savedBatchCount > 1
-      ? `⚡ 독립 이미지 ${savedBatchCount}장 실제 생성`
-      : result.executionMode === "prompt-only"
-      ? ["auto", "selected"].includes(result.styleMode)
-        ? result.styleMode === "auto"
-          ? "⚡ 자동 화풍으로 1장 실제 생성"
-          : "⚡ 선택 화풍으로 1장 실제 생성"
-        : "⚡ 프롬프트로 1장 실제 생성"
-      : result.executionMode === "guided-cast"
-        ? "⚡ 선택 인물로 1장 실제 생성"
-        : "선택 자산 실제 생성 · 연결 준비 중";
+    if (!result.executionMode) throw new Error("이 선택 조합은 아직 실제 생성에 연결되지 않았어요.");
+    elements.draftButton.textContent = `${batchCount}장 생성 요청 중…`;
+    const executionResponse = await fetch(
+      `/api/images/generation-drafts/${encodeURIComponent(result.id)}/execute`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          confirmation: batchCount > 1
+            ? "generate-draft-image-batch"
+            : "generate-one-draft-image",
+        }),
+      },
+    );
+    const execution = await executionResponse.json();
+    if (!executionResponse.ok) {
+      throw new Error(execution.error || "생성을 시작하지 못했습니다.");
+    }
+    elements.draftButton.textContent = `이미지 ${batchCount}장 생성 중…`;
+    elements.previewMessage.textContent = "무료 API가 장면을 준비하고 있어요. 이 요청은 한 번만 실행됩니다.";
+    loadJobs();
+    pollGeneration(execution.id, batchCount);
   } catch (error) {
     elements.previewMessage.textContent = error.message;
-    elements.draftButton.disabled = false;
-    elements.draftButton.textContent = "격리 초안 다시 저장";
+    elements.draftButton.textContent = "실행 상태 확인 필요";
   }
 });
 
@@ -1180,7 +1207,7 @@ elements.previewSceneCopy.addEventListener("click", (event) => {
   copyText(elements.previewScene.textContent, elements.previewSceneCopy);
 });
 
-async function pollGeneration(id) {
+async function pollGeneration(id, expectedCount = 1) {
   try {
     const response = await fetch(`/api/images/generation-jobs/${encodeURIComponent(id)}`, {
       cache: "no-store",
@@ -1190,60 +1217,22 @@ async function pollGeneration(id) {
     elements.previewMessage.textContent = result.message;
     loadJobs();
     if (result.status === "complete") {
-      elements.executeButton.textContent = `✓ 이미지 ${result.count ?? savedBatchCount}장 생성 완료`;
+      elements.draftButton.textContent = `✓ 이미지 ${result.count ?? expectedCount}장 생성 완료`;
       return;
     }
     if (result.status === "failed") {
-      elements.executeButton.textContent = "생성 실패 · 상태 확인 필요";
+      elements.draftButton.textContent = "생성 실패 · 상태 확인 필요";
       return;
     }
     if (result.status === "attention") {
-      elements.executeButton.textContent = "생성 지연 · 상태 확인 필요";
+      elements.draftButton.textContent = "생성 지연 · 상태 확인 필요";
       return;
     }
-    setTimeout(() => pollGeneration(id), 5_000);
+    setTimeout(() => pollGeneration(id, expectedCount), 5_000);
   } catch {
     elements.previewMessage.textContent = "생성 상태를 잠시 확인하지 못했어요. 다시 불러와 확인해주세요.";
   }
 }
-
-elements.executeButton.addEventListener("click", async () => {
-  if (!savedDraftId || !savedExecutionMode) return;
-  const confirmed = window.confirm(
-    savedBatchCount > 1
-      ? `같은 프롬프트와 조건으로 독립 이미지 ${savedBatchCount}장을 실제 생성할까요? 각 장은 별도 API 호출이며 콜라주로 합치지 않습니다.`
-      : savedExecutionMode === "guided-cast"
-      ? "이 프롬프트와 선택한 인물 외형 앵커로 이미지 1장을 실제 생성할까요? 무료 API와 이미지 worker가 실행됩니다."
-      : "이 프롬프트로 이미지 1장을 실제 생성할까요? 무료 API와 이미지 worker가 실행됩니다.",
-  );
-  if (!confirmed) return;
-
-  elements.executeButton.disabled = true;
-  elements.executeButton.textContent = `${savedBatchCount}장 생성 요청 중…`;
-  try {
-    const response = await fetch(
-      `/api/images/generation-drafts/${encodeURIComponent(savedDraftId)}/execute`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          confirmation: savedBatchCount > 1
-            ? "generate-draft-image-batch"
-            : "generate-one-draft-image",
-        }),
-      },
-    );
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "생성을 시작하지 못했습니다.");
-    elements.executeButton.textContent = `이미지 ${savedBatchCount}장 생성 중…`;
-    elements.previewMessage.textContent = "무료 API가 장면을 준비하고 있어요. 이 요청은 한 번만 실행됩니다.";
-    loadJobs();
-    pollGeneration(result.id);
-  } catch (error) {
-    elements.previewMessage.textContent = error.message;
-    elements.executeButton.textContent = "실행 상태 확인 필요";
-  }
-});
 
 function renderJobs(payload) {
   const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
@@ -1368,9 +1357,10 @@ function renderJobs(payload) {
       actions.className = "job-actions";
       const links = [
         ["결과 크게 보기", image.contentUrl],
-        ["같은 조합으로", `/images/create?source=${encodeURIComponent(image.id)}&mode=same-combination`],
-        ["인물만 유지", `/images/create?source=${encodeURIComponent(image.id)}&mode=same-characters`],
-        ["화풍만 유지", `/images/create?source=${encodeURIComponent(image.id)}&mode=same-style`],
+        ["같은 조합으로", `/images/create?template=${encodeURIComponent(image.id)}&mode=same-combination`],
+        ["인물만 유지", `/images/create?template=${encodeURIComponent(image.id)}&mode=same-characters`],
+        ["화풍만 유지", `/images/create?template=${encodeURIComponent(image.id)}&mode=same-style`],
+        ["이미지 재사용", `/images/create?source=${encodeURIComponent(image.id)}&mode=new`],
       ];
       for (const [label, href] of links) {
         const link = document.createElement("a");

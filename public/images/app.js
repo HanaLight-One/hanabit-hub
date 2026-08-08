@@ -26,6 +26,7 @@ const elements = {
   promptCopy: document.querySelector("#prompt-copy"),
   promptText: document.querySelector("#prompt-text"),
   createLink: document.querySelector("#create-link"),
+  reuseLink: document.querySelector("#reuse-link"),
   originalLink: document.querySelector("#original-link"),
   downloadLink: document.querySelector("#download-link"),
   trashButton: document.querySelector("#trash-button"),
@@ -212,13 +213,14 @@ function renderGrid() {
 
     const actions = document.createElement("nav");
     actions.className = "card-actions";
-    for (const [label, mode] of [
-      ["편집", "same-combination"],
-      ["인물 유지", "same-characters"],
-      ["화풍 유지", "same-style"],
+    for (const [label, query] of [
+      ["편집", `template=${encodeURIComponent(image.id)}&mode=same-combination`],
+      ["인물 유지", `template=${encodeURIComponent(image.id)}&mode=same-characters`],
+      ["화풍 유지", `template=${encodeURIComponent(image.id)}&mode=same-style`],
+      ["이미지 재사용", `source=${encodeURIComponent(image.id)}&mode=new`],
     ]) {
       const link = document.createElement("a");
-      link.href = `/images/create?source=${encodeURIComponent(image.id)}&mode=${mode}`;
+      link.href = `/images/create?${query}`;
       link.textContent = label;
       actions.append(link);
     }
@@ -437,7 +439,9 @@ function renderPanelImage(image, { refreshPreview = false } = {}) {
     : image.thumbnailUrl;
   elements.detailImage.alt = `${image.name} 미리보기`;
   elements.createLink.href =
-    `/images/create?source=${encodeURIComponent(image.id)}&mode=same-combination`;
+    `/images/create?template=${encodeURIComponent(image.id)}&mode=same-combination`;
+  elements.reuseLink.href =
+    `/images/create?source=${encodeURIComponent(image.id)}&mode=new`;
   elements.originalLink.href = image.contentUrl;
   elements.downloadLink.href = image.downloadUrl;
   elements.trashButton.hidden = !DELETABLE_CATEGORIES.has(image.category);

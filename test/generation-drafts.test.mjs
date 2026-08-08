@@ -291,6 +291,38 @@ test("새 장면도 직접 고른 소스 이미지를 보존하고 실행할 수
   });
 });
 
+test("반복 생성은 설정 원본만 보존하고 실제 이미지 레퍼런스로 전달하지 않는다", async () => {
+  await fixture(async ({ root, store }) => {
+    const result = await store.create({
+      prompt: "이전 장면의 인물과 화풍으로 다시 그린다",
+      purpose: "free-play",
+      mode: "same-combination",
+      sourceImageId: null,
+      templateImageId: SOURCE_ID,
+      characters: { mode: "custom", ids: ["헤일라", "리벨라"] },
+      style: { mode: "selected", id: "gothic" },
+    });
+    const saved = JSON.parse(await readFile(path.join(root, `${result.id}.json`), "utf8"));
+    assert.equal(saved.templateImageId, SOURCE_ID);
+    assert.equal(saved.sourceImageId, null);
+    assert.equal(result.executionMode, "guided-cast");
+  });
+});
+
+test("설정 원본과 이미지 레퍼런스를 동시에 보내지 못한다", async () => {
+  await fixture(async ({ store }) => {
+    await assert.rejects(() => store.create({
+      prompt: "모호한 이중 참조",
+      purpose: "free-play",
+      mode: "same-style",
+      sourceImageId: SOURCE_ID,
+      templateImageId: SOURCE_ID,
+      characters: { mode: "none", ids: [] },
+      style: { mode: "selected", id: "gothic" },
+    }), /동시에 보낼 수 없습니다/);
+  });
+});
+
 test("소스 이미지의 같은 조합과 외부 대상 교체도 실제 1장 실행으로 분류한다", async () => {
   await fixture(async ({ store }) => {
     const sameCombination = await store.create({
