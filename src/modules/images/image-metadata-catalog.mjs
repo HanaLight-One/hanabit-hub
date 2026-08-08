@@ -183,7 +183,7 @@ export function createImageMetadataCatalog({ database, archive, jobRoot, dailyMa
     }
   }
 
-  async function synchronizeDailyManifests(optionLabels) {
+  async function synchronizeDailyManifests(optionLabels, assetsByTarget) {
     if (!dailyManifestRoot) return 0;
     let directories;
     try {
@@ -215,7 +215,7 @@ export function createImageMetadataCatalog({ database, archive, jobRoot, dailyMa
           if (!relativeOutput || path.isAbsolute(relativeOutput)) continue;
           const output = path.resolve(datedRoot, relativeOutput);
           if (output !== datedRoot && !output.startsWith(`${datedRoot}${path.sep}`)) continue;
-          const image = await archive.findByTarget(output);
+          const image = assetsByTarget.get(output.toLowerCase());
           if (!image) continue;
           const characters = Array.isArray(manifestJob.characters)
             ? manifestJob.characters.map((value) => safeText(value, 80)).filter(Boolean)
@@ -256,6 +256,9 @@ export function createImageMetadataCatalog({ database, archive, jobRoot, dailyMa
     syncInFlight = (async () => {
       const indexedAt = now().toISOString();
       const assets = await archive.listIndexable();
+      const assetsByTarget = new Map(assets
+        .filter((image) => path.isAbsolute(image.target ?? ""))
+        .map((image) => [path.resolve(image.target).toLowerCase(), image]));
       const saveAsset = database.prepare(`
         INSERT INTO image_assets (id, source, storage_key, file_name, indexed_at)
         VALUES (?, ?, ?, ?, ?)
@@ -301,7 +304,7 @@ export function createImageMetadataCatalog({ database, archive, jobRoot, dailyMa
           if (job.status !== "complete" || !Array.isArray(job.outputs)) continue;
           for (const output of job.outputs.slice(0, 20)) {
             if (!path.isAbsolute(output ?? "")) continue;
-            const image = await archive.findByTarget(output);
+            const image = assetsByTarget.get(path.resolve(output).toLowerCase());
             if (!image) continue;
             upsert(image, job, optionLabels);
             metadata += 1;
@@ -310,7 +313,7 @@ export function createImageMetadataCatalog({ database, archive, jobRoot, dailyMa
           if (error.code !== "ENOENT" && !(error instanceof SyntaxError)) throw error;
         }
       }
-      metadata += await synchronizeDailyManifests(optionLabels);
+      metadata += await synchronizeDailyManifests(optionLabels, assetsByTarget);
       return { assets: assets.length, metadata };
     })();
     try {

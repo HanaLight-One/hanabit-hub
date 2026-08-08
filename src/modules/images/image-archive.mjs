@@ -269,6 +269,7 @@ export function createImageArchive({
         for (const entry of await walkImages(root, source)) {
           if (!entriesById.has(entry.publicRecord.id)) {
             entriesById.set(entry.publicRecord.id, Object.freeze({
+              target: entry.target,
               storageKey: entry.storageKey,
               record: entry.publicRecord,
             }));

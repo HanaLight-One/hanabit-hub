@@ -31,7 +31,15 @@ test("완료된 Hub 작업을 이미지 ID와 연결해 프롬프트와 선택 �
   }), "utf8");
 
   const database = openHubDatabase({ filePath: path.join(root, "hub.sqlite") });
-  const archive = createImageArchive({ dailyImagesRoot: imageRoot });
+  const baseArchive = createImageArchive({ dailyImagesRoot: imageRoot });
+  let individualArchiveScans = 0;
+  const archive = {
+    ...baseArchive,
+    async findByTarget(target) {
+      individualArchiveScans += 1;
+      return baseArchive.findByTarget(target);
+    },
+  };
   const optionsCatalog = { async list() { return {
     characters: [
       { id: "pink-bridge", label: "핑크브릿지" },
@@ -59,6 +67,7 @@ test("완료된 Hub 작업을 이미지 ID와 연결해 프롬프트와 선택 �
     assert.equal(record.useImageAnchors, true);
     assert.equal(record.durationMs, 154_000);
     assert.equal(record.retryCount, null);
+    assert.equal(individualArchiveScans, 0);
     const stored = database.prepare("SELECT storage_key FROM image_assets WHERE id = ?").get(image.id);
     assert.equal(stored.storage_key, "2026-08-01/extra-requests/free-play/job-a/result.png");
     assert.equal(stored.storage_key.includes(root), false);
